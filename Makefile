@@ -74,7 +74,9 @@ else ifneq (,$(findstring android,$(platform)))
    	CXX = arm-linux-androideabi-g++
 # Raspberry Pi
 else ifneq (,$(findstring rpi,$(platform)))
-	TARGET := $(TARGET_NAME)_libretro.so
+#	TARGET := $(TARGET_NAME)_libretro.so
+# only for testing purposes 28/08/2019 TST
+	TARGET := $(TARGET_NAME)_libretro_tst.so
 	LDFLAGS += -shared -Wl,--version-script=link.T
 	fpic = -fPIC
 	SHARED := -shared -Wl,-version-script=link.T -Wl,-no-undefined
@@ -232,13 +234,13 @@ else ifneq (,$(filter $(platform), wiiu))
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
-   AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)  
+   AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
    CFLAGS += -DDEFAULT_CFG_NAME="\"sd:/retroarch/cores/system/atari800.cfg\""
-   PLATFORM_DEFINES += -DSDL_BYTEORDER=SDL_BIG_ENDIAN -DMSB_FIRST -DBYTE_ORDER=BIG_ENDIAN  -DBYTE_ORDER=BIG_ENDIAN 
+   PLATFORM_DEFINES += -DSDL_BYTEORDER=SDL_BIG_ENDIAN -DMSB_FIRST -DBYTE_ORDER=BIG_ENDIAN  -DBYTE_ORDER=BIG_ENDIAN
    PLATFORM_DEFINES += -DGEKKO -mcpu=750 -meabi -mhard-float -DHAVE_STRTOF_L -DHAVE_LOCALE
    PLATFORM_DEFINES += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int -D_GNU_SOURCE
    STATIC_LINKING = 1
-   PLATFORM_DEFINES += -DWIIU -DHW_RVL -mwup -DWORDS_BIGENDIAN=1 -Dpowerpc -DMSB_FIRST  -D__POWERPC__ -D__ppc__ 
+   PLATFORM_DEFINES += -DWIIU -DHW_RVL -mwup -DWORDS_BIGENDIAN=1 -Dpowerpc -DMSB_FIRST  -D__POWERPC__ -D__ppc__
    PLATFORM_DEFINES += -DGEKKO -DWIIU -DHW_RVL -mwup -mcpu=750 -meabi -mhard-float -D__POWERPC__ -D__ppc__ -DMSB_FIRST -DWORDS_BIGENDIAN=1
    HAVE_COMPAT = 1
 # Nintendo Wii
@@ -285,7 +287,7 @@ else ifeq ($(platform), wincross64)
 	TARGET := $(TARGET_NAME)_libretro.dll
 	AR = x86_64-w64-mingw32-ar
 	CC = x86_64-w64-mingw32-gcc
-	CXX = x86_64-w64-mingw32-g++ 
+	CXX = x86_64-w64-mingw32-g++
 	SHARED := -shared -static-libgcc -static-libstdc++ -Wl,-no-undefined -Wl,-version-script=link.T
 	LIBS += -lshlwapi
 	PLATFORM_DEFINES += -DDIR_SEP_BACKSLASH=1
@@ -378,7 +380,7 @@ else ifneq (,$(findstring windows_msvc2017,$(platform)))
 	ifneq (,$(findstring uwp,$(PlatformSuffix)))
 		LIB := $(LIB);$(shell IFS=$$'\n'; cygpath -w "$(LIB)/store")
 	endif
-    
+
 	export INCLUDE := $(INCLUDE);$(WindowsSDKSharedIncludeDir);$(WindowsSDKUCRTIncludeDir);$(WindowsSDKUMIncludeDir)
 	export LIB := $(LIB);$(WindowsSDKUCRTLibDir);$(WindowsSDKUMLibDir)
 	TARGET := $(TARGET_NAME)_libretro.dll
@@ -439,7 +441,7 @@ OBJECTS += $(SOURCES_C:.c=.o) $(SOURCES_CXX:.cpp=.o)
 INCDIRS := $(EXTRA_INCLUDES) $(INCFLAGS)
 
 OBJOUT   = -o
-LINKOUT  = -o 
+LINKOUT  = -o
 
 ifneq (,$(findstring msvc,$(platform)))
 	OBJOUT = -Fo
