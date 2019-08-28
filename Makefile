@@ -74,9 +74,7 @@ else ifneq (,$(findstring android,$(platform)))
    	CXX = arm-linux-androideabi-g++
 # Raspberry Pi
 else ifneq (,$(findstring rpi,$(platform)))
-#	TARGET := $(TARGET_NAME)_libretro.so
-# only for testing purposes 28/08/2019 TST
-	TARGET := $(TARGET_NAME)_libretro_tst.so
+	TARGET := $(TARGET_NAME)_libretro.so
 	LDFLAGS += -shared -Wl,--version-script=link.T
 	fpic = -fPIC
 	SHARED := -shared -Wl,-version-script=link.T -Wl,-no-undefined
