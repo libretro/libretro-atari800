@@ -14,7 +14,7 @@ cothread_t emuThread;
 int CROP_WIDTH;
 int CROP_HEIGHT;
 int VIRTUAL_WIDTH;
-int retrow=400; 
+int retrow=400;
 int retroh=300;
 
 #define RETRO_DEVICE_ATARI_KEYBOARD RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_KEYBOARD, 0)
@@ -25,6 +25,7 @@ unsigned atari_devices[ 4 ];
 int keyboard_type=0;
 int autorun5200=0;
 int a5200_joyhack=0;
+int coreindividual_config=0;
 
 int RETROJOY=0,RETROPT0=0,RETROSTATUS=0,RETRODRVTYPE=0;
 int retrojoy_init=0,retro_ui_finalized=0;
@@ -116,11 +117,11 @@ void retro_set_environment(retro_environment_t cb)
        "atari800_artifacting",
        "Hi-Res Artifacting; disabled|enabled",
      },
-	  { 
+	  {
 		"atari800_opt1",
 		"Autodetect A5200 CartType; disabled|enabled" ,
 	  },
-	  { 
+	  {
 		"atari800_opt2",
 		"Joy hack A5200 for robotron; disabled|enabled" ,
 	  },
@@ -131,6 +132,10 @@ void retro_set_environment(retro_environment_t cb)
      {
        "atari800_keyboard",
        "Retroarch Keyboard type; poll|callback",
+     },
+     {
+       "atari800_individualconfiguration",
+       "Retroarch Core Individual Configuration; disabled|enabled",
      },
 
       { NULL, NULL },
@@ -160,6 +165,15 @@ static void update_variables(void)
    {
      if (strcmp(var.value, "enabled") == 0)
 			 a5200_joyhack = 1;
+   }
+
+   var.key = "atari800_individualconfiguration";
+   var.value = NULL;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+     if (strcmp(var.value, "enabled") == 0)
+			 coreindividual_config = 1;
    }
 
    var.key = "atari800_resolution";
@@ -241,7 +255,7 @@ static void update_variables(void)
 	   Atari800_InitialiseMachine();
 	 }
      }
-   
+
    var.key = "atari800_ntscpal";
    var.value = NULL;
 
@@ -337,10 +351,10 @@ static void update_variables(void)
 	     {
 	       ARTIFACT_Set(ARTIFACT_NONE);
 	       ARTIFACT_SetTVMode(Atari800_TV_PAL);
-	     }	   
+	     }
 	 }
      }
-   
+
    var.key = "atari800_keyboard";
    var.value = NULL;
 
@@ -358,7 +372,7 @@ static void update_variables(void)
 }
 
 static void retro_wrap_emulator()
-{    
+{
 LOGI("WRAP EMU THD\n");
    pre_main(RPATH);
 
@@ -366,7 +380,7 @@ LOGI("WRAP EMU THD\n");
 LOGI("EXIT EMU THD\n");
    pauseg=-1;
 
-   //environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, 0); 
+   //environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, 0);
 
    // Were done here
    co_switch(mainThread);
@@ -454,29 +468,29 @@ void retro_init(void)
       log_cb = log.log;
    else
       log_cb = NULL;
-	
+
    const char *system_dir = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_SYSTEM_DIRECTORY, &system_dir) && system_dir)
    {
-      // if defined, use the system directory			
-      retro_system_directory=system_dir;		
-   }		   
+      // if defined, use the system directory
+      retro_system_directory=system_dir;
+   }
 
    const char *content_dir = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_CONTENT_DIRECTORY, &content_dir) && content_dir)
    {
-      // if defined, use the system directory			
-      retro_content_directory=content_dir;		
-   }			
+      // if defined, use the system directory
+      retro_content_directory=content_dir;
+   }
 
    const char *save_dir = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY, &save_dir) && save_dir)
    {
       // If save directory is defined use it, otherwise use system directory
-      retro_save_directory = *save_dir ? save_dir : retro_system_directory;      
+      retro_save_directory = *save_dir ? save_dir : retro_system_directory;
    }
    else
    {
@@ -493,16 +507,18 @@ void retro_init(void)
    LOGI("Retro SAVE_DIRECTORY %s\n",retro_save_directory);
    LOGI("Retro CONTENT_DIRECTORY %s\n",retro_content_directory);
 
+   LOGI("coreindividual_config %s\n", coreindividual_config);
+
 #ifndef RENDER16B
     	enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;
 #else
     	enum retro_pixel_format fmt = RETRO_PIXEL_FORMAT_RGB565;
 #endif
-   
+
    if (!environ_cb(RETRO_ENVIRONMENT_SET_PIXEL_FORMAT, &fmt))
    {
       fprintf(stderr, "PIXEL FORMAT is not supported.\n");
-LOGI("PIXEL FORMAT is not supported.\n");
+      LOGI("PIXEL FORMAT is not supported.\n");
       exit(0);
    }
 
@@ -534,8 +550,8 @@ LOGI("PIXEL FORMAT is not supported.\n");
 
 extern void main_exit();
 void retro_deinit(void)
-{	 
-   Emu_uninit(); 
+{
+   Emu_uninit();
 
 
    co_switch(emuThread);
@@ -544,7 +560,7 @@ LOGI("exit emu\n");
    co_switch(mainThread);
 LOGI("exit main\n");
    if(emuThread)
-   {	 
+   {
       co_delete(emuThread);
       emuThread = 0;
    }
@@ -771,4 +787,3 @@ void retro_cheat_set(unsigned index, bool enabled, const char *code)
    (void)enabled;
    (void)code;
 }
-
