@@ -507,7 +507,7 @@ void retro_init(void)
    LOGI("Retro SAVE_DIRECTORY %s\n",retro_save_directory);
    LOGI("Retro CONTENT_DIRECTORY %s\n",retro_content_directory);
 
-   LOGI("coreindividual_config %s\n", coreindividual_config);
+   //LOGI("coreindividual_config %s\n", coreindividual_config);
 
 #ifndef RENDER16B
     	enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;
@@ -588,7 +588,8 @@ void retro_get_system_info(struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
    info->library_name     = "Atari800";
-   info->library_version  = "3.1.0" GIT_VERSION;
+//   info->library_version  = "3.1.0" GIT_VERSION;
+   info->library_version  = "3.5.0 - Neo-Stone";
    info->valid_extensions = "xfd|atr|cdm|cas|bin|a52|zip|atx";
    info->need_fullpath    = true;
    info->block_extract = false;

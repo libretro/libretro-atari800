@@ -64,6 +64,7 @@
 #endif
 
 int CFG_save_on_exit = FALSE;
+int CFG_use_individual_configuration_file = FALSE;
 
 /* If another default path config path is defined use it
    otherwise use the default one */

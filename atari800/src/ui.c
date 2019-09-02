@@ -1085,20 +1085,20 @@ static void CartManagement(void)
 		UI_MENU_CHECK(4, "Reboot after cartridge change:"),
 		UI_MENU_END
 	};
-	
+
 	typedef struct {
 		UBYTE id[4];
 		UBYTE type[4];
 		UBYTE checksum[4];
 		UBYTE gash[4];
 	} Header;
-	
+
 	int option = 2;
 	int seltype;
 
 	for (;;) {
 		static char cart_filename[FILENAME_MAX];
-		
+
 		if (CARTRIDGE_main.type == CARTRIDGE_NONE) {
 			menu_array[2].item = "None";
 			menu_array[2].suffix = "Return:insert";
@@ -1882,6 +1882,9 @@ static void AtariSettings(void)
 #endif /* XEP80_EMULATION */
 
 	static UI_tMenuItem menu_array[] = {
+#ifdef RPI
+		UI_MENU_CHECK(20, "Use individual configuration file:"),
+#endif /* RPI */
 		UI_MENU_CHECK(0, "Disable BASIC when booting Atari:"),
 		UI_MENU_CHECK(1, "Boot from tape (hold Start):"),
 		UI_MENU_CHECK(2, "Enable R-Time 8:"),
@@ -1935,6 +1938,9 @@ static void AtariSettings(void)
 		SetItemChecked(menu_array, 6, Devices_enable_r_patch);
 #endif
 		SetItemChecked(menu_array, 16, CFG_save_on_exit);
+#ifdef RPI
+		SetItemChecked(menu_array, 20, CFG_use_individual_configuration_file);
+#endif /* RPI */
 
 		option = UI_driver->fSelect("Emulator Settings", 0, option, menu_array, &seltype);
 
@@ -2007,6 +2013,11 @@ static void AtariSettings(void)
 		case 17:
 			Atari800_turbo = !Atari800_turbo;
 			break;
+#ifdef RPI
+		case 20:
+			CFG_use_individual_configuration_file = !CFG_use_individual_configuration_file;
+			break;
+#endif /* RPI */
 #ifdef XEP80_EMULATION
 		case 18:
 			{
@@ -2322,7 +2333,7 @@ static void VideoModeSettings(void)
 			SDL_VIDEO_ToggleOpengl();
 			if (!SDL_VIDEO_opengl_available)
 				UI_driver->fMessage("Error: OpenGL is not available.", 1);
-				
+
 			break;
 		case 2:
 			if (!SDL_VIDEO_opengl)
@@ -2726,7 +2737,7 @@ static void DisplaySettings(void)
 		UI_MENU_END
 	};
 
-#if SUPPORTS_PLATFORM_PALETTEUPDATE	
+#if SUPPORTS_PLATFORM_PALETTEUPDATE
 	static const UI_tMenuItem colours_preset_menu_array[] = {
 		UI_MENU_ACTION(0, "Standard (most realistic)"),
 		UI_MENU_ACTION(1, "Deep black (allows pure black color)"),
@@ -2993,8 +3004,8 @@ static void DisplaySettings(void)
 				Colours_Update();
 				for (i=0; i<6; i++) {
 					UpdateColourControl(i);
-				}					
-			}	
+				}
+			}
 			break;
 		case 13:
 		case 14:
@@ -3075,7 +3086,7 @@ static void WindowsOptions(void)
 		UI_MENU_ACTION(1, "Window"),
 		UI_MENU_END
 	};
-	
+
 	static const UI_tMenuItem display_mode_menu_array[] = {
 		UI_MENU_ACTION(0, "GDI"),
 		UI_MENU_ACTION(1, "GDI+"),
@@ -3086,7 +3097,7 @@ static void WindowsOptions(void)
 		UI_MENU_ACTION(6, "Direct3D/Bilinear"),
 		UI_MENU_END
 	};
-	
+
 	static const UI_tMenuItem window_scale_menu_array[] = {
 		UI_MENU_ACTION(0, "100% [320x240]"),
 		UI_MENU_ACTION(1, "150% [480x360]"),
@@ -3099,7 +3110,7 @@ static void WindowsOptions(void)
 		UI_MENU_ACTION(8, "500% [1600x1200]"),
 		UI_MENU_END
 	};
-	
+
 	static const UI_tMenuItem fsresolution_menu_array[] = {
 		UI_MENU_ACTION(0, desktopreslabel),
 		UI_MENU_ACTION(1, "VGA     [640x480]   (2x)"),
@@ -3107,7 +3118,7 @@ static void WindowsOptions(void)
 		UI_MENU_ACTION(3, "UXGA    [1600x1200] (5x)"),
 		UI_MENU_END
 	};
-	
+
 	static const UI_tMenuItem scaling_method_menu_array[] = {
 		UI_MENU_ACTION(0, "Off"),
 		UI_MENU_ACTION(1, "Normal"),
@@ -3115,7 +3126,7 @@ static void WindowsOptions(void)
 		UI_MENU_ACTION(3, "Adaptive"),
 		UI_MENU_END
 	};
-	
+
 	static const UI_tMenuItem aspect_mode_menu_array[] = {
 		UI_MENU_ACTION(0, "Auto       [7:5/4:3]"),
 		UI_MENU_ACTION(1, "Wide       [7:5]"),
@@ -3123,7 +3134,7 @@ static void WindowsOptions(void)
 		UI_MENU_ACTION(3, "Compressed [4:3]"),
 		UI_MENU_END
 	};
-	
+
 	static const UI_tMenuItem scanline_mode_menu_array[] = {
 		UI_MENU_ACTION(0, "Off"),
 		UI_MENU_ACTION(1, "Low     [1x]"),
@@ -3139,8 +3150,8 @@ static void WindowsOptions(void)
 		UI_MENU_SUBMENU_SUFFIX(2, "Window scale: ", NULL),
 		UI_MENU_SUBMENU_SUFFIX(3, "Fullscreen resolution:", NULL),
 		UI_MENU_SUBMENU_SUFFIX(4, "Scaling method:", NULL),
-		UI_MENU_SUBMENU_SUFFIX(5, "Aspect mode:", NULL),		
-		UI_MENU_ACTION_PREFIX(6, "Horizontal crop: ", native_width_label),		
+		UI_MENU_SUBMENU_SUFFIX(5, "Aspect mode:", NULL),
+		UI_MENU_ACTION_PREFIX(6, "Horizontal crop: ", native_width_label),
 		UI_MENU_ACTION_PREFIX(7, "Vertical crop:   ", native_height_label),
 		UI_MENU_CHECK(8, "Lock aspect mode when cropping:"),
 		UI_MENU_SUBMENU_SUFFIX(9, "Horizontal offset: ", NULL),
@@ -3168,24 +3179,24 @@ static void WindowsOptions(void)
 		else {
 			/*SetDisplayMode(GetActiveDisplayMode());*/
 			GetDisplayModeName(displaymodename);
-			FindMenuItem(menu_array, 0)->suffix = displaymodename; 
+			FindMenuItem(menu_array, 0)->suffix = displaymodename;
 			FindMenuItem(menu_array, 1)->suffix = screen_mode_menu_array[screenmode].item;
 			memcpy(current_scale, window_scale_menu_array[(int)((windowscale/100.0f-1)*2)].item, 5);
-			current_scale[4] = '\0'; 
-			
+			current_scale[4] = '\0';
+
 			FindMenuItem(menu_array, 2)->suffix = current_scale;
-			
+
 			if (fsresolution == VGA)
 				FindMenuItem(menu_array, 3)->suffix = "VGA";
 			else if (fsresolution == SXGA)
 				FindMenuItem(menu_array, 3)->suffix = "SXGA";
 			else if (fsresolution == UXGA)
 				FindMenuItem(menu_array, 3)->suffix = "UXGA";
-			else	
+			else
 				FindMenuItem(menu_array, 3)->suffix = "Desktop";
-			
+
 			FindMenuItem(menu_array, 4)->suffix = scaling_method_menu_array[scalingmethod].item;
-			
+
 			if (aspectmode == AUTO)
 				FindMenuItem(menu_array, 5)->suffix = "Auto";
 			else if (aspectmode == WIDE)
@@ -3198,14 +3209,14 @@ static void WindowsOptions(void)
 			snprintf(hcrop_label, sizeof(hcrop_label), "%d", crop.horizontal);
 			snprintf(vcrop_label, sizeof(vcrop_label), "%d", crop.vertical);
 		    FindMenuItem(menu_array, 6)->suffix = hcrop_label;
-			FindMenuItem(menu_array, 7)->suffix = vcrop_label; 
-			
+			FindMenuItem(menu_array, 7)->suffix = vcrop_label;
+
 			SetItemChecked(menu_array, 8, lockaspect);
 			snprintf(hshift_label, sizeof(hshift_label), "%d", offset.horizontal);
 			snprintf(vshift_label, sizeof(vshift_label), "%d", offset.vertical);
 			FindMenuItem(menu_array, 9)->suffix = hshift_label;
 			FindMenuItem(menu_array, 10)->suffix = vshift_label;
-			
+
 			if (frameparams.scanlinemode == NONE)
 				FindMenuItem(menu_array, 11)->suffix = "Off";
 			else if (frameparams.scanlinemode == LOW)
@@ -3214,7 +3225,7 @@ static void WindowsOptions(void)
 				FindMenuItem(menu_array, 11)->suffix = "Medium";
 			else if (frameparams.scanlinemode == HIGH)
 				FindMenuItem(menu_array, 11)->suffix = "High";
-				
+
 			SetItemChecked(menu_array, 12, hidecursor);
 			SetItemChecked(menu_array, 13, showmenu);
 		}
@@ -3227,7 +3238,7 @@ static void WindowsOptions(void)
 				prev_value = displaymode;
 				option2 = UI_driver->fSelect(NULL, UI_SELECT_POPUP, displaymode, display_mode_menu_array, NULL);
 				if (option2 >= 0) {
-					displaymode = option2;					
+					displaymode = option2;
 					if (prev_value != option2)
 						UI_driver->fMessage("Save the config and restart emulator", 1);
 				}
@@ -3245,7 +3256,7 @@ static void WindowsOptions(void)
 		case 2:
 			if (rendermode != DIRECTDRAW) {
 				option2 = UI_driver->fSelect(NULL, UI_SELECT_POPUP, (int)((windowscale/100.0f-1)*2), window_scale_menu_array, NULL);
-				if (option2 >= 0) {					
+				if (option2 >= 0) {
 					changewindowsize(SET, (int)((option2/2.0f+1)*100));
 					prev_value = windowscale;
 					windowscale = (int)((option2/2.0f+1)*100);
@@ -3296,7 +3307,7 @@ static void WindowsOptions(void)
 			if (rendermode != DIRECTDRAW) {
 				option2 = UI_driver->fSelect(NULL, UI_SELECT_POPUP, aspectmode, aspect_mode_menu_array, NULL);
 				if (option2 >= 0) {
-					aspectmode = option2;					
+					aspectmode = option2;
 					changewindowsize(RESET, 0);
 					refreshframe();
 					PLATFORM_DisplayScreen(); /* force rebuild of the clipping frame */
@@ -3309,12 +3320,12 @@ static void WindowsOptions(void)
 			if (rendermode != DIRECTDRAW)  {
 				snprintf(trim_value, sizeof(trim_value), "%d", crop.horizontal);
 				if (UI_driver->fEditString("Enter value", trim_value, sizeof(trim_value))) {
-					if (atoi(trim_value) > 150) 
+					if (atoi(trim_value) > 150)
 						UI_driver->fMessage("Maximum X-Trim value is 150", 1);
-					else if (atoi(trim_value) < -24) 
+					else if (atoi(trim_value) < -24)
 						UI_driver->fMessage("Minimum X-Trim value is -24", 1);
 					else {
-						crop.horizontal = atoi(trim_value);	
+						crop.horizontal = atoi(trim_value);
 						changewindowsize(RESET, 0);
 						refreshframe();
 						PLATFORM_DisplayScreen(); /* force rebuild of the clipping frame */
@@ -3327,7 +3338,7 @@ static void WindowsOptions(void)
 			if (rendermode != DIRECTDRAW)  {
 				snprintf(trim_value, sizeof(trim_value), "%d", crop.vertical);
 				if (UI_driver->fEditString("Enter value", trim_value, sizeof(trim_value))) {
-					if (atoi(trim_value) < 0) 
+					if (atoi(trim_value) < 0)
 						UI_driver->fMessage("Minimum Y-Trim value is 0", 1);
 					else if (atoi(trim_value) > 108)
 						UI_driver->fMessage("Maximum Y-Trim value is 108", 1);
@@ -3352,12 +3363,12 @@ static void WindowsOptions(void)
 			if (rendermode != DIRECTDRAW)  {
 				snprintf(shift_value, sizeof(shift_value), "%d", offset.horizontal);
 				if (UI_driver->fEditString("Enter value", shift_value, sizeof(shift_value))) {
-					if (atoi(shift_value) > 24) 
+					if (atoi(shift_value) > 24)
 						UI_driver->fMessage("Maximum horizontal offset is 24", 1);
-					else if (atoi(shift_value) < -24) 
+					else if (atoi(shift_value) < -24)
 						UI_driver->fMessage("Minimum horizontal offset is -24", 1);
 					else {
-						offset.horizontal = atoi(shift_value);						
+						offset.horizontal = atoi(shift_value);
 						changewindowsize(RESET, 0);
 						refreshframe();
 					}
@@ -3368,12 +3379,12 @@ static void WindowsOptions(void)
 			if (rendermode != DIRECTDRAW)  {
 				snprintf(shift_value, sizeof(shift_value), "%d", offset.vertical);
 				if (UI_driver->fEditString("Enter value", shift_value, sizeof(shift_value))) {
-					if (atoi(shift_value) > 50) 
+					if (atoi(shift_value) > 50)
 						UI_driver->fMessage("Maximum vertical offset is 50", 1);
-					else if (atoi(shift_value) < -50) 
+					else if (atoi(shift_value) < -50)
 						UI_driver->fMessage("Minimum vertical offset is 50", 1);
 					else {
-						offset.vertical = atoi(shift_value);					
+						offset.vertical = atoi(shift_value);
 						changewindowsize(RESET, 0);
 						refreshframe();
 					}
@@ -3400,7 +3411,7 @@ static void WindowsOptions(void)
 				togglemenustate();
 			}
 			break;
-			
+
 		default:
 			return;
 		}
@@ -3490,10 +3501,10 @@ static void ConfigureControllerButtons(int stick)
 	int i;
 	char title[40];
 	int option2 = 0;
-	
+
 	snprintf(title, sizeof(title), "Define keys for controller %d", stick + 1);
 	for(;;) {
-		for(i = 0; i <= 8; i++) 
+		for(i = 0; i <= 8; i++)
 			PLATFORM_GetButtonAssignments(stick, i, buttons[stick][i], sizeof(buttons[stick][i]));
 		option2 = UI_driver->fSelect(title, UI_SELECT_POPUP, option2, stick == 0 ? joy0_menu_array : joy1_menu_array, NULL);
 		if (option2 >= 0 && option2 <= 8)
@@ -3513,7 +3524,7 @@ static void ControllerConfiguration(void)
 		UI_MENU_ACTION(2, "Arrows"),
 		UI_MENU_END
 	};
-	
+
 	static const UI_tMenuItem alternate_joystick_mode_array[] = {
 		UI_MENU_ACTION(0, "Normal"),
 		UI_MENU_ACTION(1, "Dual"),
@@ -4088,9 +4099,9 @@ void UI_Run(void)
 	if (useconsole)
 		strcpy(monitor_label, "Enter Monitor");
 	else
-		strcpy(monitor_label, "Enter Monitor (need -console)"); 
+		strcpy(monitor_label, "Enter Monitor (need -console)");
 #endif
-	
+
 
 	/* Sound_Active(FALSE); */
 	UI_driver->fInit();
@@ -4103,9 +4114,9 @@ void UI_Run(void)
 #endif
 
 	while (!done) {
-		
+
 		if (UI_alt_function != -1)
-			UI_current_function = UI_alt_function;		
+			UI_current_function = UI_alt_function;
 		if (UI_alt_function < 0)
 			option = UI_driver->fSelect(Atari800_TITLE, 0, option, menu_array, NULL);
 		if (UI_alt_function >= 0) {
@@ -4238,7 +4249,7 @@ void UI_Run(void)
 #ifdef DIRECTX
 	setcursor();
 #endif
-	
+
 	/* flush keypresses */
 	while (PLATFORM_Keyboard() != AKEY_NONE)
 		Atari800_Sync();
