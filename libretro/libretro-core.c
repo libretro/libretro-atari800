@@ -25,7 +25,6 @@ unsigned atari_devices[ 4 ];
 int keyboard_type=0;
 int autorun5200=0;
 int a5200_joyhack=0;
-int coreindividual_config=0;
 
 int RETROJOY=0,RETROPT0=0,RETROSTATUS=0,RETRODRVTYPE=0;
 int retrojoy_init=0,retro_ui_finalized=0;
@@ -173,7 +172,7 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
      if (strcmp(var.value, "enabled") == 0)
-			 coreindividual_config = 1;
+			 CFG_use_individual_configuration_file = 1;
    }
 
    var.key = "atari800_resolution";

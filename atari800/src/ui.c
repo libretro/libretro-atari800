@@ -1882,9 +1882,6 @@ static void AtariSettings(void)
 #endif /* XEP80_EMULATION */
 
 	static UI_tMenuItem menu_array[] = {
-#ifdef RPI
-		UI_MENU_CHECK(20, "Use individual configuration file:"),
-#endif /* RPI */
 		UI_MENU_CHECK(0, "Disable BASIC when booting Atari:"),
 		UI_MENU_CHECK(1, "Boot from tape (hold Start):"),
 		UI_MENU_CHECK(2, "Enable R-Time 8:"),
@@ -1938,9 +1935,6 @@ static void AtariSettings(void)
 		SetItemChecked(menu_array, 6, Devices_enable_r_patch);
 #endif
 		SetItemChecked(menu_array, 16, CFG_save_on_exit);
-#ifdef RPI
-		SetItemChecked(menu_array, 20, CFG_use_individual_configuration_file);
-#endif /* RPI */
 
 		option = UI_driver->fSelect("Emulator Settings", 0, option, menu_array, &seltype);
 
@@ -2013,11 +2007,6 @@ static void AtariSettings(void)
 		case 17:
 			Atari800_turbo = !Atari800_turbo;
 			break;
-#ifdef RPI
-		case 20:
-			CFG_use_individual_configuration_file = !CFG_use_individual_configuration_file;
-			break;
-#endif /* RPI */
 #ifdef XEP80_EMULATION
 		case 18:
 			{
