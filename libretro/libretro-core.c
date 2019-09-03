@@ -7,6 +7,7 @@
 #include "memory.h"
 #include "cassette.h"
 #include "artifact.h"
+#include "cfg.h"
 
 cothread_t mainThread;
 cothread_t emuThread;
