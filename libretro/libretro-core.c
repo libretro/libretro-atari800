@@ -174,6 +174,10 @@ static void update_variables(void)
      if (strcmp(var.value, "enabled") == 0)
 			 CFG_use_individual_configuration_file = 1;
    }
+   else if (strcmp(var.value, "disabled") == 0)
+   {
+      CFG_use_individual_configuration_file = 0;
+   }
 
    var.key = "atari800_resolution";
    var.value = NULL;
@@ -505,8 +509,6 @@ void retro_init(void)
    LOGI("Retro SYSTEM_DIRECTORY %s\n",retro_system_directory);
    LOGI("Retro SAVE_DIRECTORY %s\n",retro_save_directory);
    LOGI("Retro CONTENT_DIRECTORY %s\n",retro_content_directory);
-
-   //LOGI("coreindividual_config %s\n", coreindividual_config);
 
 #ifndef RENDER16B
     	enum retro_pixel_format fmt =RETRO_PIXEL_FORMAT_XRGB8888;
