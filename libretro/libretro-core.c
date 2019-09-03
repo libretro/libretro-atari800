@@ -376,11 +376,13 @@ static void update_variables(void)
 
 static void retro_wrap_emulator()
 {
-LOGI("WRAP EMU THD\n");
+   LOGI("WRAP EMU THD\n");
+   LOGI("Calling pre-main with RPATH %s\n",RPATH);
+
    pre_main(RPATH);
 
 
-LOGI("EXIT EMU THD\n");
+   LOGI("EXIT EMU THD\n");
    pauseg=-1;
 
    //environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, 0);
