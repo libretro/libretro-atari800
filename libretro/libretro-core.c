@@ -135,7 +135,7 @@ void retro_set_environment(retro_environment_t cb)
      },
      {
        "atari800_individualconfiguration",
-       "Retroarch Core Individual Configuration; disabled|enabled",
+       "Retroarch Core Individual Configuration File; disabled|enabled",
      },
 
       { NULL, NULL },
@@ -173,11 +173,11 @@ static void update_variables(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
    {
      if (strcmp(var.value, "enabled") == 0)
-			 CFG_use_individual_configuration_file = 1;
+			 CFG_use_individual_configuration_file = TRUE;
    }
    else if (strcmp(var.value, "disabled") == 0)
    {
-      CFG_use_individual_configuration_file = 0;
+      CFG_use_individual_configuration_file = FALSE;
    }
 
    var.key = "atari800_resolution";
@@ -378,7 +378,16 @@ static void update_variables(void)
 static void retro_wrap_emulator()
 {
    LOGI("WRAP EMU THD\n");
-   LOGI("Calling pre-main with RPATH %s\n",RPATH);
+
+   if (CFG_use_individual_configuration_file)
+   {
+     LOGI("Use individual configuration file is set.");
+      //argv[0]
+   }
+   else
+   {
+     LOGI("Use individual configuration file is NOT set.");
+   }
 
    pre_main(RPATH);
 
@@ -593,7 +602,7 @@ void retro_get_system_info(struct retro_system_info *info)
    memset(info, 0, sizeof(*info));
    info->library_name     = "Atari800";
 //   info->library_version  = "3.1.0" GIT_VERSION;
-   info->library_version  = "3.5.0 - Neo-Stone";
+   info->library_version  = "3.2.0" GIT_VERSION;
    info->valid_extensions = "xfd|atr|cdm|cas|bin|a52|zip|atx";
    info->need_fullpath    = true;
    info->block_extract = false;

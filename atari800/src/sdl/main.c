@@ -69,13 +69,25 @@ int PLATFORM_Initialise(int *argc, char *argv[])
 	int i, j;
 	int help_only = FALSE;
 
+
+Log_print("Argument 0: %s", argv[0]);
 	for (i = j = 1; i < *argc; i++) {
+
+
+Log_print("Argument: %s", argv[i]);
+
+
+
+
 		if (strcmp(argv[i], "-help") == 0) {
 			help_only = TRUE;
 		}
 		argv[j++] = argv[i];
 	}
 	*argc = j;
+
+
+Log_flushlog();
 
 	if (!help_only) {
 		i = SDL_INIT_JOYSTICK
