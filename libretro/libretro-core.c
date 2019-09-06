@@ -381,12 +381,14 @@ static void retro_wrap_emulator()
 
    if (CFG_use_individual_configuration_file)
    {
-     LOGI("Use individual configuration file is set.");
+     LOGI("Use individual configuration file is ENABLED.\n");
+     LOGI(RETRO_ENVIRONMENT_GET_LIBRETRO_PATH);
+     LOGI("\n");
       //argv[0]
    }
    else
    {
-     LOGI("Use individual configuration file is NOT set.");
+     LOGI("Use individual configuration file is DISABLED.\n");
    }
 
    pre_main(RPATH);
