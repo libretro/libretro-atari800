@@ -393,7 +393,7 @@ static void retro_wrap_emulator()
         // https://stackoverflow.com/questions/7180293/how-to-extract-filename-from-path
         (whoami = strrchr(libretro_path, '/')) ? ++whoami : (whoami = libretro_path);
 
-        LOGI("  Extracted Fielname is %s\n", whoami);
+        LOGI("  Extracted Filename is %s\n", whoami);
 
 
 
