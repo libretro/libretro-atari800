@@ -382,9 +382,20 @@ static void retro_wrap_emulator()
    if (CFG_use_individual_configuration_file)
    {
      LOGI("Use individual configuration file is ENABLED.\n");
-     LOGI(RETRO_ENVIRONMENT_GET_LIBRETRO_PATH);
-     LOGI("\n");
-      //argv[0]
+
+     const char *libretro_path = NULL;
+
+     if (environ_cb(RETRO_ENVIRONMENT_GET_LIBRETRO_PATH, &libretro_path) && libretro_path)
+     {
+        LOGI("Libretro Path %s\n", libretro_path);
+
+
+
+     }
+     else
+     {
+       LOGI("RETRO_ENVIRONMENT_GET_LIBRETRO_PATH returned NULL.\n");
+     }
    }
    else
    {
