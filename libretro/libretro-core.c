@@ -389,11 +389,14 @@ static void retro_wrap_emulator()
      {
         LOGI("  Libretro Path is %s\n", libretro_path);
 
-        char * whoami;
+        char * libretro_config_filename;
         // https://stackoverflow.com/questions/7180293/how-to-extract-filename-from-path
-        (whoami = strrchr(libretro_path, '/')) ? ++whoami : (whoami = libretro_path);
+        (libretro_config_filename = strrchr(libretro_path, '/')) ? ++libretro_config_filename : (libretro_config_filename = libretro_path);
+        LOGI("  Extracted Filename is %s\n", libretro_config_filename);
 
-        LOGI("  Extracted Filename is %s\n", whoami);
+        strcat(libretro_config_filename, ".cfg");
+        LOGI("  Configuration Filename is %s\n", libretro_config_filename);
+
 
 
 
