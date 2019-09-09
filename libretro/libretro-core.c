@@ -387,13 +387,13 @@ static void retro_wrap_emulator()
 
      if (environ_cb(RETRO_ENVIRONMENT_GET_LIBRETRO_PATH, &libretro_path) && libretro_path)
      {
-        LOGI("Libretro Path is %s\n", libretro_path);
+        LOGI("  Libretro Path is %s\n", libretro_path);
 
         char * whoami;
         // https://stackoverflow.com/questions/7180293/how-to-extract-filename-from-path
         (whoami = strrchr(libretro_path, '/')) ? ++whoami : (whoami = libretro_path);
 
-        LOGI("Extracted Fielname is %s\n", whoami);
+        LOGI("  Extracted Fielname is %s\n", whoami);
 
 
 
