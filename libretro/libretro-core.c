@@ -387,13 +387,9 @@ static void retro_wrap_emulator()
 
      if (environ_cb(RETRO_ENVIRONMENT_GET_LIBRETRO_PATH, &libretro_path) && libretro_path)
      {
-        LOGI("  Libretro Path is %s\n", libretro_path);
-
         (CFG_individual_configuration_filename = strrchr(libretro_path, '/')) ? ++CFG_individual_configuration_filename : (CFG_individual_configuration_filename = libretro_path);
-        LOGI("  Extracted Filename is %s\n", CFG_individual_configuration_filename);
-
         strcat(CFG_individual_configuration_filename, ".cfg");
-        LOGI("  Configuration Filename will be %s\n", CFG_individual_configuration_filename);
+        LOGI("  Configuration filename will be %s\n", CFG_individual_configuration_filename);
      }
      else
      {
