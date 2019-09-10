@@ -101,17 +101,23 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 	if (alternate_config_filename != NULL && *alternate_config_filename > 0) {
 		Util_strlcpy(rtconfig_filename, alternate_config_filename, FILENAME_MAX);
 	}
-	/* if individual configuration filename is set then use it */
-	else if (CFG_use_individual_configuration_file && CFG_individual_configuration_filename != NULL && *CFG_individual_configuration_filename > 0) {
-		LOGI("here we go!");
-	}
-	/* else use the default config name under the HOME folder */
 	else {
 		char *home = getenv("HOME");
-		if (home != NULL)
-			Util_catpath(rtconfig_filename, home, DEFAULT_CFG_NAME);
-		else
-			strcpy(rtconfig_filename, DEFAULT_CFG_NAME);
+
+		/* if individual configuration filename is set then use it */
+		if (CFG_use_individual_configuration_file && CFG_individual_configuration_filename != NULL && *CFG_individual_configuration_filename > 0) {
+			if (home != NULL)
+				Util_catpath(rtconfig_filename, home, CFG_individual_configuration_filename);
+			else
+				strcpy(rtconfig_filename, CFG_individual_configuration_filename);
+		}
+		/* else use the default config name under the HOME folder */
+		else {
+			if (home != NULL)
+				Util_catpath(rtconfig_filename, home, DEFAULT_CFG_NAME);
+			else
+				strcpy(rtconfig_filename, DEFAULT_CFG_NAME);
+		}
 	}
 
 	fp = fopen(fname, "r");
