@@ -65,6 +65,7 @@
 
 int CFG_save_on_exit = FALSE;
 int CFG_use_individual_configuration_file = FALSE;
+char * CFG_individual_configuration_filename = NULL;
 
 /* If another default path config path is defined use it
    otherwise use the default one */
@@ -99,6 +100,10 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 	/* if alternate config filename is passed then use it */
 	if (alternate_config_filename != NULL && *alternate_config_filename > 0) {
 		Util_strlcpy(rtconfig_filename, alternate_config_filename, FILENAME_MAX);
+	}
+	/* if individual configuration filename is set then use it */
+	else if (CFG_use_individual_configuration_file && CFG_individual_configuration_filename != NULL && *CFG_individual_configuration_filename > 0) {
+		LOGI("here we go!");
 	}
 	/* else use the default config name under the HOME folder */
 	else {
