@@ -144,27 +144,226 @@ void retro_set_environment(retro_environment_t cb)
    cb(RETRO_ENVIRONMENT_SET_VARIABLES, variables);
 }
 
+static void do_update_variables(void)
+{
+  struct retro_variable var;
+
+  var.key = "atari800_opt1";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "enabled") == 0)
+      autorun5200 = 1;
+  }
+
+  var.key = "atari800_opt2";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "enabled") == 0)
+      a5200_joyhack = 1;
+  }
+
+  var.key = "atari800_resolution";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+     char *pch;
+     char str[100];
+     snprintf(str, sizeof(str), "%s", var.value);
+
+     pch = strtok(str, "x");
+     if (pch)
+        retrow = strtoul(pch, NULL, 0);
+     pch = strtok(NULL, "x");
+     if (pch)
+        retroh = strtoul(pch, NULL, 0);
+
+     fprintf(stderr, "[libretro-atari800]: Got size: %u x %u.\n", retrow, retroh);
+
+     CROP_WIDTH =retrow;
+     CROP_HEIGHT= (retroh-80);
+     VIRTUAL_WIDTH = retrow;
+     texture_init();
+     //reset_screen();
+  }
+
+  var.key = "atari800_system";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "400/800 (OS B)") == 0)
+    {
+      Atari800_machine_type = Atari800_MACHINE_800;
+      MEMORY_ram_size = 48;
+      Atari800_builtin_basic = FALSE;
+      Atari800_keyboard_leds = FALSE;
+      Atari800_f_keys = FALSE;
+      Atari800_jumper = FALSE;
+      Atari800_builtin_game = FALSE;
+      Atari800_keyboard_detached = FALSE;
+      Atari800_InitialiseMachine();
+    }
+    else if (strcmp(var.value, "800XL (64K)") == 0)
+    {
+      Atari800_machine_type = Atari800_MACHINE_XLXE;
+      MEMORY_ram_size = 64;
+      Atari800_builtin_basic = TRUE;
+      Atari800_keyboard_leds = FALSE;
+      Atari800_f_keys = FALSE;
+      Atari800_jumper = FALSE;
+      Atari800_builtin_game = FALSE;
+      Atari800_keyboard_detached = FALSE;
+      Atari800_InitialiseMachine();
+    }
+    else if (strcmp(var.value, "130XE (128K)") == 0)
+    {
+      Atari800_machine_type = Atari800_MACHINE_XLXE;
+      MEMORY_ram_size = 128;
+      Atari800_builtin_basic = TRUE;
+      Atari800_keyboard_leds = FALSE;
+      Atari800_f_keys = FALSE;
+      Atari800_jumper = FALSE;
+      Atari800_builtin_game = FALSE;
+      Atari800_keyboard_detached = FALSE;
+      Atari800_InitialiseMachine();
+    }
+    else if (strcmp(var.value, "5200") == 0)
+    {
+      Atari800_machine_type = Atari800_MACHINE_5200;
+      MEMORY_ram_size = 16;
+      Atari800_builtin_basic = FALSE;
+      Atari800_keyboard_leds = FALSE;
+      Atari800_f_keys = FALSE;
+      Atari800_jumper = FALSE;
+      Atari800_builtin_game = FALSE;
+      Atari800_keyboard_detached = FALSE;
+      Atari800_InitialiseMachine();
+    }
+  }
+
+  var.key = "atari800_ntscpal";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "NTSC") == 0)
+    {
+      Atari800_tv_mode = Atari800_TV_NTSC;
+    }
+    else if (strcmp(var.value, "PAL") == 0)
+    {
+      Atari800_tv_mode = Atari800_TV_PAL;
+    }
+  }
+
+  var.key = "atari800_internalbasic";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "enabled") == 0)
+    {
+      Atari800_disable_basic = FALSE;
+      Atari800_InitialiseMachine();
+    }
+    else if (strcmp(var.value, "disabled") == 0)
+    {
+      Atari800_disable_basic = TRUE;
+      Atari800_InitialiseMachine();
+    }
+  }
+
+  var.key = "atari800_sioaccel";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "enabled") == 0)
+    {
+      ESC_enable_sio_patch = Devices_enable_h_patch = Devices_enable_p_patch = Devices_enable_r_patch = TRUE;
+      Atari800_InitialiseMachine();
+    }
+    else if (strcmp(var.value, "disabled") == 0)
+    {
+      ESC_enable_sio_patch = Devices_enable_h_patch = Devices_enable_p_patch = Devices_enable_r_patch = FALSE;
+      Atari800_InitialiseMachine();
+    }
+  }
+
+  var.key = "atari800_cassboot";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "enabled") == 0)
+    {
+      CASSETTE_hold_start=1;
+      Atari800_InitialiseMachine();
+    }
+    else if (strcmp(var.value, "disabled") == 0)
+    {
+      CASSETTE_hold_start=0;
+      Atari800_InitialiseMachine();
+    }
+  }
+
+  var.key = "atari800_artifacting";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "enabled") == 0)
+    {
+      if (Atari800_tv_mode == Atari800_TV_NTSC)
+      {
+        ARTIFACT_Set(ARTIFACT_NTSC_OLD);
+        ARTIFACT_SetTVMode(Atari800_TV_NTSC);
+      }
+      else if (Atari800_tv_mode == Atari800_TV_PAL)
+      {
+        ARTIFACT_Set(ARTIFACT_NONE); // PAL Blending has been flipped off in config for now.
+        ARTIFACT_SetTVMode(Atari800_TV_PAL);
+      }
+    }
+    else if (strcmp(var.value, "disabled") == 0)
+    {
+      if (Atari800_tv_mode == Atari800_TV_NTSC)
+      {
+        ARTIFACT_Set(ARTIFACT_NONE);
+        ARTIFACT_SetTVMode(Atari800_TV_NTSC);
+      }
+      else if (Atari800_tv_mode == Atari800_TV_PAL)
+      {
+        ARTIFACT_Set(ARTIFACT_NONE);
+        ARTIFACT_SetTVMode(Atari800_TV_PAL);
+      }
+    }
+  }
+
+  var.key = "atari800_keyboard";
+  var.value = NULL;
+
+  if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+  {
+    if (strcmp(var.value, "poll") == 0)
+    {
+      keyboard_type=0;
+    }
+    else if (strcmp(var.value, "callback") == 0)
+    {
+      keyboard_type=1;
+    }
+  }
+}
+
 static void update_variables(void)
 {
    struct retro_variable var;
-
-   var.key = "atari800_opt1";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-     if (strcmp(var.value, "enabled") == 0)
-			 autorun5200 = 1;
-   }
-
-   var.key = "atari800_opt2";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-     if (strcmp(var.value, "enabled") == 0)
-			 a5200_joyhack = 1;
-   }
 
    var.key = "atari800_individualconfiguration";
    var.value = NULL;
@@ -179,205 +378,13 @@ static void update_variables(void)
       CFG_use_individual_configuration_file = FALSE;
    }
 
-   var.key = "atari800_resolution";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-      char *pch;
-      char str[100];
-      snprintf(str, sizeof(str), "%s", var.value);
-
-      pch = strtok(str, "x");
-      if (pch)
-         retrow = strtoul(pch, NULL, 0);
-      pch = strtok(NULL, "x");
-      if (pch)
-         retroh = strtoul(pch, NULL, 0);
-
-      fprintf(stderr, "[libretro-atari800]: Got size: %u x %u.\n", retrow, retroh);
-
-      CROP_WIDTH =retrow;
-      CROP_HEIGHT= (retroh-80);
-      VIRTUAL_WIDTH = retrow;
-      texture_init();
-      //reset_screen();
-   }
-
-   var.key = "atari800_system";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-     {
-       if (strcmp(var.value, "400/800 (OS B)") == 0)
-	 {
-	   Atari800_machine_type = Atari800_MACHINE_800;
-	   MEMORY_ram_size = 48;
-	   Atari800_builtin_basic = FALSE;
-	   Atari800_keyboard_leds = FALSE;
-	   Atari800_f_keys = FALSE;
-	   Atari800_jumper = FALSE;
-	   Atari800_builtin_game = FALSE;
-	   Atari800_keyboard_detached = FALSE;
-	   Atari800_InitialiseMachine();
-	 }
-       else if (strcmp(var.value, "800XL (64K)") == 0)
-	 {
-	   Atari800_machine_type = Atari800_MACHINE_XLXE;
-	   MEMORY_ram_size = 64;
-	   Atari800_builtin_basic = TRUE;
-	   Atari800_keyboard_leds = FALSE;
-	   Atari800_f_keys = FALSE;
-	   Atari800_jumper = FALSE;
-	   Atari800_builtin_game = FALSE;
-	   Atari800_keyboard_detached = FALSE;
-	   Atari800_InitialiseMachine();
-	 }
-       else if (strcmp(var.value, "130XE (128K)") == 0)
-	 {
-	   Atari800_machine_type = Atari800_MACHINE_XLXE;
-	   MEMORY_ram_size = 128;
-	   Atari800_builtin_basic = TRUE;
-	   Atari800_keyboard_leds = FALSE;
-	   Atari800_f_keys = FALSE;
-	   Atari800_jumper = FALSE;
-	   Atari800_builtin_game = FALSE;
-	   Atari800_keyboard_detached = FALSE;
-	   Atari800_InitialiseMachine();
-	 }
-       else if (strcmp(var.value, "5200") == 0)
-	 {
-	   Atari800_machine_type = Atari800_MACHINE_5200;
-	   MEMORY_ram_size = 16;
-	   Atari800_builtin_basic = FALSE;
-	   Atari800_keyboard_leds = FALSE;
-	   Atari800_f_keys = FALSE;
-	   Atari800_jumper = FALSE;
-	   Atari800_builtin_game = FALSE;
-	   Atari800_keyboard_detached = FALSE;
-	   Atari800_InitialiseMachine();
-	 }
-     }
-
-   var.key = "atari800_ntscpal";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-     {
-       if (strcmp(var.value, "NTSC") == 0)
-	 {
-	   Atari800_tv_mode = Atari800_TV_NTSC;
-	 }
-       else if (strcmp(var.value, "PAL") == 0)
-	 {
-	   Atari800_tv_mode = Atari800_TV_PAL;
-	 }
-     }
-
-   var.key = "atari800_internalbasic";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-     {
-       if (strcmp(var.value, "enabled") == 0)
-	 {
-	   Atari800_disable_basic = FALSE;
-	   Atari800_InitialiseMachine();
-	 }
-       else if (strcmp(var.value, "disabled") == 0)
-	 {
-	   Atari800_disable_basic = TRUE;
-	   Atari800_InitialiseMachine();
-	 }
-     }
-
-   var.key = "atari800_sioaccel";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-     {
-       if (strcmp(var.value, "enabled") == 0)
-	 {
-	   ESC_enable_sio_patch = Devices_enable_h_patch = Devices_enable_p_patch = Devices_enable_r_patch = TRUE;
-	   Atari800_InitialiseMachine();
-	 }
-       else if (strcmp(var.value, "disabled") == 0)
-	 {
-	   ESC_enable_sio_patch = Devices_enable_h_patch = Devices_enable_p_patch = Devices_enable_r_patch = FALSE;
-	   Atari800_InitialiseMachine();
-	 }
-     }
-
-   var.key = "atari800_cassboot";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-     if (strcmp(var.value, "enabled") == 0)
-	   {
-	      CASSETTE_hold_start=1;
-	      Atari800_InitialiseMachine();
-	   }
-     else if (strcmp(var.value, "disabled") == 0)
-	   {
-	      CASSETTE_hold_start=0;
-	      Atari800_InitialiseMachine();
-	   }
-   }
-
-   /* change artifacting only if
+   /* change variables only if
       Retroarch Core Individual Configuration File is DISABLED
-      otherwise it should be set only in appropriate configuration file(s)
+      otherwise values should be set only in appropriate configuration file(s)
    */
    if (!CFG_use_individual_configuration_file)
    {
-     var.key = "atari800_artifacting";
-     var.value = NULL;
-
-     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-     {
-       if (strcmp(var.value, "enabled") == 0)
-       {
-         if (Atari800_tv_mode == Atari800_TV_NTSC)
-         {
-           ARTIFACT_Set(ARTIFACT_NTSC_OLD);
-           ARTIFACT_SetTVMode(Atari800_TV_NTSC);
-         }
-         else if (Atari800_tv_mode == Atari800_TV_PAL)
-         {
-           ARTIFACT_Set(ARTIFACT_NONE); // PAL Blending has been flipped off in config for now.
-           ARTIFACT_SetTVMode(Atari800_TV_PAL);
-  	     }
-       }
-       else if (strcmp(var.value, "disabled") == 0)
-       {
-         if (Atari800_tv_mode == Atari800_TV_NTSC)
-         {
-           ARTIFACT_Set(ARTIFACT_NONE);
-           ARTIFACT_SetTVMode(Atari800_TV_NTSC);
-         }
-         else if (Atari800_tv_mode == Atari800_TV_PAL)
-         {
-           ARTIFACT_Set(ARTIFACT_NONE);
-           ARTIFACT_SetTVMode(Atari800_TV_PAL);
-         }
-       }
-     }
-   }
-
-   var.key = "atari800_keyboard";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-   {
-     if (strcmp(var.value, "poll") == 0)
-	   {
-       keyboard_type=0;
-	   }
-     else if (strcmp(var.value, "callback") == 0)
-	   {
-       keyboard_type=1;
-	   }
+     do_update_variables();
    }
 }
 
