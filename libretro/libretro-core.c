@@ -146,7 +146,6 @@ void retro_set_environment(retro_environment_t cb)
 
 static void update_variables(void)
 {
-
    struct retro_variable var;
 
    var.key = "atari800_opt1";
@@ -313,66 +312,73 @@ static void update_variables(void)
    var.value = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+     if (strcmp(var.value, "enabled") == 0)
+	   {
+	      CASSETTE_hold_start=1;
+	      Atari800_InitialiseMachine();
+	   }
+     else if (strcmp(var.value, "disabled") == 0)
+	   {
+	      CASSETTE_hold_start=0;
+	      Atari800_InitialiseMachine();
+	   }
+   }
+
+   /* change artifacting only if
+      Retroarch Core Individual Configuration File is DISABLED
+      otherwise it should be set only in appropriate configuration file(s)
+   */
+   if (!CFG_use_individual_configuration_file)
+   {
+     var.key = "atari800_artifacting";
+     var.value = NULL;
+
+     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
      {
        if (strcmp(var.value, "enabled") == 0)
-	 {
-	   CASSETTE_hold_start=1;
-	   Atari800_InitialiseMachine();
-	 }
+       {
+         if (Atari800_tv_mode == Atari800_TV_NTSC)
+         {
+           ARTIFACT_Set(ARTIFACT_NTSC_OLD);
+           ARTIFACT_SetTVMode(Atari800_TV_NTSC);
+         }
+         else if (Atari800_tv_mode == Atari800_TV_PAL)
+         {
+           ARTIFACT_Set(ARTIFACT_NONE); // PAL Blending has been flipped off in config for now.
+           ARTIFACT_SetTVMode(Atari800_TV_PAL);
+  	     }
+       }
        else if (strcmp(var.value, "disabled") == 0)
-	 {
-	   CASSETTE_hold_start=0;
-	   Atari800_InitialiseMachine();
-	 }
+       {
+         if (Atari800_tv_mode == Atari800_TV_NTSC)
+         {
+           ARTIFACT_Set(ARTIFACT_NONE);
+           ARTIFACT_SetTVMode(Atari800_TV_NTSC);
+         }
+         else if (Atari800_tv_mode == Atari800_TV_PAL)
+         {
+           ARTIFACT_Set(ARTIFACT_NONE);
+           ARTIFACT_SetTVMode(Atari800_TV_PAL);
+         }
+       }
      }
-
-   var.key = "atari800_artifacting";
-   var.value = NULL;
-
-   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-     {
-       if (strcmp(var.value, "enabled") == 0)
-	 {
-	   if (Atari800_tv_mode == Atari800_TV_NTSC)
-	     {
-	       ARTIFACT_Set(ARTIFACT_NTSC_OLD);
-	       ARTIFACT_SetTVMode(Atari800_TV_NTSC);
-	     }
-	   else if (Atari800_tv_mode == Atari800_TV_PAL)
-	     {
-	       ARTIFACT_Set(ARTIFACT_NONE); // PAL Blending has been flipped off in config for now.
-	       ARTIFACT_SetTVMode(Atari800_TV_PAL);
-	     }
-	 }
-       else if (strcmp(var.value, "disabled") == 0)
-	 {
-	   if (Atari800_tv_mode == Atari800_TV_NTSC)
-	     {
-	       ARTIFACT_Set(ARTIFACT_NONE);
-	       ARTIFACT_SetTVMode(Atari800_TV_NTSC);
-	     }
-	   else if (Atari800_tv_mode == Atari800_TV_PAL)
-	     {
-	       ARTIFACT_Set(ARTIFACT_NONE);
-	       ARTIFACT_SetTVMode(Atari800_TV_PAL);
-	     }
-	 }
-     }
+   }
 
    var.key = "atari800_keyboard";
    var.value = NULL;
 
    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-     {
-       if (strcmp(var.value, "poll") == 0)
-	 {
-		keyboard_type=0;
-	 }
-       else if (strcmp(var.value, "callback") == 0)
-	 {
-		keyboard_type=1;
-	 }
-     }
+   {
+     if (strcmp(var.value, "poll") == 0)
+	   {
+       keyboard_type=0;
+	   }
+     else if (strcmp(var.value, "callback") == 0)
+	   {
+       keyboard_type=1;
+	   }
+   }
 }
 
 static void retro_wrap_emulator()
@@ -402,7 +408,6 @@ static void retro_wrap_emulator()
    }
 
    pre_main(RPATH);
-
 
    LOGI("EXIT EMU THD\n");
    pauseg=-1;
