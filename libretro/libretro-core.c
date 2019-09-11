@@ -61,6 +61,8 @@ static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
 retro_log_printf_t log_cb;
 
+static int in_initialisation = TRUE;
+
 void retro_set_environment(retro_environment_t cb)
 {
    environ_cb = cb;
@@ -439,8 +441,6 @@ void Emu_init(){
    MOUSEMODE=1;
 #endif
 
- //  update_variables();
-
    memset(Key_Sate,0,512);
    memset(Key_Sate2,0,512);
 
@@ -450,7 +450,15 @@ void Emu_init(){
       emuThread = co_create(65536*sizeof(void*), retro_wrap_emulator);
    }
 
-   update_variables();
+   if (in_initialisation)
+   {
+     in_initialisation = FALSE;
+     do_update_variables();
+   }
+   else
+   {
+     update_variables();
+   }
 }
 
 void Emu_uninit(){
