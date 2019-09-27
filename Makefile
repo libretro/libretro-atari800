@@ -96,25 +96,45 @@ else ifneq (,$(findstring ios,$(platform)))
 	TARGET := $(TARGET_NAME)_libretro_ios.dylib
 	fpic := -fPIC
 	SHARED := -dynamiclib
+	CFLAGS += -Wno-error=implicit-function-declaration -DHAVE_POSIX_MEMALIGN
 
 	ifeq ($(IOSSDK),)
 		IOSSDK := $(shell xcodebuild -version -sdk iphoneos Path)
 	endif
 
+ifeq ($(platform),$(filter $(platform),ios-arm64))
+	CC = cc -arch arm64 -isysroot $(IOSSDK)
+	CXX = c++ -arch arm64 -isysroot $(IOSSDK)
+else
 	CC = cc -arch armv7 -isysroot $(IOSSDK)
-	CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
 	CXX = c++ -arch armv7 -isysroot $(IOSSDK)
-ifeq ($(platform),ios9)
+endif
+
+	CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
+
+ifeq ($(platform),$(filter $(platform),ios9 ios-arm64))
 	CC += -miphoneos-version-min=8.0
 	CXX += -miphoneos-version-min=8.0
 	CC_AS += -miphoneos-version-min=8.0
-	PLATFORM_DEFINES := -miphoneos-version-min=8.0
+	PLATFORM_DEFINES := -miphoneos-version-min=8.0 -DIOS
 else
 	CC += -miphoneos-version-min=5.0
 	CXX += -miphoneos-version-min=5.0
 	CC_AS += -miphoneos-version-min=5.0
-	PLATFORM_DEFINES := -miphoneos-version-min=5.0
+	PLATFORM_DEFINES := -miphoneos-version-min=5.0 -DIOS
 endif
+
+# tvOS
+else ifeq ($(platform), tvos-arm64)
+
+	TARGET := $(TARGET_NAME)_libretro_tvos.dylib
+	fpic := -fPIC
+	SHARED := -dynamiclib
+	CFLAGS += -Wno-error=implicit-function-declaration -DHAVE_POSIX_MEMALIGN -DIOS
+
+	ifeq ($(IOSSDK),)
+		IOSSDK := $(shell xcodebuild -version -sdk appletvos Path)
+	endif
 
 # Theos
 else ifeq ($(platform), theos_ios)
@@ -195,6 +215,7 @@ else ifeq ($(platform), ctr)
 	CFLAGS += -march=armv6k -mtune=mpcore -mfloat-abi=hard
 	CFLAGS += -Wall -mword-relocations
 	CFLAGS += -fomit-frame-pointer -ffast-math
+	CFLAGS += -I$(DEVKITPRO)/libctru/include
    CFLAGS += -D_3DS
    STATIC_LINKING=1
 
@@ -217,40 +238,33 @@ else ifeq ($(platform), xenon)
 	PLATFORM_DEFINES := -D__LIBXENON__
 	STATIC_LINKING = 1
 
-# Nintendo Game Cube
-else ifeq ($(platform), ngc)
-	TARGET := $(TARGET_NAME)_libretro_ngc.a
-	CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
-	CC_AS = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
-	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
-	AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-	PLATFORM_DEFINES += -DGEKKO -DHW_DOL -mrvl -mcpu=750 -meabi -mhard-float
-	STATIC_LINKING = 1
-	HAVE_COMPAT = 1
 # Nintendo Game Cube / Wii / WiiU
-else ifneq (,$(filter $(platform), wiiu))
+else ifneq (,$(filter $(platform), ngc wii wiiu))
    TARGET := $(TARGET_NAME)_libretro_$(platform).a
    CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-   CFLAGS += -DDEFAULT_CFG_NAME="\"sd:/retroarch/cores/system/atari800.cfg\""
    PLATFORM_DEFINES += -DSDL_BYTEORDER=SDL_BIG_ENDIAN -DMSB_FIRST -DBYTE_ORDER=BIG_ENDIAN  -DBYTE_ORDER=BIG_ENDIAN
    PLATFORM_DEFINES += -DGEKKO -mcpu=750 -meabi -mhard-float -DHAVE_STRTOF_L -DHAVE_LOCALE
    PLATFORM_DEFINES += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int -D_GNU_SOURCE
    STATIC_LINKING = 1
-   PLATFORM_DEFINES += -DWIIU -DHW_RVL -mwup -DWORDS_BIGENDIAN=1 -Dpowerpc -DMSB_FIRST  -D__POWERPC__ -D__ppc__
-   PLATFORM_DEFINES += -DGEKKO -DWIIU -DHW_RVL -mwup -mcpu=750 -meabi -mhard-float -D__POWERPC__ -D__ppc__ -DMSB_FIRST -DWORDS_BIGENDIAN=1
    HAVE_COMPAT = 1
-# Nintendo Wii
-else ifeq ($(platform), wii)
-	TARGET := $(TARGET_NAME)_libretro_wii.a
-	CC = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
-	CC_AS = $(DEVKITPPC)/bin/powerpc-eabi-gcc$(EXE_EXT)
-	CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
-	AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)
-	PLATFORM_DEFINES += -DGEKKO -DHW_RVL -mrvl -mcpu=750 -meabi -mhard-float
-	STATIC_LINKING = 1
-	HAVE_COMPAT = 1
+   ifneq (,$(findstring wiiu,$(platform)))
+      CFLAGS += -DDEFAULT_CFG_NAME="\"sd:/retroarch/cores/system/atari800.cfg\""
+      PLATFORM_DEFINES += -DWIIU -DHW_RVL
+   else ifneq (,$(findstring wii,$(platform)))
+      PLATFORM_DEFINES += -DHW_RVL -mrvl
+   else ifneq (,$(findstring ngc,$(platform)))
+      PLATFORM_DEFINES += -DHW_DOL -mrvl
+   endif
+
+# Nintendo Switch (libnx)
+else ifeq ($(platform), libnx)
+   include $(DEVKITPRO)/libnx/switch_rules
+   TARGET := $(TARGET_NAME)_libretro_$(platform).a
+   PLATFORM_DEFINES += -D__SWITCH__ -DHAVE_LIBNX -I$(LIBNX)/include/ -specs=$(LIBNX)/switch.specs
+   PLATFORM_DEFINES += -march=armv8-a -mtune=cortex-a57 -mtp=soft -mcpu=cortex-a57+crc+fp+simd
+   STATIC_LINKING=1
 
 # ARM
 else ifneq (,$(findstring armv,$(platform)))
@@ -276,6 +290,60 @@ else ifneq (,$(findstring armv,$(platform)))
 		PLATFORM_DEFINES += -mfloat-abi=hard
 	endif
 	PLATFORM_DEFINES += -DARM
+
+# Classic Platforms ####################
+# Platform affix = classic_<ISA>_<µARCH>
+# Help at https://modmyclassic.com/comp
+
+# (armv7 a7, hard point, neon based) ###
+# NESC, SNESC, C64 mini
+else ifeq ($(platform), classic_armv7_a7)
+	TARGET := $(TARGET_NAME)_libretro.so
+	fpic := -fPIC
+    LDFLAGS := -shared -Wl,--version-script=link.T  -Wl,--no-undefined
+	CFLAGS += -Ofast \
+	-flto=4 -fwhole-program -fuse-linker-plugin \
+	-fdata-sections -ffunction-sections -Wl,--gc-sections \
+	-fno-stack-protector -fno-ident -fomit-frame-pointer \
+	-falign-functions=1 -falign-jumps=1 -falign-loops=1 \
+	-fno-unwind-tables -fno-asynchronous-unwind-tables -fno-unroll-loops \
+	-fmerge-all-constants -fno-math-errno \
+	-marm -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+	CXXFLAGS += $(CFLAGS)
+	CPPFLAGS += $(CFLAGS)
+	ASFLAGS += $(CFLAGS)
+	HAVE_NEON = 1
+	ifeq ($(shell echo `$(CC) -dumpversion` "< 4.9" | bc -l), 1)
+	  CFLAGS += -march=armv7-a
+	else
+	  CFLAGS += -march=armv7ve
+	  # If gcc is 5.0 or later
+	  ifeq ($(shell echo `$(CC) -dumpversion` ">= 5" | bc -l), 1)
+	    LDFLAGS += -static-libgcc -static-libstdc++
+	  endif
+	endif
+
+# (armv8 a35, hard point, neon based) ###
+# PlayStation Classic
+else ifeq ($(platform), classic_armv8_a35)
+	TARGET := $(TARGET_NAME)_libretro.so
+	fpic := -fPIC
+    LDFLAGS := -shared -Wl,--version-script=link.T  -Wl,--no-undefined
+	CFLAGS += -Ofast \
+	-flto -fwhole-program -fuse-linker-plugin \
+	-fdata-sections -ffunction-sections -Wl,--gc-sections \
+	-fno-stack-protector -fno-ident -fomit-frame-pointer \
+	-falign-functions=1 -falign-jumps=1 -falign-loops=1 \
+	-fno-unwind-tables -fno-asynchronous-unwind-tables -fno-unroll-loops \
+	-fmerge-all-constants -fno-math-errno \
+	-marm -mtune=cortex-a35 -mfpu=neon-fp-armv8 -mfloat-abi=hard
+	CXXFLAGS += $(CFLAGS)
+	CPPFLAGS += $(CFLAGS)
+	ASFLAGS += $(CFLAGS)
+	HAVE_NEON = 1
+	CFLAGS += -march=armv8-a
+	LDFLAGS += -static-libgcc -static-libstdc++
+#######################################
 
 # emscripten
 else ifeq ($(platform), emscripten)
@@ -388,9 +456,9 @@ else ifneq (,$(findstring windows_msvc2017,$(platform)))
 # Windows
 else
 	TARGET := $(TARGET_NAME)_libretro.dll
-	CC = gcc
-	CC_AS = gcc
-	CXX = g++
+	CC ?= gcc
+	CC_AS ?= gcc
+	CXX ?= g++
 	SHARED := -shared -static-libgcc -static-libstdc++ -Wl,-no-undefined -Wl,-version-script=link.T
 	LIBS += -lshlwapi
 	PLATFORM_DEFINES += -D__WIN32__ -DDIR_SEP_BACKSLASH=1
