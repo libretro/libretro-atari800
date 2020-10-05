@@ -62,6 +62,10 @@
 #ifdef SOUND
 #include "sound.h"
 #endif
+#ifdef __CELLOS_LV2__
+#define DEFAULT_CFG_NAME "/dev_hdd0/game/SSNE10000/USRDIR/cores/system/atari800.cfg"
+#define SYSTEM_WIDE_CFG_FILE "/dev_hdd0/game/SSNE10000/USRDIR/cores/system/atari800.cfg"
+#endif
 
 int CFG_save_on_exit = FALSE;
 
@@ -101,10 +105,12 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 	}
 	/* else use the default config name under the HOME folder */
 	else {
+#ifndef __CELLOS_LV2__
 		char *home = getenv("HOME");
 		if (home != NULL)
 			Util_catpath(rtconfig_filename, home, DEFAULT_CFG_NAME);
 		else
+#endif
 			strcpy(rtconfig_filename, DEFAULT_CFG_NAME);
 	}
 

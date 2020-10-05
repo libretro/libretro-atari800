@@ -443,7 +443,11 @@ int Atari800_Initialise(int *argc, char *argv[])
 #if defined(__LIBRETRO__)
 	SYSROM_FindInDir(retro_system_directory, TRUE);
 #endif
+#if defined(__CELLOS_LV2__) && defined(__LIBRETRO__)
+	SYSROM_FindInDir("/dev_hdd0/game/SSNE10000/USRDIR/cores/system", TRUE);
+#else
 	SYSROM_FindInDir(".", TRUE); /* current directory */
+#endif
 #if defined(unix) || defined(__unix__) || defined(__linux__)
 	SYSROM_FindInDir("/usr/share/atari800", TRUE);
 #endif

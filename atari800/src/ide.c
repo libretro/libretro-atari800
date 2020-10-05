@@ -85,6 +85,10 @@
 #  define fseeko fseek
 #  define ftello ftell
 #  define PRId64 "lld"
+#elif  defined (__CELLOS_LV2__)
+#  define fseeko fseek
+#  define ftello ftell
+#  define PRId64 "lld"
 #endif
 
 int IDE_enabled = 0, IDE_debug = 0;

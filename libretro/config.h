@@ -579,3 +579,21 @@
 #undef HAVE_NANOSLEEP
 
 #endif
+
+#ifdef __CELLOS_LV2__
+/* On Sony SDK for PS3 following macro be undef*/
+#undef HAVE_FSEEKO
+#undef HAVE_GETCWD
+#undef HAVE_NANOSLEEP
+#undef HAVE_MKSTEMP
+#undef HAVE_MKTEMP
+#undef HAVE_SIGNAL
+#undef HAVE_SIGNAL_H
+#undef HAVE_SYSTEM
+#undef HAVE_TMPFILE
+#undef HAVE_TMPNAM
+#undef HAVE_STRINGS_H
+
+/*PS3 is a Big Endian machine*/
+#define WORDS_BIGENDIAN 1
+#endif

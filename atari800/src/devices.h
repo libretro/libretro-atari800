@@ -4,6 +4,12 @@
 #include <stdio.h> /* FILENAME_MAX */
 #include "atari.h" /* UWORD */
 
+#ifdef __CELLOS_LV2__
+#define S_IREAD S_IRUSR
+#define S_IWRITE S_IWUSR
+#define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
+#endif
+
 int Devices_Initialise(int *argc, char *argv[]);
 void Devices_Exit(void);
 int Devices_PatchOS(void);

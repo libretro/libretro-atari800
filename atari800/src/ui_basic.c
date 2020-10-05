@@ -44,6 +44,9 @@
 #ifdef HAVE_WINDOWS_H
 #include <windows.h>
 #endif
+#ifdef __CELLOS_LV2__
+#include "devices.h"
+#endif
 
 #include "antic.h"
 #include "atari.h"
