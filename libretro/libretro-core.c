@@ -114,7 +114,7 @@ void retro_set_environment(retro_environment_t cb)
     struct retro_variable variables[] = {
       {
         "atari800_system",
-        "Atari System; 400/800 (OS B)|800XL (64K)|130XE (128K)|Modern XL/XE(576K)|Modern XL/XE(1088K)|5200",
+        "Atari System; 400/800 (OS B)|800XL (64K)|130XE (128K)|Modern XL/XE(320K CS)|Modern XL/XE(576K)|Modern XL/XE(1088K)|5200",
       },
       {
         "atari800_ntscpal",
@@ -240,6 +240,18 @@ static void update_variables(void)
         {
             Atari800_machine_type = Atari800_MACHINE_XLXE;
             MEMORY_ram_size = 128;
+            Atari800_builtin_basic = TRUE;
+            Atari800_keyboard_leds = FALSE;
+            Atari800_f_keys = FALSE;
+            Atari800_jumper = FALSE;
+            Atari800_builtin_game = FALSE;
+            Atari800_keyboard_detached = FALSE;
+            Atari800_InitialiseMachine();
+        }
+        else if (strcmp(var.value, "Modern XL/XE(320K CS)") == 0)
+        {
+            Atari800_machine_type = Atari800_MACHINE_XLXE;
+            MEMORY_ram_size = MEMORY_RAM_320_COMPY_SHOP;
             Atari800_builtin_basic = TRUE;
             Atari800_keyboard_leds = FALSE;
             Atari800_f_keys = FALSE;
