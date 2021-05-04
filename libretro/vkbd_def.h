@@ -101,9 +101,9 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " @" ," |"  ,0x32},
 	{ " [" ," ["  ,0x21},
 
-	{ "OPT" ,"OPT"  ,RETROK_F4}, //70+14
+	{ "STA" ,"STA"  ,RETROK_F4}, //70+14
 	{ "RES." ,"RES."  ,RETROK_F5},
-	{ " F6" ," F6"  ,RETROK_F6},
+	{ "HELP" ,"HELP"  ,RETROK_F6},
 	{ " ." ," ."  ,0x07},
 	{ " <-" ," <-"  ,0x10},
 	{ "COPY" ,"COPY"  ,0x11},
@@ -114,8 +114,8 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " *" ," *",  RETROK_ASTERISK},
 	{ "# " ,"# "  ,RETROK_HASH},
 
-	{ "HELP" ,"HELP"  ,RETROK_F1},//80+16
-	{ "STA" ,"STA"  ,RETROK_F2},
+	{ "MENU" ,"MENU"  ,RETROK_F1},//80+16
+	{ "OPT" ,"OPT"  ,RETROK_F2},
 	{ "SEL" ,"SEL"  ,RETROK_F3},
 	{ "Ent" ,"Ent"  ,0x06},
 	{ " b" ," B"  ,0x66},
