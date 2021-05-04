@@ -62,13 +62,13 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "SHFT" ,"SHFT"  ,0x25},
 
 	{ "PG2","PG2" ,-2}, //40+8
-	{ "TAB","TAB" ,0x54},
+	{ "TAB","TAB" ,RETROK_TAB},
 	{ "CPSL" ,"CPSL"  ,0x86},
-	{ "RET" ,"RET"  ,0x22},
+	{ "RET" ,"RET"  ,RETROK_ENTER},
 	{ "DEL" ,"DEL"  ,0x97},
 	{ "CTRL" ,"CTRL"  ,0x27},
 	{ "CLR" ,"CLR" , 0x20},
-	{ "Spc" ,"Spc",0x57},
+	{ "Spc" ,"Spc",RETROK_SPACE},
 	{ "= " ,"= "  ,RETROK_EQUALS},
 	{ " *" ," *",  RETROK_ASTERISK},
 	{ "# " ,"# "  ,RETROK_HASH},
