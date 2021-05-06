@@ -44,6 +44,7 @@ extern char Key_Sate[512];
 #include "libretro.h"
 #include "retroscreen.h"
 
+extern int SHIFTON;
 extern int UI_is_active;
 
 static int swap_joysticks = FALSE;
@@ -193,7 +194,8 @@ int PLATFORM_Keyboard(void)
 	}
 
 	/* SHIFT STATE */
-	if ((Key_Sate[RETROK_LSHIFT]) || (Key_Sate[RETROK_RSHIFT]))
+	//if ((Key_Sate[RETROK_LSHIFT]) || (Key_Sate[RETROK_RSHIFT]))
+	if (SHIFTON == 1)
 		INPUT_key_shift = 1;
 	else
 		INPUT_key_shift = 0;
