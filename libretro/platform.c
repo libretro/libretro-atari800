@@ -492,19 +492,19 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_z])return AKEY_Z;
 
 		if (Key_Sate[RETROK_1])return AKEY_EXCLAMATION;
-		if (Key_Sate[RETROK_2])return AKEY_AT;
+		if (Key_Sate[RETROK_2])return AKEY_DBLQUOTE;
 		if (Key_Sate[RETROK_3])return AKEY_HASH;
 		if (Key_Sate[RETROK_4])return AKEY_DOLLAR;
 		if (Key_Sate[RETROK_5])return AKEY_PERCENT;
 		if (Key_Sate[RETROK_6])return AKEY_CARET;
 		if (Key_Sate[RETROK_7])return AKEY_AMPERSAND;
-		if (Key_Sate[RETROK_8])return AKEY_ASTERISK;
+		if (Key_Sate[RETROK_8])return AKEY_AT;
 		if (Key_Sate[RETROK_9])return AKEY_PARENLEFT;
 		if (Key_Sate[RETROK_0])return AKEY_PARENRIGHT;
 
 		if (Key_Sate[RETROK_BACKSLASH])return AKEY_BAR;
-		if (Key_Sate[RETROK_COMMA])return AKEY_LESS;
-		if (Key_Sate[RETROK_PERIOD])return AKEY_GREATER;
+		if (Key_Sate[RETROK_COMMA])return AKEY_BRACKETLEFT;
+		if (Key_Sate[RETROK_PERIOD])return AKEY_BRACKETRIGHT;
 		if (Key_Sate[RETROK_MINUS])return AKEY_UNDERSCORE;
 		if (Key_Sate[RETROK_EQUALS])return AKEY_PLUS;
 		if (Key_Sate[RETROK_LEFTBRACKET])return AKEY_BRACKETLEFT; // no curly braces on Atari
@@ -562,6 +562,7 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_SEMICOLON])return AKEY_SEMICOLON;
 		if (Key_Sate[RETROK_QUOTE])return AKEY_QUOTE;
 		if (Key_Sate[RETROK_SLASH])return AKEY_SLASH;
+		if (Key_Sate[RETROK_ASTERISK])return AKEY_ASTERISK;
 
 	}
 
