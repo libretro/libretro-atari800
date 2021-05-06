@@ -35,7 +35,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " p" ," P"  ,RETROK_p},
 	{ "Ret" ,"Ret"  ,RETROK_RETURN},
 
-	{ "CTRL" ,"CTRL"  ,RETROK_LCTRL},
+	{ "ctrl" ,"ctrl"  ,RETROK_LCTRL},
 	{ " a" ," A"  ,RETROK_a}, //20+4
 	{ " s" ," S"  ,RETROK_s},
 	{ " d" ," D"  ,RETROK_d},
@@ -48,7 +48,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " ;" ," :"  ,RETROK_SEMICOLON},
 	{ "Cap" ,"Cap"  ,RETROK_CAPSLOCK},
 
-	{ "SHFT" ,"SHFT"  ,RETROK_LSHIFT},
+	{ "shft" ,"SHFT"  ,RETROK_LSHIFT},
 	{ " z" ," Z"  ,RETROK_z},//30+6
 	{ " x" ," X"  ,RETROK_x},
 	{ " c" ," C"  ,RETROK_c},
