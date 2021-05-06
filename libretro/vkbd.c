@@ -38,7 +38,7 @@ unsigned short *pix=(unsigned short *)buffer;
 		 {
 			Draw_text((char*)pix,XBASE0-2+x*XSIDE ,YBASE0+YSIDE*y,coul, BKGCOLOR ,1, 1,20,MVk[(y*NPLGN)+x+page].shift);
 		 }
-		 else if (CONTRON==1)
+		 else if (CTRLON==1)
 		 {
 			Draw_text((char*)pix,XBASE0-2+x*XSIDE ,YBASE0+YSIDE*y,coul, BKGCOLOR ,1, 1,20,MVk[(y*NPLGN)+x+page].ctrl);
 		 }
@@ -54,7 +54,7 @@ unsigned short *pix=(unsigned short *)buffer;
 	{
 		Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,1), BKGCOLOR ,1, 1,20,MVk[(vy*NPLGN)+vx+page].shift);
 	}
-	else if (CONTRON==1)
+	else if (CTRLON==1)
 	{
 		Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,1), BKGCOLOR ,1, 1,20,MVk[(vy*NPLGN)+vx+page].ctrl);
 	}
