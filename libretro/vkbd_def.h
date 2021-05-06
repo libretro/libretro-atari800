@@ -14,7 +14,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " 2" ," \"" ,RETROK_2 },
 	{ " 3" ," #"  ,RETROK_3 },
 	{ " 4" ," $"  ,RETROK_4 },
-	{ " 5" ," %"  ,RETROK_5 },
+	{ " 5" ," \%"  ,RETROK_5 },
 	{ " 6" ," &"  ,RETROK_6 },
 	{ " 7" ," \'"  ,RETROK_7 },
 	{ " 8" ," @"  ,RETROK_8 },

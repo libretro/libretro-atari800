@@ -45,6 +45,7 @@ extern char Key_Sate[512];
 #include "retroscreen.h"
 
 extern int SHIFTON;
+extern int CTRLON;
 extern int UI_is_active;
 
 static int swap_joysticks = FALSE;
@@ -201,7 +202,8 @@ int PLATFORM_Keyboard(void)
 		INPUT_key_shift = 0;
 
 	/* CONTROL STATE */
-	if ((Key_Sate[RETROK_LCTRL]) || (Key_Sate[RETROK_RCTRL]))
+	//if ((Key_Sate[RETROK_LCTRL]) || (Key_Sate[RETROK_RCTRL]))
+	if (CTRLON == 1)
 		key_control = 1;
 	else
 		key_control = 0;
@@ -498,8 +500,8 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_3])return AKEY_HASH;
 		if (Key_Sate[RETROK_4])return AKEY_DOLLAR;
 		if (Key_Sate[RETROK_5])return AKEY_PERCENT;
-		if (Key_Sate[RETROK_6])return AKEY_CARET;
-		if (Key_Sate[RETROK_7])return AKEY_AMPERSAND;
+		if (Key_Sate[RETROK_6])return AKEY_AMPERSAND;
+		if (Key_Sate[RETROK_7])return AKEY_QUOTE;
 		if (Key_Sate[RETROK_8])return AKEY_AT;
 		if (Key_Sate[RETROK_9])return AKEY_PARENLEFT;
 		if (Key_Sate[RETROK_0])return AKEY_PARENRIGHT;
