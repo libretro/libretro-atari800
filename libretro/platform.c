@@ -581,6 +581,8 @@ int PLATFORM_Keyboard(void)
 		return AKEY_ESCAPE;
 	if (mbt[RETRO_DEVICE_ID_JOYPAD_B])
 		return AKEY_RETURN;
+	if (mbt[RETRO_DEVICE_ID_JOYPAD_Y])
+		return AKEY_HELP;
 }
 
 	if (UI_is_active){
