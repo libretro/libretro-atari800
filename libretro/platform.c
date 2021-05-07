@@ -464,7 +464,7 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_SEMICOLON])return (AKEY_CTRL | AKEY_SEMICOLON);
 		
 		if (Key_Sate[RETROK_F7])return (AKEY_CTRL | AKEY_F1);
-		if (Key_Sate[RETROK_F8])return (AKEY_CTRL | AKEY_F2};
+		if (Key_Sate[RETROK_F8])return (AKEY_CTRL | AKEY_F2);
 		if (Key_Sate[RETROK_F9])return (AKEY_CTRL | AKEY_F3);
 		if (Key_Sate[RETROK_F10])return (AKEY_CTRL | AKEY_F4);
 
@@ -523,7 +523,7 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_SLASH])return AKEY_QUESTION;
 		
 		if (Key_Sate[RETROK_F7])return (AKEY_SHFT | AKEY_F1);
-		if (Key_Sate[RETROK_F8])return (AKEY_SHFT | AKEY_F2};
+		if (Key_Sate[RETROK_F8])return (AKEY_SHFT | AKEY_F2);
 		if (Key_Sate[RETROK_F9])return (AKEY_SHFT | AKEY_F3);
 		if (Key_Sate[RETROK_F10])return (AKEY_SHFT | AKEY_F4);
 
