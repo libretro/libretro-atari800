@@ -225,8 +225,6 @@ int PLATFORM_Keyboard(void)
 	if (Key_Sate[RETROK_F5])
 		return INPUT_key_shift ? AKEY_COLDSTART : AKEY_WARMSTART;
 
-	}
-
 
 	if (Key_Sate[RETROK_F12])return AKEY_TURBO;
 
