@@ -67,13 +67,13 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "Del", "Del", "Del", RETROK_DELETE},
 	{ "Clr", "Clr", "Clr", RETROK_HOME},
 	{ "Ins", "Ins", "Ins", RETROK_INSERT},
-	{ " + ", " \\ ", " + ", RETROK_EQUALS},
-	{ " _ ", " - ", " _ ", RETROK_HASH},
-	{ " = ", " | ", " = ", RETROK_EQUALS},
-	{ " * ", " ^ ", " * ", RETROK_ASTERISK},
-	{ " < ", " < ", " < ", 0x86},
-	{ " > ", " > ", " > ", 0x27},
-	{ "Spc", "Spc", "Spc", RETROK_SPACE},
+	{ " + ", " \\ ", " \x1e ", RETROK_PLUS},
+	{ " _ ", " - ", " \x1c ", RETROK_UNDERSCORE},
+	{ " = ", " | ", " \x1d ", RETROK_EQUALS},
+	{ " * ", " ^ ", " \x1f ", RETROK_ASTERISK},
+	{ " < ", " < ", " < ", RETROK_LESS},
+	{ " > ", " > ", " > ", RETROK_GREATER},
+	{ "PG2", "PG2", "PG2", -2},
 
 
 	{ "Esc", "Esc", "Esc", RETROK_ESCAPE},//50+10
@@ -134,13 +134,13 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "Del", "Del", "Del", RETROK_DELETE},
 	{ "Clr", "Clr", "Clr", RETROK_HOME},
 	{ "Ins", "Ins", "Ins", RETROK_INSERT},
-	{ " + ", " \\ ", " + ", RETROK_EQUALS},
-	{ " _ ", " - ", " _ ", RETROK_HASH},
-	{ " = ", " | ", " = ", RETROK_EQUALS},
-	{ " * ", " ^ ", " * ", RETROK_ASTERISK},
-	{ " < ", " < ", " < ", 0x86},
-	{ " > ", " > ", " > ", 0x27},
-	{ "Spc", "Spc", "Spc", RETROK_SPACE},
+	{ " + ", " \\ ", " \x1e ", RETROK_PLUS},
+	{ " _ ", " - ", " \x1c ", RETROK_UNDERSCORE},
+	{ " = ", " | ", " \x1d ", RETROK_EQUALS},
+	{ " * ", " ^ ", " \x1f ", RETROK_ASTERISK},
+	{ " < ", " < ", " < ", RETROK_LESS},
+	{ " > ", " > ", " > ", RETROK_GREATER},
+	{ "PG1", "PG1", "PG1", -2},
 
 } ;
 

@@ -460,6 +460,13 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_F8])return (AKEY_CTRL | AKEY_F2);
 		if (Key_Sate[RETROK_F9])return (AKEY_CTRL | AKEY_F3);
 		if (Key_Sate[RETROK_F10])return (AKEY_CTRL | AKEY_F4);
+		
+		// cursor keys
+		if (Key_Sate[RETROK_PLUS])return AKEY_LEFT;
+		if (Key_Sate[RETROK_ASTERISK])return AKEY_RIGHT;
+		if (Key_Sate[RETROK_EQUALS])return AKEY_DOWN;
+		if (Key_Sate[RETROK_UNDERSCORE])return AKEY_UP;
+
 
 	}
 
@@ -507,13 +514,15 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_BACKSLASH])return AKEY_BAR;
 		if (Key_Sate[RETROK_COMMA])return AKEY_BRACKETLEFT;
 		if (Key_Sate[RETROK_PERIOD])return AKEY_BRACKETRIGHT;
-		if (Key_Sate[RETROK_MINUS])return AKEY_UNDERSCORE;
-		if (Key_Sate[RETROK_EQUALS])return AKEY_PLUS;
+		if (Key_Sate[RETROK_UNDERSCORE])return AKEY_MINUS;
+		if (Key_Sate[RETROK_PLUS])return AKEY_BACKSLASH;
+		if (Key_Sate[RETROK_EQUALS])return AKEY_BAR;
 		if (Key_Sate[RETROK_LEFTBRACKET])return AKEY_BRACKETLEFT; // no curly braces on Atari
 		if (Key_Sate[RETROK_RIGHTBRACKET])return AKEY_BRACKETRIGHT; // no curly braces on Atari
 		if (Key_Sate[RETROK_SEMICOLON])return AKEY_COLON;
 		if (Key_Sate[RETROK_QUOTE])return AKEY_DBLQUOTE;
 		if (Key_Sate[RETROK_SLASH])return AKEY_QUESTION;
+		if (Key_Sate[RETROK_ASTERISK])return AKEY_CIRCUMFLEX;
 		
 		if (Key_Sate[RETROK_F7])return (AKEY_SHFT | AKEY_F1);
 		if (Key_Sate[RETROK_F8])return (AKEY_SHFT | AKEY_F2);
@@ -563,6 +572,7 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_COMMA])return AKEY_COMMA;
 		if (Key_Sate[RETROK_PERIOD])return AKEY_FULLSTOP;
 		if (Key_Sate[RETROK_MINUS])return AKEY_MINUS;
+		if (Key_Sate[RETROK_PLUS])return AKEY_PLUS;
 		if (Key_Sate[RETROK_EQUALS])return AKEY_EQUAL;
 		if (Key_Sate[RETROK_LEFTBRACKET])return AKEY_BRACKETLEFT;
 		if (Key_Sate[RETROK_RIGHTBRACKET])return AKEY_BRACKETRIGHT;
@@ -570,6 +580,9 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_QUOTE])return AKEY_QUOTE;
 		if (Key_Sate[RETROK_SLASH])return AKEY_SLASH;
 		if (Key_Sate[RETROK_ASTERISK])return AKEY_ASTERISK;
+		if (Key_Sate[RETROK_LESS])return AKEY_LESS;
+		if (Key_Sate[RETROK_GREATER])return AKEY_GREATER;
+		if (Key_Sate[RETROK_UNDERSCORE])return AKEY_UNDERSCORE;
 		
 		if (Key_Sate[RETROK_F7])return AKEY_F1;
 		if (Key_Sate[RETROK_F8])return AKEY_F2;
