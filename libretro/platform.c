@@ -462,6 +462,11 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_COMMA])return (AKEY_CTRL | AKEY_COMMA);
 		if (Key_Sate[RETROK_PERIOD])return (AKEY_CTRL | AKEY_FULLSTOP);
 		if (Key_Sate[RETROK_SEMICOLON])return (AKEY_CTRL | AKEY_SEMICOLON);
+		
+		if (Key_Sate[RETROK_F7])return (AKEY_CTRL | AKEY_F1);
+		if (Key_Sate[RETROK_F8])return (AKEY_CTRL | AKEY_F2};
+		if (Key_Sate[RETROK_F9])return (AKEY_CTRL | AKEY_F3);
+		if (Key_Sate[RETROK_F10])return (AKEY_CTRL | AKEY_F4);
 
 	}
 
@@ -516,6 +521,11 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_SEMICOLON])return AKEY_COLON;
 		if (Key_Sate[RETROK_QUOTE])return AKEY_DBLQUOTE;
 		if (Key_Sate[RETROK_SLASH])return AKEY_QUESTION;
+		
+		if (Key_Sate[RETROK_F7])return (AKEY_SHFT | AKEY_F1);
+		if (Key_Sate[RETROK_F8])return (AKEY_SHFT | AKEY_F2};
+		if (Key_Sate[RETROK_F9])return (AKEY_SHFT | AKEY_F3);
+		if (Key_Sate[RETROK_F10])return (AKEY_SHFT | AKEY_F4);
 
 	} else {
 		if (Key_Sate[RETROK_a])return AKEY_a;
@@ -567,6 +577,11 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_QUOTE])return AKEY_QUOTE;
 		if (Key_Sate[RETROK_SLASH])return AKEY_SLASH;
 		if (Key_Sate[RETROK_ASTERISK])return AKEY_ASTERISK;
+		
+		if (Key_Sate[RETROK_F7])return AKEY_F1;
+		if (Key_Sate[RETROK_F8])return AKEY_F2;
+		if (Key_Sate[RETROK_F9])return AKEY_F3;
+		if (Key_Sate[RETROK_F10])return AKEY_F4;
 
 	}
 
