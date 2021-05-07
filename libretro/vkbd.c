@@ -64,30 +64,25 @@ unsigned short *pix=(unsigned short *)buffer;
    DrawBoxBmp((char*)pix,XBASE3+vx*XSIDE,YBASE3+vy*YSIDE, XSIDE,YSIDE, RGB565(31, 2, 1));
 	if (SHIFTON==1)
 	{
-		if (vx==0 && vy==3) // diferent Shift color if Shift is ON - position 0,3
-		{
-			Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,21), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].shift);
-		}
-		else
-		{
-			Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,1), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].shift);
-		}
+		Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,1), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].shift);
 	}
 	else if (CTRLON==1)
 	{
-		if (vx==0 && vy==2) // diferent Conrol color if Control is ON - position 0,2
-		{
-			Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,21), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].ctrl);
-		}
-		else
-		{
-			Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,1), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].ctrl);
-		}
+		Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,1), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].ctrl);
 	}
 	else
 	{
 		Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,1), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].norml);
 	}
+	if (vx==0 && vy==3 && SHIFTON==1) // diferent Shift color if Shift is ON - position 0,3
+	{
+		Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,21), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].shift);
+	}
+	if (vx==0 && vy==2 && CTRLON==1) // diferent Conrol color if Control is ON - position 0,2
+	{
+		Draw_text((char*)pix,XBASE0-2+vx*XSIDE ,YBASE0+YSIDE*vy,RGB565(2,31,21), BKGCOLOR ,1, 1,3,MVk[(vy*NPLGN)+vx+page].ctrl);
+	}
+	
 }
 
 int check_vkey2(int x,int y)
