@@ -523,6 +523,8 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_QUOTE])return AKEY_DBLQUOTE;
 		if (Key_Sate[RETROK_SLASH])return AKEY_QUESTION;
 		if (Key_Sate[RETROK_ASTERISK])return AKEY_CIRCUMFLEX;
+		if (Key_Sate[RETROK_LESS])return AKEY_LESS;
+		if (Key_Sate[RETROK_GREATER])return AKEY_GREATER;
 		
 		if (Key_Sate[RETROK_F7])return (AKEY_SHFT | AKEY_F1);
 		if (Key_Sate[RETROK_F8])return (AKEY_SHFT | AKEY_F2);

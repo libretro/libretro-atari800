@@ -36,7 +36,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " p ", " P ", "P \x10", RETROK_p},
 	{ "Ret", "Ret", "Ret", RETROK_RETURN},
 
-	{ "ctl", "ctl", "CTL", RETROK_LCTRL}, //20+4
+	{ "Ctl", "Ctl", "Ctl", RETROK_LCTRL}, //20+4
 	{ " a ", " A ", "A \x01", RETROK_a},
 	{ " s ", " S ", "S \x13", RETROK_s},
 	{ " d ", " D ", "D \x04", RETROK_d},
@@ -49,7 +49,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " ; ", " : ", "; \x7b", RETROK_SEMICOLON},
 	{ "Cap", "Cap", "Cap", RETROK_CAPSLOCK},
 
-	{ "shf", "SHF", "shf", RETROK_LSHIFT}, //30+6
+	{ "Shf", "Shf", "Shf", RETROK_LSHIFT}, //30+6
 	{ " z ", " Z ", "Z \x1a", RETROK_z},
 	{ " x ", " X ", "X \x18", RETROK_x},
 	{ " c ", " C ", "C \x03", RETROK_c},
@@ -94,7 +94,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " w ", " W ", "W \x17", RETROK_w},
 	{ " e ", " E ", "E \x05", RETROK_e},
 	{ " r ", " R ", "R \x12", RETROK_r},
-	{ " \x1c ", " \x1c ", " \x1c ", RETROK_UP},
+	{ " \x9c ", " \x9c ", " \x9c ", RETROK_UP},
 	{ " y ", " Y ", "Y \x19", RETROK_y},
 	{ " u ", " U ", "U \x15", RETROK_u},
 	{ " i ", " I ", "I \x09", RETROK_i},
@@ -102,32 +102,31 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " p ", " P ", "P \x10", RETROK_p},
 	{ "Ret", "Ret", "Ret", RETROK_RETURN},
 
-	{ "ctl", "ctl", "CTL", RETROK_LCTRL}, //70+14
+	{ "Ctl", "Ctl", "Ctl", RETROK_LCTRL}, //70+14
 	{ " a ", " A ", "A \x01", RETROK_a},
 	{ " s ", " S ", "S \x13", RETROK_s},
 	{ " d ", " D ", "D \x04", RETROK_d},
-	{ " \x1e ", " \x1e ", " \x1e ", RETROK_LEFT},
+	{ " \x9e ", " \x9e ", " \x9e ", RETROK_LEFT},
 	{ "Ret", "Ret", "Ret", RETROK_RETURN},
-	{ " \x1f ", " \x1f ", " \x1f ", RETROK_RIGHT},
+	{ " \x9f ", " \x9f ", " \x9f ", RETROK_RIGHT},
 	{ " j ", " J ", "J \x0a", RETROK_j},
 	{ " k ", " K ", "K \x0b", RETROK_k},	
 	{ " l ", " L ", "L \x0c", RETROK_l},
 	{ " ; ", " : ", "; \x7b", RETROK_SEMICOLON},
 	{ "Cap", "Cap", "Cap", RETROK_CAPSLOCK},
 
-	{ "shf", "SHF", "shf", RETROK_LSHIFT}, //80+16
+	{ "Shf", "Shf", "Shf", RETROK_LSHIFT}, //80+16
 	{ " z ", " Z ", "Z \x1a", RETROK_z},
 	{ " x ", " X ", "X \x18", RETROK_x},
 	{ " c ", " C ", "C \x03", RETROK_c},
 	{ " v ", " V ", "V \x16", RETROK_v},
-	{ " \x1d ", " \x1d ", " \x1d ", RETROK_DOWN},
+	{ " \x9d ", " \x9d ", " \x9d ", RETROK_DOWN},
 	{ " n ", " N ", "N \x0e", RETROK_n},
 	{ " m ", " M ", "M \x0d", RETROK_m},
 	{ " , ", " [ ", ", \x00", RETROK_COMMA},
 	{ " . ", " ] ", ". \x60", RETROK_PERIOD},
 	{ " / ", " ? ", " / ", RETROK_SLASH},
 	{ "Inv", "Inv", "Inv", RETROK_LSUPER},
-
 
 	{ "PG1", "PG1", "PG1", -2},//90+18
 	{ "Spc", "Spc", "Spc", RETROK_SPACE},
