@@ -48,6 +48,18 @@ unsigned short *pix=(unsigned short *)buffer;
 		 }
       }
    }
+   
+   // draw Shift and Control keys status
+   // Shift - position 0,3
+   if (SHIFTON==1)
+   {
+	   Draw_text((char*)pix,XBASE0-2+0*XSIDE ,YBASE0+YSIDE*3,RGB565(2,2,31), BKGCOLOR ,1, 1,3,MVk[(3*NPLGN)+0+page].shift);
+   }
+   // Control - position 0,2
+   if (CTRLON==1)
+   {
+	   Draw_text((char*)pix,XBASE0-2+0*XSIDE ,YBASE0+YSIDE*2,RGB565(2,2,31), BKGCOLOR ,1, 1,3,MVk[(2*NPLGN)+0+page].ctrl);
+   }
 
    DrawBoxBmp((char*)pix,XBASE3+vx*XSIDE,YBASE3+vy*YSIDE, XSIDE,YSIDE, RGB565(31, 2, 1));
 	if (SHIFTON==1)

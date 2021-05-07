@@ -63,8 +63,8 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "Inv", "Inv", "Inv", RETROK_LSUPER},
 
 	{ "PG2", "PG2", "PG2", -2}, //40+8
-	{ "Del", "Del", "Del", RETROK_DELETE},
 	{ "Spc", "Spc", "Spc", RETROK_SPACE},
+	{ "Del", "Del", "Del", RETROK_DELETE},
 	{ "Clr", "Clr", "Clr", RETROK_HOME},
 	{ "Ins", "Ins", "Ins", RETROK_INSERT},
 	{ " + ", " \\ ", " + ", RETROK_EQUALS},
