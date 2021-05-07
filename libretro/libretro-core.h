@@ -43,7 +43,7 @@ extern int pauseg;
 
 #define NPLGN 12
 #define NLIGN 5
-#define NLETT 5
+#define NLETT 3
 
 #define XSIDE  (CROP_WIDTH/NPLGN -1)
 #define YSIDE  (CROP_HEIGHT/8 -1)
