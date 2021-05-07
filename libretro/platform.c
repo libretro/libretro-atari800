@@ -225,13 +225,8 @@ int PLATFORM_Keyboard(void)
 	if (Key_Sate[RETROK_F5])
 		return INPUT_key_shift ? AKEY_COLDSTART : AKEY_WARMSTART;
 
-	if (Key_Sate[RETROK_F8]){
-		UI_alt_function = UI_MENU_MONITOR;
 	}
 
-	if (Key_Sate[RETROK_F9])return AKEY_EXIT;
-
-	if (Key_Sate[RETROK_F10])return INPUT_key_shift ? AKEY_SCREENSHOT_INTERLACE : AKEY_SCREENSHOT;
 
 	if (Key_Sate[RETROK_F12])return AKEY_TURBO;
 
@@ -304,7 +299,7 @@ int PLATFORM_Keyboard(void)
 	if (Key_Sate[RETROK_HOME])
 		return key_control ? AKEY_LESS|shiftctrl : AKEY_CLEAR;
 
-	if (Key_Sate[RETROK_PAUSE] || Key_Sate[RETROK_F7] )
+	if (Key_Sate[RETROK_PAUSE])
 	{
 		if (BINLOAD_wait_active) {
 			BINLOAD_pause_loading = TRUE;
