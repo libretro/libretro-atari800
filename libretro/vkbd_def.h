@@ -15,7 +15,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " 2 ", " \" ", " \xb2 ", RETROK_2},
 	{ " 3 ", " # ", " \xb3 ", RETROK_3},
 	{ " 4 ", " $ ", " \xb4 ", RETROK_4},
-	{ " 5 ", " % ", " \xb5 ", RETROK_5},
+	{ " 5 ", " %% ", " \xb5 ", RETROK_5},
 	{ " 6 ", " & ", " \xb6 ", RETROK_6},
 	{ " 7 ", " \' ", " \xb7 ", RETROK_7},
 	{ " 8 ", " @ ", " \xb8 ", RETROK_8},

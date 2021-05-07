@@ -297,7 +297,8 @@ unsigned char *mbuffer=(unsigned char *)surf;
 #endif
 
     	if(string==NULL)return;
-    	for(strlen = 0; strlen<maxstrlen && string[strlen]; strlen++) {}
+		strlen = sizeof(string);
+		if (strlen>maxstrlen) strlen = maxstrlen;
 
 	int surfw=strlen * 7 * xscale;
 	int surfh=8 * yscale;
