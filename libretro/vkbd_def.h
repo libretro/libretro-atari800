@@ -57,7 +57,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " b ", " B ", "B \x02", RETROK_b},
 	{ " n ", " N ", "N \x0e", RETROK_n},
 	{ " m ", " M ", "M \x0d", RETROK_m},
-	{ " , ", " [ ", ",\x00", RETROK_COMMA},
+	{ " , ", " [ ", ", \x00", RETROK_COMMA},
 	{ " . ", " ] ", ". \x60", RETROK_PERIOD},
 	{ " / ", " ? ", " / ", RETROK_SLASH},
 	{ "Inv", "Inv", "Inv", RETROK_LSUPER},
