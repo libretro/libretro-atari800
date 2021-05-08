@@ -24,7 +24,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 		for(j=y;j<y+dy;j++){
 			
 			idx=i+j*VIRTUAL_WIDTH;
-			mbuffer[idx]=color;	
+			mbuffer[idx]=(mbuffer[idx]/2)+(color/2);	
 		}
 	}
 	
@@ -43,17 +43,17 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 	
 	for(i=x;i<x+dx;i++){
 		idx=i+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;
+		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);
 		idx=i+(y+dy)*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;
+		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);
 	}
 
 	for(j=y;j<y+dy;j++){
 			
 		idx=x+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;	
+		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);	
 		idx=(x+dx)+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;	
+		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);	
 	}
 	
 }
@@ -69,7 +69,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
 
 		idx=x+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;		
+		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);		
 	
 }
 
@@ -85,7 +85,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 		
 	for(i=x;i<x+dx;i++){
 		idx=i+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;		
+		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);		
 	}
 }
 
@@ -100,7 +100,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
 	for(j=y;j<y+dy;j++){			
 		idx=x+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;		
+		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);		
 	}	
 }
 
@@ -135,7 +135,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 
  		} else {
 			idx=x1+y1*VIRTUAL_WIDTH;
- 			mbuffer[idx]=color;
+ 			mbuffer[idx]=(mbuffer[idx]/2)+(color/2);
 			return ;
  		}
  	}
@@ -174,7 +174,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 	idx=x1+y1*VIRTUAL_WIDTH;
 
 	for (; x < dx; x++, idx +=pixx) {
-		mbuffer[idx]=color;
+		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);
  		y += dy;
  		if (y >= dx) {
  			y -= dx;
