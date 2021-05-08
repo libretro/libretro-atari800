@@ -9,6 +9,17 @@
 
 extern int VIRTUAL_WIDTH;
 
+unsigned Opacity(unsigned color1, unsigned color2){
+	
+	unsigned r,g,b;
+	
+	r=(R_RGB565(color1)/2)+(R_RGB565(color2)/2);
+	g=(G_RGB565(color1)/2)+(G_RGB565(color2)/2);
+	b=(B_RGB565(color1)/2)+(B_RGB565(color2)/2);
+	return RGB565(r,g,b);
+	
+}
+
 void DrawFBoxBmp(char  *buffer,int x,int y,int dx,int dy,unsigned   color){
 	
 	int i,j,idx;
@@ -24,7 +35,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 		for(j=y;j<y+dy;j++){
 			
 			idx=i+j*VIRTUAL_WIDTH;
-			mbuffer[idx]=(mbuffer[idx]/2)+(color/2);	
+			mbuffer[idx]=Opacity(mbuffer[idx],color);	
 		}
 	}
 	
@@ -43,17 +54,17 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 	
 	for(i=x;i<x+dx;i++){
 		idx=i+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);
+		mbuffer[idx]=Opacity(mbuffer[idx],color);
 		idx=i+(y+dy)*VIRTUAL_WIDTH;
-		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);
+		mbuffer[idx]=Opacity(mbuffer[idx],color);
 	}
 
 	for(j=y;j<y+dy;j++){
 			
 		idx=x+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);	
+		mbuffer[idx]=Opacity(mbuffer[idx],color);	
 		idx=(x+dx)+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);	
+		mbuffer[idx]=Opacity(mbuffer[idx],color);	
 	}
 	
 }
@@ -69,7 +80,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
 
 		idx=x+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);		
+		mbuffer[idx]=Opacity(mbuffer[idx],color);		
 	
 }
 
@@ -85,7 +96,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 		
 	for(i=x;i<x+dx;i++){
 		idx=i+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);		
+		mbuffer[idx]=Opacity(mbuffer[idx],color);		
 	}
 }
 
@@ -100,7 +111,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
 	for(j=y;j<y+dy;j++){			
 		idx=x+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);		
+		mbuffer[idx]=Opacity(mbuffer[idx],color);		
 	}	
 }
 
@@ -135,7 +146,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 
  		} else {
 			idx=x1+y1*VIRTUAL_WIDTH;
- 			mbuffer[idx]=(mbuffer[idx]/2)+(color/2);
+ 			mbuffer[idx]=Opacity(mbuffer[idx],color);
 			return ;
  		}
  	}
@@ -174,7 +185,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 	idx=x1+y1*VIRTUAL_WIDTH;
 
 	for (; x < dx; x++, idx +=pixx) {
-		mbuffer[idx]=(mbuffer[idx]/2)+(color/2);
+		mbuffer[idx]=Opacity(mbuffer[idx],color);
  		y += dy;
  		if (y >= dx) {
  			y -= dx;
@@ -343,7 +354,7 @@ unsigned char *mbuffer=(unsigned char *)surf;
 
     	for(yrepeat = y; yrepeat < y+ surfh; yrepeat++) 
         	for(xrepeat = x; xrepeat< x+surfw; xrepeat++,yptr++)
-             		if(*yptr!=0)mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = (mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH]/2) + (*yptr/2);
+             		if(*yptr!=0)mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = Opacity(mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH],*yptr);
 
 	free(linesurf);
 
