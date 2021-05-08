@@ -452,7 +452,7 @@ int Retro_PollEvent()
    }
 
 
-   if(atari_devices[0]==RETRO_DEVICE_ATARI_JOYSTICK)
+   if(atari_devices[0]==RETRO_DEVICE_ATARI_JOYSTICK && SHOWKEY==-1) // disable joystick input if Virtual Keyboard active
    {
       //shortcut for joy mode only
 
