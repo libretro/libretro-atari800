@@ -8,15 +8,22 @@
 #include "libretro-core.h"
 
 extern int VIRTUAL_WIDTH;
+extern int VKBD_OPACITY;
 
 unsigned Opacity(unsigned color1, unsigned color2){
 	
 	unsigned r,g,b;
 	
-	r=(R_RGB565(color1)/2)+(R_RGB565(color2)/2);
-	g=(G_RGB565(color1)/2)+(G_RGB565(color2)/2);
-	b=(B_RGB565(color1)/2)+(B_RGB565(color2)/2);
-	return RGB565(r,g,b);
+	if (VKBD_OPACITY==1){
+		r=(R_RGB565(color1)/2)+(R_RGB565(color2)/2);
+		g=(G_RGB565(color1)/2)+(G_RGB565(color2)/2);
+		b=(B_RGB565(color1)/2)+(B_RGB565(color2)/2);
+		return RGB565(r,g,b);
+	}
+	else
+	{
+		return color2
+	}
 	
 }
 

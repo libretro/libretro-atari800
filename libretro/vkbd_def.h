@@ -76,7 +76,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " \x9c ", " \x9c ", " \x9c ", RETROK_UP},
 	{ "Inv", "Inv", "Inv", RETROK_LSUPER},
 
-	{ "Spc", "Spc", "Spc", RETROK_SPACE}, // page 1, line 6
+	{ "OPC", "OPC", "OPC", -5}, // page 1, line 6
 	{ "Spc", "Spc", "Spc", RETROK_SPACE},
 	{ " + ", " \\ ", " \x1e ", RETROK_PLUS},
 	{ " _ ", " - ", " \x1c ", RETROK_UNDERSCORE},
