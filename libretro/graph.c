@@ -343,7 +343,7 @@ unsigned char *mbuffer=(unsigned char *)surf;
 
     	for(yrepeat = y; yrepeat < y+ surfh; yrepeat++) 
         	for(xrepeat = x; xrepeat< x+surfw; xrepeat++,yptr++)
-             		if(*yptr!=0)mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = *yptr;
+             		if(*yptr!=0)mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = (mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH]/2) + (*yptr/2);
 
 	free(linesurf);
 
