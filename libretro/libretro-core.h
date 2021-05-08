@@ -42,7 +42,7 @@ extern char Key_Sate2[512];
 extern int pauseg; 
 
 #define NPLGN 12
-#define NLIGN 5
+#define NLIGN 6
 #define NLETT 5
 
 #define XSIDE  (CROP_WIDTH/NPLGN -1)

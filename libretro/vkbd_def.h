@@ -8,9 +8,23 @@ typedef struct {
 	int val;	
 } Mvk;
 
+// I left 2 pages of Virtual Keyboard allowed to work, but everything now fits on one.
 Mvk MVk[NPLGN*NLIGN*2]={
 
-	{ "Esc", "Esc", "Esc", RETROK_ESCAPE},//0
+	{ "HLP", "HLP", "HLP", RETROK_F6}, // page 1, line 1
+	{ "STA", "STA", "STA", RETROK_F4},
+	{ "SEL", "SEL", "SEL", RETROK_F3},
+	{ "OPT", "OPT", "OPT", RETROK_F2},
+	{ "RES", "RES", "RES", RETROK_F5},
+	{ " F1", " F1", " F1", RETROK_F7},
+	{ " F2", " F2", " F2", RETROK_F8},
+	{ " F3", " F3", " F3", RETROK_F9},
+	{ " F4", " F4", " F4", RETROK_F10},
+	{ "Clr", "Clr", "Clr", RETROK_HOME},
+	{ "Ins", "Ins", "Ins", RETROK_INSERT},
+	{ "Del", "Del", "Del", RETROK_DELETE},
+
+	{ "Esc", "Esc", "Esc", RETROK_ESCAPE}, // page 1, line 2
 	{ " 1 ", " ! ", " \xb1 " , RETROK_1},
 	{ " 2 ", " \" ", " \xb2 ", RETROK_2},
 	{ " 3 ", " # ", " \xb3 ", RETROK_3},
@@ -23,7 +37,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " 0 ", " ) ", " \xb0 ", RETROK_0},
 	{ "Brk", "Brk", "Brk", RETROK_PAUSE},
 
-	{ "Tab", "Tab", "Tab", RETROK_TAB}, //10+2
+	{ "Tab", "Tab", "Tab", RETROK_TAB},  // page 1, line 3
 	{ " q ", " Q ", "Q \x11", RETROK_q},
 	{ " w ", " W ", "W \x17", RETROK_w},
 	{ " e ", " E ", "E \x05", RETROK_e},
@@ -36,7 +50,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " p ", " P ", "P \x10", RETROK_p},
 	{ "Ret", "Ret", "Ret", RETROK_RETURN},
 
-	{ "Ctl", "Ctl", "Ctl", RETROK_LCTRL}, //20+4
+	{ "Ctl", "Ctl", "Ctl", RETROK_LCTRL},  // page 1, line 4
 	{ " a ", " A ", "A \x01", RETROK_a},
 	{ " s ", " S ", "S \x13", RETROK_s},
 	{ " d ", " D ", "D \x04", RETROK_d},
@@ -49,7 +63,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " ; ", " : ", "; \x7b", RETROK_SEMICOLON},
 	{ "Cap", "Cap", "Cap", RETROK_CAPSLOCK},
 
-	{ "Shf", "Shf", "Shf", RETROK_LSHIFT}, //30+6
+	{ "Shf", "Shf", "Shf", RETROK_LSHIFT},  // page 1, line 5
 	{ " z ", " Z ", "Z \x1a", RETROK_z},
 	{ " x ", " X ", "X \x18", RETROK_x},
 	{ " c ", " C ", "C \x03", RETROK_c},
@@ -59,24 +73,24 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " m ", " M ", "M \x0d", RETROK_m},
 	{ " , ", " [ ", ", \x00", RETROK_COMMA},
 	{ " . ", " ] ", ". \x60", RETROK_PERIOD},
-	{ " / ", " ? ", " / ", RETROK_SLASH},
+	{ " \x9c ", " \x9c ", " \x9c ", RETROK_UP},
 	{ "Inv", "Inv", "Inv", RETROK_LSUPER},
 
-	{ "PG2", "PG2", "PG2", -2}, //40+8
+	{ "Spc", "Spc", "Spc", RETROK_SPACE}, // page 1, line 6
 	{ "Spc", "Spc", "Spc", RETROK_SPACE},
-	{ "Del", "Del", "Del", RETROK_DELETE},
-	{ "Clr", "Clr", "Clr", RETROK_HOME},
-	{ "Ins", "Ins", "Ins", RETROK_INSERT},
 	{ " + ", " \\ ", " \x1e ", RETROK_PLUS},
 	{ " _ ", " - ", " \x1c ", RETROK_UNDERSCORE},
 	{ " = ", " | ", " \x1d ", RETROK_EQUALS},
 	{ " * ", " ^ ", " \x1f ", RETROK_ASTERISK},
+	{ " / ", " ? ", " / ", RETROK_SLASH},
 	{ " < ", " < ", " < ", RETROK_LESS},
 	{ " > ", " > ", " > ", RETROK_GREATER},
-	{ "PG2", "PG2", "PG2", -2},
+	{ " \x9e ", " \x9e ", " \x9e ", RETROK_LEFT},
+	{ " \x9d ", " \x9d ", " \x9d ", RETROK_DOWN},
+	{ " \x9f ", " \x9f ", " \x9f ", RETROK_RIGHT},
 
 
-	{ "Esc", "Esc", "Esc", RETROK_ESCAPE},//50+10
+	{ "Esc", "Esc", "Esc", RETROK_ESCAPE}, // page 2, line 1
 	{ "HLP", "HLP", "HLP", RETROK_F6},
 	{ "STA", "STA", "STA", RETROK_F4},
 	{ "SEL", "SEL", "SEL", RETROK_F3},
@@ -89,7 +103,20 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ "GUI", "GUI", "GUI", RETROK_F1},
 	{ "Brk", "Brk", "Brk", RETROK_PAUSE},
 
-	{ "Tab", "Tab", "Tab", RETROK_TAB}, //60+12
+	{ "Esc", "Esc", "Esc", RETROK_ESCAPE}, // page 2, line 2
+	{ "HLP", "HLP", "HLP", RETROK_F6},
+	{ "STA", "STA", "STA", RETROK_F4},
+	{ "SEL", "SEL", "SEL", RETROK_F3},
+	{ "OPT", "OPT", "OPT", RETROK_F2},
+	{ "RES", "RES", "RES", RETROK_F5},
+	{ " F1", " F1", " F1", RETROK_F7},
+	{ " F2", " F2", " F2", RETROK_F8},
+	{ " F3", " F3", " F3", RETROK_F9},
+	{ " F4", " F4", " F4", RETROK_F10},
+	{ "GUI", "GUI", "GUI", RETROK_F1},
+	{ "Brk", "Brk", "Brk", RETROK_PAUSE},
+
+	{ "Tab", "Tab", "Tab", RETROK_TAB}, // page 2, line 3
 	{ " q ", " Q ", "Q \x11", RETROK_q},
 	{ " w ", " W ", "W \x17", RETROK_w},
 	{ " e ", " E ", "E \x05", RETROK_e},
@@ -102,7 +129,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " p ", " P ", "P \x10", RETROK_p},
 	{ "Ret", "Ret", "Ret", RETROK_RETURN},
 
-	{ "Ctl", "Ctl", "Ctl", RETROK_LCTRL}, //70+14
+	{ "Ctl", "Ctl", "Ctl", RETROK_LCTRL}, // page 2, line 4
 	{ " a ", " A ", "A \x01", RETROK_a},
 	{ " s ", " S ", "S \x13", RETROK_s},
 	{ " d ", " D ", "D \x04", RETROK_d},
@@ -115,7 +142,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " ; ", " : ", "; \x7b", RETROK_SEMICOLON},
 	{ "Cap", "Cap", "Cap", RETROK_CAPSLOCK},
 
-	{ "Shf", "Shf", "Shf", RETROK_LSHIFT}, //80+16
+	{ "Shf", "Shf", "Shf", RETROK_LSHIFT}, // page 2, line 5
 	{ " z ", " Z ", "Z \x1a", RETROK_z},
 	{ " x ", " X ", "X \x18", RETROK_x},
 	{ " c ", " C ", "C \x03", RETROK_c},
@@ -128,7 +155,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " / ", " ? ", " / ", RETROK_SLASH},
 	{ "Inv", "Inv", "Inv", RETROK_LSUPER},
 
-	{ "PG1", "PG1", "PG1", -2},//90+18
+	{ "PG1", "PG1", "PG1", -2}, // page 2, line 6
 	{ "Spc", "Spc", "Spc", RETROK_SPACE},
 	{ "Del", "Del", "Del", RETROK_DELETE},
 	{ "Clr", "Clr", "Clr", RETROK_HOME},
