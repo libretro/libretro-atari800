@@ -22,7 +22,7 @@ unsigned Opacity(unsigned color1, unsigned color2){
 	}
 	else
 	{
-		return color2
+		return color2;
 	}
 	
 }
