@@ -22,7 +22,7 @@ Mvk MVk[NPLGN*NLIGN*2]={
 	{ " F4", " F4", " F4", RETROK_F10},
 	{ "Clr", "Clr", "Clr", RETROK_HOME},
 	{ "Ins", "Ins", "Ins", RETROK_INSERT},
-	{ "Del", "Del", "Del", RETROK_DELETE},
+	{ "Bsp", "Del", "Del", RETROK_BACKSPACE},
 
 	{ "Esc", "Esc", "Esc", RETROK_ESCAPE}, // page 1, line 2
 	{ " 1 ", " ! ", " \xb1 " , RETROK_1},

@@ -316,8 +316,14 @@ int PLATFORM_Keyboard(void)
 	if (Key_Sate[RETROK_SPACE])
 		return AKEY_SPACE ^ shiftctrl;
 
-	if (Key_Sate[RETROK_BACKSPACE])
-		return AKEY_BACKSPACE|shiftctrl;
+	if (Key_Sate[RETROK_BACKSPACE]){
+		if (INPUT_key_shift)
+			return AKEY_DELETE_CHAR;
+		else if (key_control)
+			return AKEY_DELETE_LINE;
+		else
+			return AKEY_BACKSPACE;
+	}
 
 	if (Key_Sate[RETROK_RETURN])
 		return AKEY_RETURN ^ shiftctrl;
