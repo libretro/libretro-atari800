@@ -57,6 +57,11 @@
 #include <pspthreadman.h>
 #endif
 
+#if defined(__PS3__) && !defined(__PSL1GHT__)
+#include <sys/timer.h>
+#define usleep sys_timer_usleep
+#endif
+
 #include "atari.h"
 #include "platform.h"
 #include "util.h"

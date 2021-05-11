@@ -583,3 +583,33 @@
 #undef HAVE_NANOSLEEP
 
 #endif
+
+#if defined(__PS3__) && !defined(__PSL1GHT__)
+#undef HAVE_FSEEKO
+#undef HAVE_GETCWD
+#undef HAVE_NANOSLEEP
+#undef HAVE_MKSTEMP
+#undef HAVE_MKTEMP
+#undef HAVE_SIGNAL
+#undef HAVE_SIGNAL_H
+#undef HAVE_SYSTEM
+#undef HAVE_TMPFILE
+#undef HAVE_TMPNAM
+#undef HAVE_STRINGS_H
+#include <cell/cell_fs.h>
+#define O_RDONLY CELL_FS_O_RDONLY
+#define O_WRONLY CELL_FS_O_WRONLY
+#define O_CREAT CELL_FS_O_CREAT
+#define O_TRUNC CELL_FS_O_TRUNC
+#define O_RDWR CELL_FS_O_RDWR
+#define sysFsStat cellFsStat
+#define sysFSStat CellFsStat
+#define sysFSDirent CellFsDirent
+#define sysFsOpendir cellFsOpendir
+#define sysFsReaddir cellFsReaddir
+#define sysFSDirent CellFsDirent
+#define sysFsClosedir cellFsClosedir
+#define WORDS_BIGENDIAN 1
+#define FS_SUCCEEDED 0
+#define FS_TYPE_DIR 1
+#endif

@@ -443,7 +443,9 @@ int Atari800_Initialise(int *argc, char *argv[])
 #if defined(__LIBRETRO__)
 	SYSROM_FindInDir(retro_system_directory, TRUE);
 #endif
+#if !defined(__PS3__) && !defined(__PSL1GHT__)
 	SYSROM_FindInDir(".", TRUE); /* current directory */
+#endif
 #if defined(unix) || defined(__unix__) || defined(__linux__)
 	SYSROM_FindInDir("/usr/share/atari800", TRUE);
 #endif
