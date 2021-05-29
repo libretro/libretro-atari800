@@ -64,6 +64,9 @@
 #endif
 
 int CFG_save_on_exit = FALSE;
+#if defined(__LIBRETRO__)
+extern const char *retro_system_directory;
+#endif
 
 /* If another default path config path is defined use it
    otherwise use the default one */
@@ -73,6 +76,10 @@ int CFG_save_on_exit = FALSE;
 
 #ifndef SYSTEM_WIDE_CFG_FILE
 #define SYSTEM_WIDE_CFG_FILE "/etc/atari800.cfg"
+#endif
+
+#if defined (__PS3__) || defined(__PSL1GHT__)
+#define DEFAULT_CFG_NAME "/atari800.cfg"
 #endif
 
 #ifdef WIIU
@@ -101,11 +108,16 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 	}
 	/* else use the default config name under the HOME folder */
 	else {
+#if !defined(__PS3__) && !defined(__PSL1GHT__)
 		char *home = getenv("HOME");
 		if (home != NULL)
 			Util_catpath(rtconfig_filename, home, DEFAULT_CFG_NAME);
 		else
 			strcpy(rtconfig_filename, DEFAULT_CFG_NAME);
+#else
+		strcpy(rtconfig_filename, retro_system_directory);
+		strcat(rtconfig_filename, DEFAULT_CFG_NAME);
+#endif
 	}
 
 	fp = fopen(fname, "r");

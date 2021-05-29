@@ -81,7 +81,7 @@
 #  define fseeko _fseek
 #  define ftello _ftell
 #  define PRId64 "lld"
-#elif defined (__DJGPP__)
+#elif defined (__DJGPP__) || defined(__PS3__) && !defined(__PSL1GHT__)
 #  define fseeko fseek
 #  define ftello ftell
 #  define PRId64 "lld"

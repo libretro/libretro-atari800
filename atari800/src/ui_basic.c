@@ -44,6 +44,9 @@
 #ifdef HAVE_WINDOWS_H
 #include <windows.h>
 #endif
+#if defined(__PS3__) && !defined(__PSL1GHT__)
+#include "devices.h"
+#endif
 
 #include "antic.h"
 #include "atari.h"
