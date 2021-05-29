@@ -44,6 +44,8 @@ extern char Key_Sate[512];
 #include "libretro.h"
 #include "retroscreen.h"
 
+extern int SHIFTON;
+extern int CTRLON;
 extern int UI_is_active;
 
 static int swap_joysticks = FALSE;
@@ -193,13 +195,15 @@ int PLATFORM_Keyboard(void)
 	}
 
 	/* SHIFT STATE */
-	if ((Key_Sate[RETROK_LSHIFT]) || (Key_Sate[RETROK_RSHIFT]))
+	//if ((Key_Sate[RETROK_LSHIFT]) || (Key_Sate[RETROK_RSHIFT]))
+	if (SHIFTON == 1)
 		INPUT_key_shift = 1;
 	else
 		INPUT_key_shift = 0;
 
 	/* CONTROL STATE */
-	if ((Key_Sate[RETROK_LCTRL]) || (Key_Sate[RETROK_RCTRL]))
+	//if ((Key_Sate[RETROK_LCTRL]) || (Key_Sate[RETROK_RCTRL]))
+	if (CTRLON == 1)
 		key_control = 1;
 	else
 		key_control = 0;
@@ -221,13 +225,6 @@ int PLATFORM_Keyboard(void)
 	if (Key_Sate[RETROK_F5])
 		return INPUT_key_shift ? AKEY_COLDSTART : AKEY_WARMSTART;
 
-	if (Key_Sate[RETROK_F8]){
-		UI_alt_function = UI_MENU_MONITOR;
-	}
-
-	if (Key_Sate[RETROK_F9])return AKEY_EXIT;
-
-	if (Key_Sate[RETROK_F10])return INPUT_key_shift ? AKEY_SCREENSHOT_INTERLACE : AKEY_SCREENSHOT;
 
 	if (Key_Sate[RETROK_F12])return AKEY_TURBO;
 
@@ -300,7 +297,7 @@ int PLATFORM_Keyboard(void)
 	if (Key_Sate[RETROK_HOME])
 		return key_control ? AKEY_LESS|shiftctrl : AKEY_CLEAR;
 
-	if (Key_Sate[RETROK_PAUSE] || Key_Sate[RETROK_F7] )
+	if (Key_Sate[RETROK_PAUSE])
 	{
 		if (BINLOAD_wait_active) {
 			BINLOAD_pause_loading = TRUE;
@@ -319,8 +316,14 @@ int PLATFORM_Keyboard(void)
 	if (Key_Sate[RETROK_SPACE])
 		return AKEY_SPACE ^ shiftctrl;
 
-	if (Key_Sate[RETROK_BACKSPACE])
-		return AKEY_BACKSPACE|shiftctrl;
+	if (Key_Sate[RETROK_BACKSPACE]){
+		if (INPUT_key_shift)
+			return AKEY_DELETE_CHAR;
+		else if (key_control)
+			return AKEY_DELETE_LINE;
+		else
+			return AKEY_BACKSPACE;
+	}
 
 	if (Key_Sate[RETROK_RETURN])
 		return AKEY_RETURN ^ shiftctrl;
@@ -458,6 +461,18 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_COMMA])return (AKEY_CTRL | AKEY_COMMA);
 		if (Key_Sate[RETROK_PERIOD])return (AKEY_CTRL | AKEY_FULLSTOP);
 		if (Key_Sate[RETROK_SEMICOLON])return (AKEY_CTRL | AKEY_SEMICOLON);
+		
+		if (Key_Sate[RETROK_F7])return (AKEY_CTRL | AKEY_F1);
+		if (Key_Sate[RETROK_F8])return (AKEY_CTRL | AKEY_F2);
+		if (Key_Sate[RETROK_F9])return (AKEY_CTRL | AKEY_F3);
+		if (Key_Sate[RETROK_F10])return (AKEY_CTRL | AKEY_F4);
+		
+		// cursor keys
+		if (Key_Sate[RETROK_PLUS])return AKEY_LEFT;
+		if (Key_Sate[RETROK_ASTERISK])return AKEY_RIGHT;
+		if (Key_Sate[RETROK_EQUALS])return AKEY_DOWN;
+		if (Key_Sate[RETROK_UNDERSCORE])return AKEY_UP;
+
 
 	}
 
@@ -492,26 +507,35 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_z])return AKEY_Z;
 
 		if (Key_Sate[RETROK_1])return AKEY_EXCLAMATION;
-		if (Key_Sate[RETROK_2])return AKEY_AT;
+		if (Key_Sate[RETROK_2])return AKEY_DBLQUOTE;
 		if (Key_Sate[RETROK_3])return AKEY_HASH;
 		if (Key_Sate[RETROK_4])return AKEY_DOLLAR;
 		if (Key_Sate[RETROK_5])return AKEY_PERCENT;
-		if (Key_Sate[RETROK_6])return AKEY_CARET;
-		if (Key_Sate[RETROK_7])return AKEY_AMPERSAND;
-		if (Key_Sate[RETROK_8])return AKEY_ASTERISK;
+		if (Key_Sate[RETROK_6])return AKEY_AMPERSAND;
+		if (Key_Sate[RETROK_7])return AKEY_QUOTE;
+		if (Key_Sate[RETROK_8])return AKEY_AT;
 		if (Key_Sate[RETROK_9])return AKEY_PARENLEFT;
 		if (Key_Sate[RETROK_0])return AKEY_PARENRIGHT;
 
 		if (Key_Sate[RETROK_BACKSLASH])return AKEY_BAR;
-		if (Key_Sate[RETROK_COMMA])return AKEY_LESS;
-		if (Key_Sate[RETROK_PERIOD])return AKEY_GREATER;
-		if (Key_Sate[RETROK_MINUS])return AKEY_UNDERSCORE;
-		if (Key_Sate[RETROK_EQUALS])return AKEY_PLUS;
+		if (Key_Sate[RETROK_COMMA])return AKEY_BRACKETLEFT;
+		if (Key_Sate[RETROK_PERIOD])return AKEY_BRACKETRIGHT;
+		if (Key_Sate[RETROK_UNDERSCORE])return AKEY_MINUS;
+		if (Key_Sate[RETROK_PLUS])return AKEY_BACKSLASH;
+		if (Key_Sate[RETROK_EQUALS])return AKEY_BAR;
 		if (Key_Sate[RETROK_LEFTBRACKET])return AKEY_BRACKETLEFT; // no curly braces on Atari
 		if (Key_Sate[RETROK_RIGHTBRACKET])return AKEY_BRACKETRIGHT; // no curly braces on Atari
 		if (Key_Sate[RETROK_SEMICOLON])return AKEY_COLON;
 		if (Key_Sate[RETROK_QUOTE])return AKEY_DBLQUOTE;
 		if (Key_Sate[RETROK_SLASH])return AKEY_QUESTION;
+		if (Key_Sate[RETROK_ASTERISK])return AKEY_CIRCUMFLEX;
+		if (Key_Sate[RETROK_LESS])return AKEY_LESS;
+		if (Key_Sate[RETROK_GREATER])return AKEY_GREATER;
+		
+		if (Key_Sate[RETROK_F7])return (AKEY_SHFT | AKEY_F1);
+		if (Key_Sate[RETROK_F8])return (AKEY_SHFT | AKEY_F2);
+		if (Key_Sate[RETROK_F9])return (AKEY_SHFT | AKEY_F3);
+		if (Key_Sate[RETROK_F10])return (AKEY_SHFT | AKEY_F4);
 
 	} else {
 		if (Key_Sate[RETROK_a])return AKEY_a;
@@ -556,12 +580,22 @@ int PLATFORM_Keyboard(void)
 		if (Key_Sate[RETROK_COMMA])return AKEY_COMMA;
 		if (Key_Sate[RETROK_PERIOD])return AKEY_FULLSTOP;
 		if (Key_Sate[RETROK_MINUS])return AKEY_MINUS;
+		if (Key_Sate[RETROK_PLUS])return AKEY_PLUS;
 		if (Key_Sate[RETROK_EQUALS])return AKEY_EQUAL;
 		if (Key_Sate[RETROK_LEFTBRACKET])return AKEY_BRACKETLEFT;
 		if (Key_Sate[RETROK_RIGHTBRACKET])return AKEY_BRACKETRIGHT;
 		if (Key_Sate[RETROK_SEMICOLON])return AKEY_SEMICOLON;
 		if (Key_Sate[RETROK_QUOTE])return AKEY_QUOTE;
 		if (Key_Sate[RETROK_SLASH])return AKEY_SLASH;
+		if (Key_Sate[RETROK_ASTERISK])return AKEY_ASTERISK;
+		if (Key_Sate[RETROK_LESS])return AKEY_LESS;
+		if (Key_Sate[RETROK_GREATER])return AKEY_GREATER;
+		if (Key_Sate[RETROK_UNDERSCORE])return AKEY_UNDERSCORE;
+		
+		if (Key_Sate[RETROK_F7])return AKEY_F1;
+		if (Key_Sate[RETROK_F8])return AKEY_F2;
+		if (Key_Sate[RETROK_F9])return AKEY_F3;
+		if (Key_Sate[RETROK_F10])return AKEY_F4;
 
 	}
 
@@ -581,6 +615,8 @@ int PLATFORM_Keyboard(void)
 		return AKEY_ESCAPE;
 	if (mbt[RETRO_DEVICE_ID_JOYPAD_B])
 		return AKEY_RETURN;
+	if (mbt[RETRO_DEVICE_ID_JOYPAD_Y])
+		return AKEY_HELP;
 }
 
 	if (UI_is_active){

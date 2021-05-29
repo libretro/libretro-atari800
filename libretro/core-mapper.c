@@ -41,6 +41,7 @@ char RPATH[512];
 //EMU FLAGS
 int NPAGE=-1, KCOL=1, BKGCOLOR=0;
 int SHOWKEY=-1;
+int VKBD_OPACITY=-1;
 
 #if defined(ANDROID) || defined(__ANDROID__)
 int MOUSE_EMULATED=1;
@@ -257,7 +258,11 @@ void retro_virtualkb(void)
             SHOWKEY=-SHOWKEY;
          }
          else if(i==-5)
-            oldi=-1;
+		 {
+			//VKbd opacitu on/off
+			VKBD_OPACITY=-VKBD_OPACITY;
+			oldi=-1;
+		 }
          else if(i==-6)
             oldi=-1;
          else if(i==-7)

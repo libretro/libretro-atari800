@@ -42,7 +42,7 @@ extern char Key_Sate2[512];
 extern int pauseg; 
 
 #define NPLGN 12
-#define NLIGN 5
+#define NLIGN 6
 #define NLETT 5
 
 #define XSIDE  (CROP_WIDTH/NPLGN -1)
@@ -58,11 +58,20 @@ extern int pauseg;
 
 #ifndef  RENDER16B
 #define RGB565(r, g, b)  (((r) << (5+16)) | ((g) << (5+8)) | (b<<5))
+#define R_RGB565(rgb)	(((rgb) >> (5+16)) & 255)
+#define G_RGB565(rgb)	(((rgb) >> (5+8)) & 255)
+#define B_RGB565(rgb)	((rgb>>5) & 255)
 #else
 #if defined(ABGR1555)
 #define RGB565(r, g, b)  (((b) << (10)) | ((g) << 5) | (r))
+#define B_RGB565(rgb)	(((rgb) >> (10)) & 31)
+#define G_RGB565(rgb)	(((rgb) >> 5) & 31)
+#define R_RGB565(rgb)	(rgb & 31)
 #else
 #define RGB565(r, g, b)  (((r) << (5+6)) | ((g) << 6) | (b))
+#define R_RGB565(rgb)	(((rgb) >> (5+6)) & 31)
+#define G_RGB565(rgb)	(((rgb) >> 6) & 31)
+#define B_RGB565(rgb)	(rgb & 31)
 #endif
 #endif
 #define uint32 unsigned int

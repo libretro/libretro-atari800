@@ -8,6 +8,24 @@
 #include "libretro-core.h"
 
 extern int VIRTUAL_WIDTH;
+extern int VKBD_OPACITY;
+
+unsigned Opacity(unsigned color1, unsigned color2){
+	
+	unsigned r,g,b;
+	
+	if (VKBD_OPACITY==1){
+		r=(R_RGB565(color1)/2)+(R_RGB565(color2)/2);
+		g=(G_RGB565(color1)/2)+(G_RGB565(color2)/2);
+		b=(B_RGB565(color1)/2)+(B_RGB565(color2)/2);
+		return RGB565(r,g,b);
+	}
+	else
+	{
+		return color2;
+	}
+	
+}
 
 void DrawFBoxBmp(char  *buffer,int x,int y,int dx,int dy,unsigned   color){
 	
@@ -24,7 +42,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 		for(j=y;j<y+dy;j++){
 			
 			idx=i+j*VIRTUAL_WIDTH;
-			mbuffer[idx]=color;	
+			mbuffer[idx]=Opacity(mbuffer[idx],color);	
 		}
 	}
 	
@@ -43,17 +61,17 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 	
 	for(i=x;i<x+dx;i++){
 		idx=i+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;
+		mbuffer[idx]=Opacity(mbuffer[idx],color);
 		idx=i+(y+dy)*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;
+		mbuffer[idx]=Opacity(mbuffer[idx],color);
 	}
 
 	for(j=y;j<y+dy;j++){
 			
 		idx=x+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;	
+		mbuffer[idx]=Opacity(mbuffer[idx],color);	
 		idx=(x+dx)+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;	
+		mbuffer[idx]=Opacity(mbuffer[idx],color);	
 	}
 	
 }
@@ -69,7 +87,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
 
 		idx=x+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;		
+		mbuffer[idx]=Opacity(mbuffer[idx],color);		
 	
 }
 
@@ -85,7 +103,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 		
 	for(i=x;i<x+dx;i++){
 		idx=i+y*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;		
+		mbuffer[idx]=Opacity(mbuffer[idx],color);		
 	}
 }
 
@@ -100,7 +118,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
 	for(j=y;j<y+dy;j++){			
 		idx=x+j*VIRTUAL_WIDTH;
-		mbuffer[idx]=color;		
+		mbuffer[idx]=Opacity(mbuffer[idx],color);		
 	}	
 }
 
@@ -135,7 +153,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 
  		} else {
 			idx=x1+y1*VIRTUAL_WIDTH;
- 			mbuffer[idx]=color;
+ 			mbuffer[idx]=Opacity(mbuffer[idx],color);
 			return ;
  		}
  	}
@@ -174,7 +192,7 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 	idx=x1+y1*VIRTUAL_WIDTH;
 
 	for (; x < dx; x++, idx +=pixx) {
-		mbuffer[idx]=color;
+		mbuffer[idx]=Opacity(mbuffer[idx],color);
  		y += dy;
  		if (y >= dx) {
  			y -= dx;
@@ -297,7 +315,8 @@ unsigned char *mbuffer=(unsigned char *)surf;
 #endif
 
     	if(string==NULL)return;
-    	for(strlen = 0; strlen<maxstrlen && string[strlen]; strlen++) {}
+		strlen = sizeof(string);
+		if (strlen>maxstrlen) strlen = maxstrlen;
 
 	int surfw=strlen * 7 * xscale;
 	int surfh=8 * yscale;
@@ -342,7 +361,7 @@ unsigned char *mbuffer=(unsigned char *)surf;
 
     	for(yrepeat = y; yrepeat < y+ surfh; yrepeat++) 
         	for(xrepeat = x; xrepeat< x+surfw; xrepeat++,yptr++)
-             		if(*yptr!=0)mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = *yptr;
+             		if(*yptr!=0)mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH] = Opacity(mbuffer[xrepeat+yrepeat*VIRTUAL_WIDTH],*yptr);
 
 	free(linesurf);
 
