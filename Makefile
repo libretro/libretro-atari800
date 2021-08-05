@@ -347,7 +347,7 @@ else ifeq ($(platform), classic_armv8_a35)
 #######################################
 
 #RETROFW
-else ifneq (,$(findstring retrofw,$(platform)))
+else ifeq ($(platform), retrofw)
 	TARGET := $(TARGET_NAME)_libretro.so
 	CC = /opt/retrofw-toolchain/usr/bin/mipsel-linux-gcc
 	CXX = /opt/retrofw-toolchain/usr/bin/mipsel-linux-g++
