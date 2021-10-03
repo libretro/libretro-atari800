@@ -21,13 +21,9 @@
 
 #include "zlib.h"
 
-#if defined(STDC) && !defined(Z_SOLO)
-#  if !(defined(_WIN32_WCE) && defined(_MSC_VER))
-#    include <stddef.h>
-#  endif
-#  include <string.h>
-#  include <stdlib.h>
-#endif
+#include <stddef.h>
+#include <string.h>
+#include <stdlib.h>
 
 #ifdef Z_SOLO
    typedef long ptrdiff_t;  /* guess -- will be caught if guess is wrong */
@@ -80,31 +76,12 @@ extern const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 
         /* target dependencies */
 
-#if defined(MSDOS) || (defined(WINDOWS) && !defined(WIN32))
-#  define OS_CODE  0x00
-#  ifndef Z_SOLO
-#    if defined(__TURBOC__) || defined(__BORLANDC__)
-#      if (__STDC__ == 1) && (defined(__LARGE__) || defined(__COMPACT__))
-         /* Allow compilation with ANSI keywords only enabled */
-         void _Cdecl farfree( void *block );
-         void *_Cdecl farmalloc( unsigned long nbytes );
-#      else
-#        include <alloc.h>
-#      endif
-#    else /* MSC or DJGPP */
-#      include <malloc.h>
-#    endif
-#  endif
-#endif
-
 #ifdef AMIGA
 #  define OS_CODE  0x01
 #endif
 
 #if defined(VAXC) || defined(VMS)
 #  define OS_CODE  0x02
-#  define F_OPEN(name, mode) \
-     fopen((name), (mode), "mbc=60", "ctx=stm", "rfm=fix", "mrs=512")
 #endif
 
 #if defined(ATARI) || defined(atarist)
@@ -179,11 +156,7 @@ extern const char * const z_errmsg[10]; /* indexed by 2-zlib_error */
 #  define OS_CODE  0x03  /* assume Unix */
 #endif
 
-#ifndef F_OPEN
-#  define F_OPEN(name, mode) fopen((name), (mode))
-#endif
-
-         /* functions */
+/* functions */
 
 #if defined(pyr) || defined(Z_SOLO)
 #  define NO_MEMCPY
