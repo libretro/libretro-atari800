@@ -92,16 +92,14 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 }
 
 void DrawHlineBmp(char  *buffer,int x,int y,int dx,int dy,unsigned    color){
-	
-	int i,j,idx;
-			
+	int i,idx;
 #if defined PITCH && PITCH == 4
-unsigned *mbuffer=(unsigned*)buffer;
+	unsigned *mbuffer=(unsigned*)buffer;
 #else
-unsigned short *mbuffer=(unsigned short *)buffer;
+	unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
-		
-	for(i=x;i<x+dx;i++){
+	for(i=x;i<x+dx;i++)
+	{
 		idx=i+y*VIRTUAL_WIDTH;
 		mbuffer[idx]=Opacity(mbuffer[idx],color);		
 	}
@@ -110,37 +108,32 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 void DrawVlineBmp(char *buffer,int x,int y,int dx,int dy,unsigned    color){
 	
 	int i,j,idx;
-			
 #if defined PITCH && PITCH == 4
-unsigned *mbuffer=(unsigned*)buffer;
+	unsigned *mbuffer=(unsigned*)buffer;
 #else
-unsigned short *mbuffer=(unsigned short *)buffer;
+	unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
-	for(j=y;j<y+dy;j++){			
+	for(j=y;j<y+dy;j++)
+	{
 		idx=x+j*VIRTUAL_WIDTH;
 		mbuffer[idx]=Opacity(mbuffer[idx],color);		
 	}	
 }
 
 void DrawlineBmp(char  *buffer,int x1,int y1,int x2,int y2,unsigned    color){
-		
 	int pixx, pixy;
  	int x, y;
- 	int dx, dy; 	
- 	int sx, sy;
  	int swaptmp;
  	int idx;
-			
 #if defined PITCH && PITCH == 4
-unsigned *mbuffer=(unsigned*)buffer;
+	unsigned *mbuffer=(unsigned*)buffer;
 #else
-unsigned short *mbuffer=(unsigned short *)buffer;
+	unsigned short *mbuffer=(unsigned short *)buffer;
 #endif
-
-	dx = x2 - x1;
-	dy = y2 - y1;
-	sx = (dx >= 0) ? 1 : -1;
-	sy = (dy >= 0) ? 1 : -1;
+	int dx = x2 - x1;
+	int dy = y2 - y1;
+	int sx = (dx >= 0) ? 1 : -1;
+	int sy = (dy >= 0) ? 1 : -1;
 
 	if (dx==0) {
  		if (dy>0) {
@@ -168,8 +161,8 @@ unsigned short *mbuffer=(unsigned short *)buffer;
  		}
  	}
 
-	dx = sx * dx + 1;
- 	dy = sy * dy + 1;
+	dx   = sx * dx + 1;
+ 	dy   = sy * dy + 1;
 	
 	pixx = 1;
  	pixy = VIRTUAL_WIDTH;
@@ -201,55 +194,28 @@ unsigned short *mbuffer=(unsigned short *)buffer;
 	}
 
 }
-/*
-void DrawBox(char   *buffer,box b,char t[],unsigned    color){
-
-
-	DrawBoxBmp(mbuffer,b.x,b.y,b.dx,b.dy,color); 	
-	textCpixel(mbuffer,b.x, 3*b.x + b.dx ,b.y+2,color,1,1,4,"%s",t);
-
-}
-
-void DrawBoxF(char    *buffer,box b,char t[],unsigned   color,unsigned    border){
-
-	int ydec=b.y+(b.dy/2)-4;
-
-
-	if(ydec<b.y+2)ydec=b.y+2;
-
-	DrawBoxBmp(mbuffer,b.x,b.y,b.dx,b.dy,border);
-	DrawFBoxBmp(mbuffer,b.x+1,b.y+1,b.dx-2,b.dy-2,color);
- 	
-	textCpixel(mbuffer,b.x, 3*b.x + b.dx , ydec ,border,1,1,4,"%s",t);
-
-}
-*/
 
 const float DEG2RAD = 3.14159/180;
 
 void DrawCircle(char *buf,int x, int y, int radius,unsigned  rgba,int full)
 { 
 	int i;
-	float degInRad; 
-	int x1,y1;
-			
 #if defined PITCH && PITCH == 4
-unsigned *mbuffer=(unsigned*)buf;
+	unsigned *mbuffer=(unsigned*)buf;
 #else
-unsigned short *mbuffer=(unsigned short *)buf;
+	unsigned short *mbuffer=(unsigned short *)buf;
 #endif
 
-   	for ( i=0; i < 360; i++){
+   	for ( i=0; i < 360; i++)
+	{
+		float degInRad = i*DEG2RAD;
+   		int x1         = x+cos(degInRad)*radius;
+		int y1         = y+sin(degInRad)*radius;
 
-		degInRad = i*DEG2RAD;
-   		x1=x+cos(degInRad)*radius;
-		y1=y+sin(degInRad)*radius;
-
-		if(full)DrawlineBmp(buf,x,y, x1,y1,rgba); 
-		else {
+		if(full)
+			DrawlineBmp(buf,x,y, x1,y1,rgba); 
+		else
 			mbuffer[x1+y1*VIRTUAL_WIDTH]=rgba;
-		}
-     		
      	}
     	
 }

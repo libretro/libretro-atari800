@@ -631,7 +631,11 @@ void retro_get_system_info(struct retro_system_info* info)
 {
     memset(info, 0, sizeof(*info));
     info->library_name = "Atari800";
+#ifdef GIT_VERSION
     info->library_version = "3.1.0" GIT_VERSION;
+#else
+    info->library_version = "3.1.0";
+#endif
     info->valid_extensions = "xfd|atr|cdm|cas|bin|a52|zip|atx|car|rom|com|xex";
     info->need_fullpath = true;
     info->block_extract = false;
@@ -673,8 +677,6 @@ void Retro_PollEvent(void);
 
 void retro_run(void)
 {
-    int x;
-
     bool updated = false;
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE_UPDATE, &updated) && updated)
