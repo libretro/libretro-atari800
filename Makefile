@@ -246,7 +246,7 @@ else ifneq (,$(filter $(platform), ngc wii wiiu))
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)  
    PLATFORM_DEFINES += -DGEKKO -mcpu=750 -meabi -mhard-float -DHAVE_STRTOF_L -DHAVE_LOCALE
-   PLATFORM_DEFINES += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int -D_GNU_SOURCE
+   PLATFORM_DEFINES += -ffunction-sections -fdata-sections -D__wiiu__ -D__wut__ -D_GNU_SOURCE
    STATIC_LINKING = 1
    HAVE_COMPAT = 1
    ifneq (,$(findstring wiiu,$(platform)))
