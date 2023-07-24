@@ -59,4 +59,9 @@ int SIO_WriteSector(int unit, int sector, const UBYTE *buffer);
 void SIO_StateSave(void);
 void SIO_StateRead(void);
 
+#if defined(__LIBRETRO__)
+void Retro_SIO_StateSave(void);
+void Retro_SIO_StateRead(void);
+#endif
+
 #endif	/* SIO_H_ */

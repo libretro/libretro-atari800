@@ -32,6 +32,10 @@
 #include <stdio.h>
 #include <string.h>
 
+#ifdef HAVE_SYS_STAT_H
+#include <sys/stat.h>
+#endif
+
 #include "sysrom.h"
 
 #include "cfg.h"
@@ -266,6 +270,9 @@ int SYSROM_FindInDir(char const *directory, int only_if_not_set)
 {
 	DIR *dir;
 	struct dirent *entry;
+#ifdef HAVE_STAT
+	struct stat status;
+#endif
 
 	if (only_if_not_set && num_unset_roms == 0)
 		/* No unset ROM paths left. */
@@ -281,7 +288,25 @@ int SYSROM_FindInDir(char const *directory, int only_if_not_set)
 		int id;
 		ULONG crc;
 		int matched_crc = FALSE;
+		
+		if (entry->d_name[0] == '.') {
+			/* never match "." */
+			if (entry->d_name[1] == '\0')
+				continue;
+			/* never match ".." */
+			if (entry->d_name[1] == '.' && entry->d_name[2] == '\0')
+				continue;
+		}
+		
 		Util_catpath(full_filename, directory, entry->d_name);
+		
+#ifdef HAVE_STAT
+		if (stat(full_filename, &status) == 0) {
+			if (S_ISDIR(status.st_mode))
+				continue ;
+		}
+#endif
+		
 		if ((file = fopen(full_filename, "rb")) == NULL)
 			/* Ignore non-readable files (e.g. directories). */
 			continue;

@@ -147,7 +147,7 @@
 #endif
 #if defined(__LIBRETRO__)
 extern const char *retro_system_directory;
-#endif
+#endif /* __LIBRETRO__ */
 
 int Atari800_machine_type = Atari800_MACHINE_XLXE;
 
@@ -1376,6 +1376,131 @@ void Atari800_Frame(void)
 #endif /* __PLUS */
 
 #ifndef BASIC
+
+#if defined(__LIBRETRO__)
+void Retro_Atari800_StateSave(void)
+{
+	UBYTE temp = Atari800_tv_mode == Atari800_TV_PAL;
+	Retro_SaveUBYTE(&temp, 1);
+	temp = Atari800_machine_type;
+	Retro_SaveUBYTE(&temp, 1);
+	if (Atari800_machine_type == Atari800_MACHINE_XLXE) {
+		temp = Atari800_builtin_basic;
+		Retro_SaveUBYTE(&temp, 1);
+		temp = Atari800_keyboard_leds;
+		Retro_SaveUBYTE(&temp, 1);
+		temp = Atari800_f_keys;
+		Retro_SaveUBYTE(&temp, 1);
+		temp = Atari800_jumper;
+		Retro_SaveUBYTE(&temp, 1);
+		temp = Atari800_builtin_game;
+		Retro_SaveUBYTE(&temp, 1);
+		temp = Atari800_keyboard_detached;
+		Retro_SaveUBYTE(&temp, 1);
+	}
+}
+
+void Retro_Atari800_StateRead(UBYTE version)
+{
+	if (version >= 7) {
+		UBYTE temp;
+		Retro_ReadUBYTE(&temp, 1);
+		Atari800_SetTVMode(temp ? Atari800_TV_PAL : Atari800_TV_NTSC);
+		Retro_ReadUBYTE(&temp, 1);
+		if (temp < 0 || temp >= Atari800_MACHINE_SIZE) {
+			temp = Atari800_MACHINE_XLXE;
+			Log_print("Warning: Bad machine type read in from state save, defaulting to XL/XE");
+		}
+		Atari800_SetMachineType(temp);
+		if (Atari800_machine_type == Atari800_MACHINE_XLXE) {
+			Retro_ReadUBYTE(&temp, 1);
+			Atari800_builtin_basic = temp != 0;
+			Retro_ReadUBYTE(&temp, 1);
+			Atari800_keyboard_leds = temp != 0;
+			Retro_ReadUBYTE(&temp, 1);
+			Atari800_f_keys = temp != 0;
+			Retro_ReadUBYTE(&temp, 1);
+			Atari800_jumper = temp != 0;
+			Atari800_UpdateJumper();
+			Retro_ReadUBYTE(&temp, 1);
+			Atari800_builtin_game = temp != 0;
+			Retro_ReadUBYTE(&temp, 1);
+			Atari800_keyboard_detached = temp != 0;
+			Atari800_UpdateKeyboardDetached();
+		}
+	}
+	else { /* savestate from version 2.2.1 or earlier */
+		int new_tv_mode;
+		/* these are all for compatibility with previous versions */
+		UBYTE temp;
+		int default_tv_mode;
+		int os;
+		int default_system;
+		int pil_on;
+
+		Retro_ReadUBYTE(&temp, 1);
+		new_tv_mode = (temp == 0) ? Atari800_TV_PAL : Atari800_TV_NTSC;
+		Atari800_SetTVMode(new_tv_mode);
+
+		Retro_ReadUBYTE(&temp, 1);
+		Retro_ReadINT(&os, 1);
+		switch (temp) {
+		case 0:
+			Atari800_machine_type = Atari800_MACHINE_800;
+			MEMORY_ram_size = 48;
+			break;
+		case 1:
+			Atari800_machine_type = Atari800_MACHINE_XLXE;
+			MEMORY_ram_size = 64;
+			break;
+		case 2:
+			Atari800_machine_type = Atari800_MACHINE_XLXE;
+			MEMORY_ram_size = 128;
+			break;
+		case 3:
+			Atari800_machine_type = Atari800_MACHINE_XLXE;
+			MEMORY_ram_size = MEMORY_RAM_320_COMPY_SHOP;
+			break;
+		case 4:
+			Atari800_machine_type = Atari800_MACHINE_5200;
+			MEMORY_ram_size = 16;
+			break;
+		case 5:
+			Atari800_machine_type = Atari800_MACHINE_800;
+			MEMORY_ram_size = 16;
+			break;
+		case 6:
+			Atari800_machine_type = Atari800_MACHINE_XLXE;
+			MEMORY_ram_size = 16;
+			break;
+		case 7:
+			Atari800_machine_type = Atari800_MACHINE_XLXE;
+			MEMORY_ram_size = 576;
+			break;
+		case 8:
+			Atari800_machine_type = Atari800_MACHINE_XLXE;
+			MEMORY_ram_size = 1088;
+			break;
+		case 9:
+			Atari800_machine_type = Atari800_MACHINE_XLXE;
+			MEMORY_ram_size = 192;
+			break;
+		default:
+			Atari800_machine_type = Atari800_MACHINE_XLXE;
+			MEMORY_ram_size = 64;
+			Log_print("Warning: Bad machine type read in from state save, defaulting to 800 XL");
+			break;
+		}
+
+		Retro_ReadINT(&pil_on, 1);
+		Retro_ReadINT(&default_tv_mode, 1);
+		Retro_ReadINT(&default_system, 1);
+		Atari800_SetMachineType(Atari800_machine_type);
+	}
+	load_roms();
+	/* XXX: what about patches? */
+}
+#endif /* __LIBRETRO__ */
 
 void Atari800_StateSave(void)
 {

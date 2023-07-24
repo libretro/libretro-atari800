@@ -74,7 +74,14 @@ enum {
 	CARTRIDGE_THECART_32M    = 65,
 	CARTRIDGE_THECART_64M    = 66,
 	CARTRIDGE_XEGS_8F_64     = 67,
-	CARTRIDGE_LAST_SUPPORTED = 67
+
+	CARTRIDGE_5200_SUPER_64	 = 68, // 71
+	CARTRIDGE_5200_SUPER_128 = 69, // 72
+	CARTRIDGE_5200_SUPER_256 = 70, // 73
+	CARTRIDGE_5200_SUPER_512 = 71, // 74
+	CARTRIDGE_ATMAX_NEW_1024 = 72, // 75
+
+	CARTRIDGE_LAST_SUPPORTED = 72
 };
 
 #define CARTRIDGE_MAX_SIZE	(128 * 1024 * 1024)
@@ -121,7 +128,7 @@ extern int const CARTRIDGE_kb[CARTRIDGE_LAST_SUPPORTED + 1];
 #define CARTRIDGE_PHOENIX_8_DESC     "Phoenix 8 KB cartridge"
 #define CARTRIDGE_BLIZZARD_16_DESC   "Blizzard 16 KB cartridge"
 #define CARTRIDGE_ATMAX_128_DESC     "Atarimax 128 KB Flash cartridge"
-#define CARTRIDGE_ATMAX_1024_DESC    "Atarimax 1 MB Flash cartridge"
+#define CARTRIDGE_ATMAX_1024_DESC    "Atarimax 1 MB Flash cartridge (old)"
 #define CARTRIDGE_SDX_128_DESC       "SpartaDOS X 128 KB cartridge"
 #define CARTRIDGE_OSS_8_DESC         "OSS 8 KB cartridge"
 #define CARTRIDGE_OSS_043M_16_DESC   "OSS two chip 16 KB cartridge (043M)"
@@ -147,6 +154,11 @@ extern int const CARTRIDGE_kb[CARTRIDGE_LAST_SUPPORTED + 1];
 #define CARTRIDGE_THECART_32M_DESC   "The!Cart 32 MB cartridge"
 #define CARTRIDGE_THECART_64M_DESC   "The!Cart 64 MB cartridge"
 #define CARTRIDGE_XEGS_8F_64_DESC    "XEGS 64 KB cartridge (banks 8-15)"
+#define CARTRIDGE_5200_SUPER_64_DESC "64 KB Atari 5200 Super Cart"
+#define CARTRIDGE_5200_SUPER_128_DESC "128 KB Atari 5200 Super Cart"
+#define CARTRIDGE_5200_SUPER_256_DESC "256 KB Atari 5200 Super Cart"
+#define CARTRIDGE_5200_SUPER_512_DESC "512 KB Atari 5200 Super Cart"
+#define CARTRIDGE_ATMAX_NEW_1024_DESC "Atarimax 1 MB Flash cartridge"
 
 /* Indicates whether the emulator should automatically reboot (coldstart)
    after inserting/removing a cartridge. (Doesn't affect the piggyback
@@ -203,6 +215,19 @@ void CARTRIDGE_BountyBob1(UWORD addr);
 void CARTRIDGE_BountyBob2(UWORD addr);
 void CARTRIDGE_StateSave(void);
 void CARTRIDGE_StateRead(UBYTE version);
+
+/* addr must be $bfxx in 5200 mode only. */
+UBYTE CARTRIDGE_5200SuperCartGetByte(UWORD addr, int no_side_effects);
+
+/* addr must be $bfxx in 5200 mode only. */
+void CARTRIDGE_5200SuperCartPutByte(UWORD addr, UBYTE value);
+
+
+#if defined(__LIBRETRO__)
+void Retro_CARTRIDGE_StateSave(void);
+void Retro_CARTRIDGE_StateRead(UBYTE version);
+#endif
+
 #ifdef PAGED_ATTRIB
 UBYTE CARTRIDGE_BountyBob1GetByte(UWORD addr, int no_side_effects);
 UBYTE CARTRIDGE_BountyBob2GetByte(UWORD addr, int no_side_effects);

@@ -634,6 +634,80 @@ static void Update_Counter(int chan_mask)
 
 #ifndef BASIC
 
+#if defined(__LIBRETRO__)
+void Retro_POKEY_StateSave(void)
+{
+	int shift_key = 0;
+	int keypressed = 0;
+	UWORD random_scanline_counter_lo;
+	UWORD random_scanline_counter_hi;
+
+	Retro_SaveUBYTE(&POKEY_KBCODE, 1);
+	Retro_SaveUBYTE(&POKEY_IRQST, 1);
+	Retro_SaveUBYTE(&POKEY_IRQEN, 1);
+	Retro_SaveUBYTE(&POKEY_SKCTL, 1);
+
+	Retro_SaveINT(&shift_key, 1);
+	Retro_SaveINT(&keypressed, 1);
+	Retro_SaveINT(&POKEY_DELAYED_SERIN_IRQ, 1);
+	Retro_SaveINT(&POKEY_DELAYED_SEROUT_IRQ, 1);
+	Retro_SaveINT(&POKEY_DELAYED_XMTDONE_IRQ, 1);
+
+	Retro_SaveUBYTE(&POKEY_AUDF[0], 4);
+	Retro_SaveUBYTE(&POKEY_AUDC[0], 4);
+	Retro_SaveUBYTE(&POKEY_AUDCTL[0], 1);
+
+	Retro_SaveINT(&POKEY_DivNIRQ[0], 4);
+	Retro_SaveINT(&POKEY_DivNMax[0], 4);
+	Retro_SaveINT(&POKEY_Base_mult[0], 1);
+
+	// Store the random number generator for runahead and netplay.  It's not seed based on the Atari like it is on other systems
+	random_scanline_counter_lo = random_scanline_counter & 0xFFFF;
+	random_scanline_counter_hi = (random_scanline_counter >> 16) & 0xFFFF;
+
+	Retro_SaveUWORD(&random_scanline_counter_lo, 1);
+	Retro_SaveUWORD(&random_scanline_counter_hi, 1);
+}
+
+void Retro_POKEY_StateRead(void)
+{
+	int i, shift_key, keypressed;
+	UWORD random_scanline_counter_lo = 0;
+	UWORD random_scanline_counter_hi = 0;
+
+	Retro_ReadUBYTE(&POKEY_KBCODE, 1);
+	Retro_ReadUBYTE(&POKEY_IRQST, 1);
+	Retro_ReadUBYTE(&POKEY_IRQEN, 1);
+	Retro_ReadUBYTE(&POKEY_SKCTL, 1);
+
+	Retro_ReadINT(&shift_key, 1);
+	Retro_ReadINT(&keypressed, 1);
+	Retro_ReadINT(&POKEY_DELAYED_SERIN_IRQ, 1);
+	Retro_ReadINT(&POKEY_DELAYED_SEROUT_IRQ, 1);
+	Retro_ReadINT(&POKEY_DELAYED_XMTDONE_IRQ, 1);
+
+	Retro_ReadUBYTE(&POKEY_AUDF[0], 4);
+	Retro_ReadUBYTE(&POKEY_AUDC[0], 4);
+	Retro_ReadUBYTE(&POKEY_AUDCTL[0], 1);
+	for (i = 0; i < 4; i++) {
+		POKEY_PutByte((UWORD)(POKEY_OFFSET_AUDF1 + i * 2), POKEY_AUDF[i]);
+		POKEY_PutByte((UWORD)(POKEY_OFFSET_AUDC1 + i * 2), POKEY_AUDC[i]);
+	}
+	POKEY_PutByte(POKEY_OFFSET_AUDCTL, POKEY_AUDCTL[0]);
+
+	Retro_ReadINT(&POKEY_DivNIRQ[0], 4);
+	Retro_ReadINT(&POKEY_DivNMax[0], 4);
+	Retro_ReadINT(&POKEY_Base_mult[0], 1);
+
+	Retro_ReadUWORD(&random_scanline_counter_lo, 1);
+	Retro_ReadUWORD(&random_scanline_counter_hi, 1);
+
+	// Restore the random number generator for runahead and netplay.  It's not seed based on the Atari like it is on other systems
+	random_scanline_counter = (random_scanline_counter_hi << 16) |
+		random_scanline_counter_lo;
+}
+#endif /* __LIBRETRO__ */
+
 void POKEY_StateSave(void)
 {
 	int shift_key = 0;

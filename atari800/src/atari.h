@@ -187,4 +187,10 @@ void Atari800_StateRead(UBYTE version);
 /* Change TV mode. */
 void Atari800_SetTVMode(int mode);
 
+#if defined(__LIBRETRO__)
+/* Save State */
+void Retro_Atari800_StateSave(void);
+void Retro_Atari800_StateRead(UBYTE version);
+#endif
+
 #endif /* ATARI_H_ */
