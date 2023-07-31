@@ -19,6 +19,12 @@ extern int PBI_IRQ;
 extern int PBI_D6D7ram;
 void PBI_StateSave(void);
 void PBI_StateRead(void);
+
+#if defined(__LIBRETRO__)
+void Retro_PBI_StateSave(void);
+void Retro_PBI_StateRead(void);
+#endif
+
 #define PBI_NOT_HANDLED -1
 /* #define PBI_DEBUG */
 #endif /* PBI_H_ */

@@ -22,6 +22,12 @@ void CPU_PutStatus(void);
 void CPU_Reset(void);
 void CPU_StateSave(UBYTE SaveVerbose);
 void CPU_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
+
+#if defined(__LIBRETRO__)
+void Retro_CPU_StateSave(UBYTE SaveVerbose);
+void Retro_CPU_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
+#endif
+
 void CPU_NMI(void);
 void CPU_GO(int limit);
 #define CPU_GenerateIRQ() (CPU_IRQ = 1)

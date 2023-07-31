@@ -26,6 +26,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
+#if defined(__LIBRETRO__)
+#include <libretro.h>
+#include <streams/memory_stream.h>
+
+int Retro_SaveState_Size = 0;
+#endif
+
 #ifdef HAVE_ERRNO_H
 #include <errno.h>
 #endif
@@ -99,6 +107,12 @@ static size_t mem_write(const void *buf, size_t len, gzFile *stream);
 #define Z_OK    0
 #endif
 
+
+#if defined(__LIBRETRO__)
+static memstream_t* state_stream = NULL;
+static bool state_stream_error = false;
+#endif
+
 static gzFile StateFile = NULL;
 static int nFileError = Z_OK;
 
@@ -119,6 +133,119 @@ static void GetGZErrorText(void)
 #endif /* GZERROR */
 	Log_print("State file I/O failed.");
 }
+
+#if defined(__LIBRETRO__)
+/* Value is memory location of data, num is number of type to save */
+void Retro_SaveUBYTE(const UBYTE* data, int num)
+{
+	if (!state_stream || state_stream_error)
+		return;
+
+	/* Assumption is that UBYTE = 8bits and the pointer passed in refers
+	 * directly to the active bits in a padded location. If not (unlikely)
+	 * you'll have to redefine this to save appropriately for cross-platform
+	 * compatibility */
+	if (memstream_write(state_stream, data, num) != num)
+		state_stream_error = true;
+
+	Retro_SaveState_Size += num;
+}
+
+void Retro_SaveINT(const int* data, int num)
+{
+	if (!state_stream || state_stream_error)
+		return;
+
+	/* INTs are always saved as 32bits (4 bytes) in the file. They can be any size
+	 * on the platform however. The sign bit is clobbered into the fourth byte saved
+	 * for each int; on read it will be extended out to its proper position for the
+	 * native INT size */
+	while (num > 0)
+	{
+		UBYTE signbit = 0;
+		unsigned int temp;
+		UBYTE byte;
+		int temp0 = *data++;
+		if (temp0 < 0)
+		{
+			temp0 = -temp0;
+			signbit = 0x80;
+		}
+		temp = (unsigned int)temp0;
+
+		byte = temp & 0xff;
+		if (memstream_write(state_stream, &byte, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		temp >>= 8;
+		byte = temp & 0xff;
+		if (memstream_write(state_stream, &byte, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		temp >>= 8;
+		byte = temp & 0xff;
+		if (memstream_write(state_stream, &byte, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		temp >>= 8;
+		byte = (temp & 0x7f) | signbit;
+		if (memstream_write(state_stream, &byte, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		num--;
+		Retro_SaveState_Size += 4;
+	}
+
+}
+
+/* Value is memory location of data, num is number of type to save */
+void Retro_SaveUWORD(const UWORD* data, int num)
+{
+	if (!state_stream || state_stream_error)
+		return;
+
+	/* UWORDS are saved as 16bits, regardless of the size on this particular
+	 * platform. Each byte of the UWORD will be pushed out individually in
+	 * LSB order. The shifts here and in the read routines will work for both
+	 * LSB and MSB architectures. */
+	while (num > 0)
+	{
+		UWORD temp = *data++;
+		UBYTE byte = temp & 0xff;
+
+		if (memstream_write(state_stream, &byte, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		temp >>= 8;
+		byte = temp & 0xff;
+
+		if (memstream_write(state_stream, &byte, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		num--;
+		Retro_SaveState_Size += 2;
+	}
+
+}
+#endif
 
 /* Value is memory location of data, num is number of type to save */
 void StateSav_SaveUBYTE(const UBYTE *data, int num)
@@ -328,9 +455,353 @@ void StateSav_ReadFNAME(char *filename)
 	filename[namelen] = 0;
 }
 
+#if defined(__LIBRETRO__)
+
+int Retro_SaveAtariState(uint8_t* data, size_t size, UBYTE SaveVerbose)
+{
+	UBYTE StateVersion = SAVE_VERSION_NUMBER;
+	Retro_SaveState_Size = 0;
+
+	/* Clean up any existing memory stream */
+	if (state_stream)
+	{
+		memstream_close(state_stream);
+		memstream_set_buffer(NULL, 0);
+		state_stream = NULL;
+	}
+	state_stream_error = false;
+
+	if (!data || size < 1)
+		goto error;
+
+	/* Open memory stream */
+	memstream_set_buffer(data, size);
+	state_stream = memstream_open(1);
+	if (!state_stream)
+		goto error;
+
+	if (memstream_write(state_stream, "ATARI800", 8) != 8)
+		goto error;
+
+	Retro_SaveState_Size += 8;
+
+	Retro_SaveUBYTE(&StateVersion, 1);
+	Retro_SaveUBYTE(&SaveVerbose, 1);
+	/* The order here is important. Atari800_StateSave must be first because it saves the machine type, and
+	   decisions on what to save/not save are made based off that later in the process */
+	Retro_Atari800_StateSave();
+	Retro_CARTRIDGE_StateSave();
+	Retro_SIO_StateSave();
+	Retro_ANTIC_StateSave();
+	Retro_CPU_StateSave(SaveVerbose);
+	Retro_GTIA_StateSave();
+	Retro_PIA_StateSave();
+	Retro_POKEY_StateSave();
+#ifdef XEP80_EMULATION
+	//XEP80_StateSave();
+#else
+	{
+		int local_xep80_enabled = FALSE;
+		Retro_SaveINT(&local_xep80_enabled, 1);
+	}
+#endif /* XEP80_EMULATION */
+	PBI_StateSave();
+#ifdef PBI_MIO
+	//PBI_MIO_StateSave();
+#else
+	{
+		int local_mio_enabled = FALSE;
+		Retro_SaveINT(&local_mio_enabled, 1);
+	}
+#endif /* PBI_MIO */
+#ifdef PBI_BB
+	//PBI_BB_StateSave();
+#else
+	{
+		int local_bb_enabled = FALSE;
+		Retro_SaveINT(&local_bb_enabled, 1);
+	}
+#endif /* PBI_BB */
+#ifdef PBI_XLD
+	//PBI_XLD_StateSave();
+#else
+	{
+		int local_xld_enabled = FALSE;
+		Retro_SaveINT(&local_xld_enabled, 1);
+	}
+#endif /* PBI_XLD */
+#ifdef DREAMCAST
+	DCStateSave();
+#endif
+
+	/* Close memory stream */
+	memstream_close(state_stream);
+	memstream_set_buffer(NULL, 0);
+	state_stream = NULL;
+
+	if (state_stream_error)
+		return FALSE;
+
+	return Retro_SaveState_Size;
+
+error:
+	if (state_stream)
+		memstream_close(state_stream);
+	memstream_set_buffer(NULL, 0);
+	state_stream = NULL;
+	state_stream_error = true;
+	return FALSE;
+}
+
+void Retro_SaveFNAME(const char* filename)
+{
+	UWORD namelen;
+#ifdef HAVE_GETCWD
+	char dirname[FILENAME_MAX] = "";
+
+	/* Check to see if file is in application tree, if so, just save as
+	   relative path....*/
+	if (getcwd(dirname, FILENAME_MAX) != NULL) {
+		if (strncmp(filename, dirname, strlen(dirname)) == 0)
+			/* XXX: check if '/' or '\\' follows dirname in filename? */
+			filename += strlen(dirname) + 1;
+	}
+#endif
+
+	namelen = strlen(filename);
+	/* Save the length of the filename, followed by the filename */
+	Retro_SaveUWORD(&namelen, 1);
+	Retro_SaveUBYTE((const UBYTE*)filename, namelen);
+}
+
+int Retro_ReadAtariState(const uint8_t* data, size_t size)
+{
+	char header_string[8];
+	UBYTE StateVersion = 0;  /* The version of the save file */
+	UBYTE SaveVerbose = 0;   /* Verbose mode means save basic, OS if patched */
+
+	Retro_SaveState_Size = 0;
+
+	/* Clean up any existing memory stream */
+	if (state_stream)
+	{
+		memstream_close(state_stream);
+		memstream_set_buffer(NULL, 0);
+		state_stream = NULL;
+	}
+	state_stream_error = false;
+
+	/* Open memory stream */
+	memstream_set_buffer((uint8_t*)data, size);
+	state_stream = memstream_open(0);
+	if (!state_stream)
+		goto error;
+
+	if (memstream_read(state_stream, header_string, 8) != 8)
+		goto error;
+
+	Retro_SaveState_Size += 8;
+
+	if (memcmp(header_string, "ATARI800", 8) != 0)
+		goto error;
+
+	if ((memstream_read(state_stream, &StateVersion, 1) != 1) ||
+		(memstream_read(state_stream, &SaveVerbose, 1) != 1))
+		goto error;
+
+	Retro_SaveState_Size += 2;
+
+	if (StateVersion > SAVE_VERSION_NUMBER || StateVersion < 3)
+		goto error;
+
+	Retro_Atari800_StateRead(StateVersion);
+	if (StateVersion >= 4) {
+		Retro_CARTRIDGE_StateRead(StateVersion);
+		Retro_SIO_StateRead();
+	}
+	Retro_ANTIC_StateRead();
+	Retro_CPU_StateRead(SaveVerbose, StateVersion);
+	Retro_GTIA_StateRead(StateVersion);
+	Retro_PIA_StateRead(StateVersion);
+	Retro_POKEY_StateRead();
+	if (StateVersion >= 6) {
+#ifdef XEP80_EMULATION
+		//XEP80_StateRead();
+#else
+		int local_xep80_enabled;
+		Retro_ReadINT(&local_xep80_enabled, 1);
+		if (local_xep80_enabled)
+			goto error;
+#endif /* XEP80_EMULATION */
+		PBI_StateRead();
+#ifdef PBI_MIO
+		//PBI_MIO_StateRead();
+#else
+		{
+			int local_mio_enabled;
+			Retro_ReadINT(&local_mio_enabled, 1);
+			if (local_mio_enabled)
+				goto error;
+		}
+#endif /* PBI_MIO */
+#ifdef PBI_BB
+		//PBI_BB_StateRead();
+#else
+		{
+			int local_bb_enabled;
+			Retro_ReadINT(&local_bb_enabled, 1);
+			if (local_bb_enabled)
+				goto error;
+		}
+#endif /* PBI_BB */
+#ifdef PBI_XLD
+		//PBI_XLD_StateRead();
+#else
+		{
+			int local_xld_enabled;
+			Retro_ReadINT(&local_xld_enabled, 1);
+			if (local_xld_enabled)
+				goto error;
+		}
+#endif /* PBI_XLD */
+	}
+#ifdef DREAMCAST
+	DCStateRead();
+#endif
+
+	/* Close memory stream */
+	memstream_close(state_stream);
+	memstream_set_buffer(NULL, 0);
+	state_stream = NULL;
+
+	if (state_stream_error)
+		return FALSE;
+
+	GTIA_consol_override = 0;
+
+	return Retro_SaveState_Size;
+
+error:
+	if (state_stream)
+		memstream_close(state_stream);
+	memstream_set_buffer(NULL, 0);
+	state_stream = NULL;
+	state_stream_error = true;
+	return FALSE;
+}
+
+/* Value is memory location of data, num is number of type to save */
+void Retro_ReadUBYTE(UBYTE* data, int num)
+{
+	if (!state_stream || state_stream_error)
+		return;
+
+	if (memstream_read(state_stream, data, num) != num)
+		state_stream_error = true;
+
+	Retro_SaveState_Size += num;
+}
+
+/* Value is memory location of data, num is number of type to save */
+void Retro_ReadUWORD(UWORD* data, int num)
+{
+	if (!state_stream || state_stream_error)
+		return;
+
+	while (num > 0)
+	{
+		UBYTE byte1;
+		UBYTE byte2;
+
+		if (memstream_read(state_stream, &byte1, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		if (memstream_read(state_stream, &byte2, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		*data++ = (byte2 << 8) | byte1;
+		num--;
+
+		Retro_SaveState_Size += 2;
+	}
+
+}
+
+void Retro_ReadINT(int* data, int num)
+{
+	if (!state_stream || state_stream_error)
+		return;
+
+	while (num > 0)
+	{
+		UBYTE signbit = 0;
+		int temp;
+		UBYTE byte1;
+		UBYTE byte2;
+		UBYTE byte3;
+		UBYTE byte4;
+
+		if (memstream_read(state_stream, &byte1, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		if (memstream_read(state_stream, &byte2, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		if (memstream_read(state_stream, &byte3, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		if (memstream_read(state_stream, &byte4, 1) != 1)
+		{
+			state_stream_error = true;
+			break;
+		}
+
+		signbit = byte4 & 0x80;
+		byte4 &= 0x7f;
+
+		temp = (byte4 << 24) | (byte3 << 16) | (byte2 << 8) | byte1;
+		if (signbit)
+			temp = -temp;
+		*data++ = temp;
+
+		num--;
+
+		Retro_SaveState_Size += 4;
+	}
+}
+
+void Retro_ReadFNAME(char* filename)
+{
+	UWORD namelen = 0;
+
+	Retro_ReadUWORD(&namelen, 1);
+	if (namelen >= FILENAME_MAX)
+		return;
+
+	Retro_ReadUBYTE((UBYTE*)filename, namelen);
+	filename[namelen] = 0;
+}
+#endif /* __RETROLIB__ */
+
 int StateSav_SaveAtariState(const char *filename, const char *mode, UBYTE SaveVerbose)
 {
 	UBYTE StateVersion = SAVE_VERSION_NUMBER;
+
 
 	if (StateFile != NULL) {
 		GZCLOSE(StateFile);

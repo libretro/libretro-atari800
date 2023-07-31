@@ -1199,6 +1199,145 @@ void GTIA_PutByte(UWORD addr, UBYTE byte)
 
 #ifndef BASIC
 
+#if defined(__LIBRETRO__)
+void Retro_GTIA_StateSave(void)
+{
+	int next_console_value = 7;
+
+	Retro_SaveUBYTE(&GTIA_HPOSP0, 1);
+	Retro_SaveUBYTE(&GTIA_HPOSP1, 1);
+	Retro_SaveUBYTE(&GTIA_HPOSP2, 1);
+	Retro_SaveUBYTE(&GTIA_HPOSP3, 1);
+	Retro_SaveUBYTE(&GTIA_HPOSM0, 1);
+	Retro_SaveUBYTE(&GTIA_HPOSM1, 1);
+	Retro_SaveUBYTE(&GTIA_HPOSM2, 1);
+	Retro_SaveUBYTE(&GTIA_HPOSM3, 1);
+	Retro_SaveUBYTE(&PF0PM, 1);
+	Retro_SaveUBYTE(&PF1PM, 1);
+	Retro_SaveUBYTE(&PF2PM, 1);
+	Retro_SaveUBYTE(&PF3PM, 1);
+	Retro_SaveUBYTE(&GTIA_M0PL, 1);
+	Retro_SaveUBYTE(&GTIA_M1PL, 1);
+	Retro_SaveUBYTE(&GTIA_M2PL, 1);
+	Retro_SaveUBYTE(&GTIA_M3PL, 1);
+	Retro_SaveUBYTE(&GTIA_P0PL, 1);
+	Retro_SaveUBYTE(&GTIA_P1PL, 1);
+	Retro_SaveUBYTE(&GTIA_P2PL, 1);
+	Retro_SaveUBYTE(&GTIA_P3PL, 1);
+	Retro_SaveUBYTE(&GTIA_SIZEP0, 1);
+	Retro_SaveUBYTE(&GTIA_SIZEP1, 1);
+	Retro_SaveUBYTE(&GTIA_SIZEP2, 1);
+	Retro_SaveUBYTE(&GTIA_SIZEP3, 1);
+	Retro_SaveUBYTE(&GTIA_SIZEM, 1);
+	Retro_SaveUBYTE(&GTIA_GRAFP0, 1);
+	Retro_SaveUBYTE(&GTIA_GRAFP1, 1);
+	Retro_SaveUBYTE(&GTIA_GRAFP2, 1);
+	Retro_SaveUBYTE(&GTIA_GRAFP3, 1);
+	Retro_SaveUBYTE(&GTIA_GRAFM, 1);
+	Retro_SaveUBYTE(&GTIA_COLPM0, 1);
+	Retro_SaveUBYTE(&GTIA_COLPM1, 1);
+	Retro_SaveUBYTE(&GTIA_COLPM2, 1);
+	Retro_SaveUBYTE(&GTIA_COLPM3, 1);
+	Retro_SaveUBYTE(&GTIA_COLPF0, 1);
+	Retro_SaveUBYTE(&GTIA_COLPF1, 1);
+	Retro_SaveUBYTE(&GTIA_COLPF2, 1);
+	Retro_SaveUBYTE(&GTIA_COLPF3, 1);
+	Retro_SaveUBYTE(&GTIA_COLBK, 1);
+	Retro_SaveUBYTE(&GTIA_PRIOR, 1);
+	Retro_SaveUBYTE(&GTIA_VDELAY, 1);
+	Retro_SaveUBYTE(&GTIA_GRACTL, 1);
+
+	Retro_SaveUBYTE(&consol_mask, 1);
+	Retro_SaveINT(&GTIA_speaker, 1);
+	Retro_SaveINT(&next_console_value, 1);
+	Retro_SaveUBYTE(GTIA_TRIG_latch, 4);
+}
+
+void Retro_GTIA_StateRead(UBYTE version)
+{
+	int next_console_value;	/* ignored */
+
+	Retro_ReadUBYTE(&GTIA_HPOSP0, 1);
+	Retro_ReadUBYTE(&GTIA_HPOSP1, 1);
+	Retro_ReadUBYTE(&GTIA_HPOSP2, 1);
+	Retro_ReadUBYTE(&GTIA_HPOSP3, 1);
+	Retro_ReadUBYTE(&GTIA_HPOSM0, 1);
+	Retro_ReadUBYTE(&GTIA_HPOSM1, 1);
+	Retro_ReadUBYTE(&GTIA_HPOSM2, 1);
+	Retro_ReadUBYTE(&GTIA_HPOSM3, 1);
+	Retro_ReadUBYTE(&PF0PM, 1);
+	Retro_ReadUBYTE(&PF1PM, 1);
+	Retro_ReadUBYTE(&PF2PM, 1);
+	Retro_ReadUBYTE(&PF3PM, 1);
+	Retro_ReadUBYTE(&GTIA_M0PL, 1);
+	Retro_ReadUBYTE(&GTIA_M1PL, 1);
+	Retro_ReadUBYTE(&GTIA_M2PL, 1);
+	Retro_ReadUBYTE(&GTIA_M3PL, 1);
+	Retro_ReadUBYTE(&GTIA_P0PL, 1);
+	Retro_ReadUBYTE(&GTIA_P1PL, 1);
+	Retro_ReadUBYTE(&GTIA_P2PL, 1);
+	Retro_ReadUBYTE(&GTIA_P3PL, 1);
+	Retro_ReadUBYTE(&GTIA_SIZEP0, 1);
+	Retro_ReadUBYTE(&GTIA_SIZEP1, 1);
+	Retro_ReadUBYTE(&GTIA_SIZEP2, 1);
+	Retro_ReadUBYTE(&GTIA_SIZEP3, 1);
+	Retro_ReadUBYTE(&GTIA_SIZEM, 1);
+	Retro_ReadUBYTE(&GTIA_GRAFP0, 1);
+	Retro_ReadUBYTE(&GTIA_GRAFP1, 1);
+	Retro_ReadUBYTE(&GTIA_GRAFP2, 1);
+	Retro_ReadUBYTE(&GTIA_GRAFP3, 1);
+	Retro_ReadUBYTE(&GTIA_GRAFM, 1);
+	Retro_ReadUBYTE(&GTIA_COLPM0, 1);
+	Retro_ReadUBYTE(&GTIA_COLPM1, 1);
+	Retro_ReadUBYTE(&GTIA_COLPM2, 1);
+	Retro_ReadUBYTE(&GTIA_COLPM3, 1);
+	Retro_ReadUBYTE(&GTIA_COLPF0, 1);
+	Retro_ReadUBYTE(&GTIA_COLPF1, 1);
+	Retro_ReadUBYTE(&GTIA_COLPF2, 1);
+	Retro_ReadUBYTE(&GTIA_COLPF3, 1);
+	Retro_ReadUBYTE(&GTIA_COLBK, 1);
+	Retro_ReadUBYTE(&GTIA_PRIOR, 1);
+	Retro_ReadUBYTE(&GTIA_VDELAY, 1);
+	Retro_ReadUBYTE(&GTIA_GRACTL, 1);
+
+	Retro_ReadUBYTE(&consol_mask, 1);
+	Retro_ReadINT(&GTIA_speaker, 1);
+	Retro_ReadINT(&next_console_value, 1);
+	if (version >= 7)
+		Retro_ReadUBYTE(GTIA_TRIG_latch, 4);
+
+	GTIA_PutByte(GTIA_OFFSET_HPOSP0, GTIA_HPOSP0);
+	GTIA_PutByte(GTIA_OFFSET_HPOSP1, GTIA_HPOSP1);
+	GTIA_PutByte(GTIA_OFFSET_HPOSP2, GTIA_HPOSP2);
+	GTIA_PutByte(GTIA_OFFSET_HPOSP3, GTIA_HPOSP3);
+	GTIA_PutByte(GTIA_OFFSET_HPOSM0, GTIA_HPOSM0);
+	GTIA_PutByte(GTIA_OFFSET_HPOSM1, GTIA_HPOSM1);
+	GTIA_PutByte(GTIA_OFFSET_HPOSM2, GTIA_HPOSM2);
+	GTIA_PutByte(GTIA_OFFSET_HPOSM3, GTIA_HPOSM3);
+	GTIA_PutByte(GTIA_OFFSET_SIZEP0, GTIA_SIZEP0);
+	GTIA_PutByte(GTIA_OFFSET_SIZEP1, GTIA_SIZEP1);
+	GTIA_PutByte(GTIA_OFFSET_SIZEP2, GTIA_SIZEP2);
+	GTIA_PutByte(GTIA_OFFSET_SIZEP3, GTIA_SIZEP3);
+	GTIA_PutByte(GTIA_OFFSET_SIZEM, GTIA_SIZEM);
+	GTIA_PutByte(GTIA_OFFSET_GRAFP0, GTIA_GRAFP0);
+	GTIA_PutByte(GTIA_OFFSET_GRAFP1, GTIA_GRAFP1);
+	GTIA_PutByte(GTIA_OFFSET_GRAFP2, GTIA_GRAFP2);
+	GTIA_PutByte(GTIA_OFFSET_GRAFP3, GTIA_GRAFP3);
+	GTIA_PutByte(GTIA_OFFSET_GRAFM, GTIA_GRAFM);
+	GTIA_PutByte(GTIA_OFFSET_COLPM0, GTIA_COLPM0);
+	GTIA_PutByte(GTIA_OFFSET_COLPM1, GTIA_COLPM1);
+	GTIA_PutByte(GTIA_OFFSET_COLPM2, GTIA_COLPM2);
+	GTIA_PutByte(GTIA_OFFSET_COLPM3, GTIA_COLPM3);
+	GTIA_PutByte(GTIA_OFFSET_COLPF0, GTIA_COLPF0);
+	GTIA_PutByte(GTIA_OFFSET_COLPF1, GTIA_COLPF1);
+	GTIA_PutByte(GTIA_OFFSET_COLPF2, GTIA_COLPF2);
+	GTIA_PutByte(GTIA_OFFSET_COLPF3, GTIA_COLPF3);
+	GTIA_PutByte(GTIA_OFFSET_COLBK, GTIA_COLBK);
+	GTIA_PutByte(GTIA_OFFSET_PRIOR, GTIA_PRIOR);
+	GTIA_PutByte(GTIA_OFFSET_GRACTL, GTIA_GRACTL);
+}
+#endif /* __LIBRETRO__ */
+
 void GTIA_StateSave(void)
 {
 	int next_console_value = 7;

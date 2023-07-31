@@ -26,4 +26,9 @@ void PIA_PutByte(UWORD addr, UBYTE byte);
 void PIA_StateSave(void);
 void PIA_StateRead(UBYTE version);
 
+#if defined(__LIBRETRO__)
+void Retro_PIA_StateSave(void);
+void Retro_PIA_StateRead(UBYTE version);
+#endif
+
 #endif /* PIA_H_ */

@@ -19,6 +19,7 @@ SOURCES_C := \
 	$(LIBRETRO_COMM_DIR)/encodings/encoding_utf.c \
 	$(LIBRETRO_COMM_DIR)/file/file_path.c \
 	$(LIBRETRO_COMM_DIR)/file/file_path_io.c \
+	$(LIBRETRO_COMM_DIR)/streams/memory_stream.c \
 	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
 	$(LIBRETRO_COMM_DIR)/time/rtime.c \
 	$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c
@@ -27,7 +28,10 @@ SOURCES_C += \
 	$(CORE_DIR)/libretro/libretro-core.c \
 	$(CORE_DIR)/libretro/core-mapper.c \
 	$(CORE_DIR)/libretro/graph.c \
-	$(CORE_DIR)/libretro/vkbd.c
+	$(CORE_DIR)/libretro/vkbd.c \
+	$(CORE_DIR)/libretro/retro_strings.c \
+	$(CORE_DIR)/libretro/retro_utils.c \
+	$(CORE_DIR)/libretro/retro_disk_control.c
 
 SOURCES_C += \
 	$(CORE_DIR)/atari800/src/afile.c \

@@ -109,6 +109,12 @@ int MEMORY_SizeValid(int size);
 void MEMORY_InitialiseMachine(void);
 void MEMORY_StateSave(UBYTE SaveVerbose);
 void MEMORY_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
+
+#if defined(__LIBRETRO__)
+void Retro_MEMORY_StateSave(UBYTE SaveVerbose);
+void Retro_MEMORY_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
+#endif
+
 void MEMORY_CopyFromMem(UWORD from, UBYTE *to, int size);
 void MEMORY_CopyToMem(const UBYTE *from, UWORD to, int size);
 void MEMORY_HandlePORTB(UBYTE byte, UBYTE oldval);

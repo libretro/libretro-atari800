@@ -48,7 +48,7 @@
 #include <zlib.h>
 #endif
 
-#ifdef DREAMCAST
+#if defined (DREAMCAST) || defined(__LIBRETRO__)
 extern int Atari_POT(int);
 #else
 #define Atari_POT(x) 228
@@ -67,6 +67,12 @@ int INPUT_joy_multijoy = 0;
 int INPUT_joy_5200_min = 6;
 int INPUT_joy_5200_center = 114;
 int INPUT_joy_5200_max = 220;
+
+#if defined(__LIBRETRO__)
+int INPUT_digital_5200_min = 6;
+int INPUT_digital_5200_center = 114;
+int INPUT_digital_5200_max = 220;
+#endif
 
 int INPUT_cx85 = 0;
 
@@ -625,15 +631,38 @@ void INPUT_Frame(void)
 	}
 	else {
 		for (i = 0; i < 4; i++) {
-#ifdef DREAMCAST
+#if defined (DREAMCAST)
 			/* first get analog js data */
 			POKEY_POT_input[2 * i] = Atari_POT(2 * i);         /* x */
 			POKEY_POT_input[2 * i + 1] = Atari_POT(2 * i + 1); /* y */
 			if (POKEY_POT_input[2 * i] != INPUT_joy_5200_center
 			 || POKEY_POT_input[2 * i + 1] != INPUT_joy_5200_center)
 				continue;
-			/* if analog js is unused, alternatively try keypad */
 #endif
+#if defined(__LIBRETRO__)
+			/* first get analog js data */
+			POKEY_POT_input[2 * i] = Atari_POT(2 * i);         /* x */
+			POKEY_POT_input[2 * i + 1] = Atari_POT(2 * i + 1); /* y */
+			if (POKEY_POT_input[2 * i] != INPUT_joy_5200_center
+				|| POKEY_POT_input[2 * i + 1] != INPUT_joy_5200_center)
+				continue;
+
+			/* if analog js is unused, alternatively try keypad */
+			if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_LEFT)) == 0)
+				POKEY_POT_input[2 * i] = INPUT_digital_5200_min;
+			else if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_RIGHT)) == 0)
+				POKEY_POT_input[2 * i] = INPUT_digital_5200_max;
+			else
+				POKEY_POT_input[2 * i] = INPUT_digital_5200_center;
+			if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_FORWARD)) == 0)
+				POKEY_POT_input[2 * i + 1] = INPUT_digital_5200_min;
+			else if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_BACK)) == 0)
+				POKEY_POT_input[2 * i + 1] = INPUT_digital_5200_max;
+			else
+				POKEY_POT_input[2 * i + 1] = INPUT_digital_5200_center;
+		}
+#else
+			/* if analog js is unused, alternatively try keypad */
 			if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_LEFT)) == 0)
 				POKEY_POT_input[2 * i] = INPUT_joy_5200_min;
 			else if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_RIGHT)) == 0)
@@ -647,6 +676,7 @@ void INPUT_Frame(void)
 			else
 				POKEY_POT_input[2 * i + 1] = INPUT_joy_5200_center;
 		}
+#endif
 	}
 
 	/* handle mouse */

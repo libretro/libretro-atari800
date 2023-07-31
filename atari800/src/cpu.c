@@ -2385,6 +2385,42 @@ void CPU_Reset(void)
 
 #if !defined(BASIC) && !defined(ASAP)
 
+#if defined(__LIBRETRO__)
+void Retro_CPU_StateSave(UBYTE SaveVerbose)
+{
+	Retro_SaveUBYTE(&CPU_regA, 1);
+
+	CPU_GetStatus();	/* Make sure flags are all updated */
+	Retro_SaveUBYTE(&CPU_regP, 1);
+
+	Retro_SaveUBYTE(&CPU_regS, 1);
+	Retro_SaveUBYTE(&CPU_regX, 1);
+	Retro_SaveUBYTE(&CPU_regY, 1);
+	Retro_SaveUBYTE(&CPU_IRQ, 1);
+
+	Retro_MEMORY_StateSave(SaveVerbose);
+
+	Retro_SaveUWORD(&CPU_regPC, 1);
+}
+
+void Retro_CPU_StateRead(UBYTE SaveVerbose, UBYTE StateVersion)
+{
+	Retro_ReadUBYTE(&CPU_regA, 1);
+
+	Retro_ReadUBYTE(&CPU_regP, 1);
+	CPU_PutStatus();	/* Make sure flags are all updated */
+
+	Retro_ReadUBYTE(&CPU_regS, 1);
+	Retro_ReadUBYTE(&CPU_regX, 1);
+	Retro_ReadUBYTE(&CPU_regY, 1);
+	Retro_ReadUBYTE(&CPU_IRQ, 1);
+
+	Retro_MEMORY_StateRead(SaveVerbose, StateVersion);
+
+	Retro_ReadUWORD(&CPU_regPC, 1);
+}
+#endif /* __LIBRETRO__ */
+
 void CPU_StateSave(UBYTE SaveVerbose)
 {
 	StateSav_SaveUBYTE(&CPU_regA, 1);

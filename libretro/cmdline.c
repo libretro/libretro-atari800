@@ -22,7 +22,7 @@ void Add_Option(const char* option)
       first++;
    }
 
-   sprintf(XARGV[PARAMCOUNT++],"%s\0",option);
+   sprintf(XARGV[PARAMCOUNT++],"%s", option);
 }
 
 int pre_main(const char *argv)

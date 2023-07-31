@@ -332,6 +332,73 @@ void PIA_PutByte(UWORD addr, UBYTE byte)
 
 #ifndef BASIC
 
+#if defined(__LIBRETRO__)
+void Retro_PIA_StateSave(void)
+{
+	Retro_SaveUBYTE(&PIA_PACTL, 1);
+	Retro_SaveUBYTE(&PIA_PBCTL, 1);
+	Retro_SaveUBYTE(&PIA_PORTA, 1);
+	Retro_SaveUBYTE(&PIA_PORTB, 1);
+
+	Retro_SaveUBYTE(&PIA_PORTA_mask, 1);
+	Retro_SaveUBYTE(&PIA_PORTB_mask, 1);
+	Retro_SaveINT(&PIA_CA2, 1);
+	Retro_SaveINT(&PIA_CA2_negpending, 1);
+	Retro_SaveINT(&PIA_CA2_pospending, 1);
+	Retro_SaveINT(&PIA_CB2, 1);
+	Retro_SaveINT(&PIA_CB2_negpending, 1);
+	Retro_SaveINT(&PIA_CB2_pospending, 1);
+}
+
+void Retro_PIA_StateRead(UBYTE version)
+{
+	UBYTE byte;
+	int temp;
+
+	Retro_ReadUBYTE(&byte, 1);
+	if (version <= 7) {
+		PIA_PutByte(PIA_OFFSET_PACTL, byte); /* set PIA_CA2 and tape motor */
+	}
+	PIA_PACTL = byte;
+	Retro_ReadUBYTE(&byte, 1);
+	if (version <= 7) {
+		PIA_PutByte(PIA_OFFSET_PBCTL, byte); /* set PIA_CB2 and !command line */
+	}
+	PIA_PBCTL = byte;
+	Retro_ReadUBYTE(&PIA_PORTA, 1);
+	Retro_ReadUBYTE(&PIA_PORTB, 1);
+
+	/* In version 7 and later these variables are read in memory.c. */
+	if (version <= 6) {
+		int Ram256;
+		Retro_ReadINT(&MEMORY_xe_bank, 1);
+		Retro_ReadINT(&MEMORY_selftest_enabled, 1);
+		Retro_ReadINT(&Ram256, 1);
+
+		if (Atari800_machine_type == Atari800_MACHINE_XLXE) {
+			if (Ram256 == 1 && MEMORY_ram_size == MEMORY_RAM_320_COMPY_SHOP)
+				MEMORY_ram_size = MEMORY_RAM_320_RAMBO;
+		}
+		Retro_ReadINT(&MEMORY_cartA0BF_enabled, 1);
+	}
+
+	Retro_ReadUBYTE(&PIA_PORTA_mask, 1);
+	Retro_ReadUBYTE(&PIA_PORTB_mask, 1);
+
+	if (version >= 8) {
+		Retro_ReadINT(&temp, 1);
+		set_CA2(temp);
+		Retro_ReadINT(&PIA_CA2_negpending, 1);
+		Retro_ReadINT(&PIA_CA2_pospending, 1);
+		Retro_ReadINT(&temp, 1);
+		set_CB2(temp);
+		Retro_ReadINT(&PIA_CB2_negpending, 1);
+		Retro_ReadINT(&PIA_CB2_pospending, 1);
+		update_PIA_IRQ();
+	}
+}
+#endif /* __LIBRETRO__ */
+
 void PIA_StateSave(void)
 {
 	StateSav_SaveUBYTE( &PIA_PACTL, 1 );

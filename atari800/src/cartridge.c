@@ -119,7 +119,12 @@ int const CARTRIDGE_kb[CARTRIDGE_LAST_SUPPORTED + 1] = {
 	2048,     /* CARTRIDGE_MEGA_2048 */
 	32*1024,  /* CARTRIDGE_THECART_32M */
 	64*1024,  /* CARTRIDGE_THECART_64M */
-	64        /* CARTRIDGE_XEGS_64_8F */
+	64,       /* CARTRIDGE_XEGS_64_8F */
+	64,		  /* CARTRIDGE_5200_SUPER_64 */
+	128,	  /* CARTRIDGE_5200_SUPER_128 */
+	256,	  /* CARTRIDGE_5200_SUPER_256 */
+	512,	  /* CARTRIDGE_5200_SUPER_512 */
+	1024,	  /* CARTRIDGE_ATMAX_NEW_1024 */
 };
 
 int CARTRIDGE_autoreboot = TRUE;
@@ -133,6 +138,10 @@ static int CartIsFor5200(int type)
 	case CARTRIDGE_5200_NS_16:
 	case CARTRIDGE_5200_8:
 	case CARTRIDGE_5200_4:
+	case CARTRIDGE_5200_SUPER_64:
+	case CARTRIDGE_5200_SUPER_128:
+	case CARTRIDGE_5200_SUPER_256:
+	case CARTRIDGE_5200_SUPER_512:
 		return TRUE;
 	default:
 		break;
@@ -224,6 +233,11 @@ static void set_bank_80BF(void)
 		MEMORY_CartA0bfEnable();
 		MEMORY_CopyROM(0x8000, 0xbfff, active_cart->image + (active_cart->state & 0x7f) * 0x4000);
 	}
+}
+
+static void set_bank_5200_SUPER(void)
+{
+	MEMORY_CopyROM(0x4000, 0xbfff, active_cart->image + active_cart->state * 0x8000);
 }
 
 static void set_bank_SDX_128(void)
@@ -402,7 +416,20 @@ static void MapActiveCart(void)
 	if (Atari800_machine_type == Atari800_MACHINE_5200) {
 		MEMORY_SetROM(0x4ff6, 0x4ff9);		/* disable Bounty Bob bank switching */
 		MEMORY_SetROM(0x5ff6, 0x5ff9);
+		MEMORY_SetROM(0xbfc0, 0xbfff); /* disable Super Cart bank switching */
 		switch (active_cart->type) {
+		case CARTRIDGE_5200_SUPER_64:
+		case CARTRIDGE_5200_SUPER_128:
+		case CARTRIDGE_5200_SUPER_256:
+		case CARTRIDGE_5200_SUPER_512:
+			set_bank_5200_SUPER();
+#ifndef PAGED_ATTRIB
+			MEMORY_SetHARDWARE(0xbfc0, 0xbfff);
+#else
+			MEMORY_readmap[0xbf] = CARTRIDGE_5200SuperCartGetByte;
+			MEMORY_writemap[0xbf] = CARTRIDGE_5200SuperCartPutByte;
+#endif
+			break;
 		case CARTRIDGE_5200_32:
 			MEMORY_CopyROM(0x4000, 0xbfff, active_cart->image);
 			break;
@@ -1151,12 +1178,10 @@ UBYTE CARTRIDGE_BountyBob2GetByte(UWORD addr, int no_side_effects)
 		if (Atari800_machine_type == Atari800_MACHINE_5200) {
 			if (addr >= 0x5ff6 && addr <= 0x5ff9) {
 				CARTRIDGE_BountyBob2(addr);
-				return 0;
 			}
 		} else {
 			if (addr >= 0x9ff6 && addr <= 0x9ff9) {
 				CARTRIDGE_BountyBob2(addr);
-				return 0;
 			}
 		}
 	}
@@ -1198,6 +1223,45 @@ int CARTRIDGE_Checksum(const UBYTE *image, int nbytes)
 		nbytes--;
 	}
 	return checksum;
+}
+
+/* addr must be $bfxx in 5200 mode only. */
+static void access_5200SuperCart(UWORD addr)
+{
+	int old_state = active_cart->state;
+	int new_state = old_state;
+
+	if ((addr & 0xc0) == 0xc0) {
+		switch (addr & 0x30) {
+		case 0x00: /* $BFCx */
+			new_state = (new_state & 0x03) | (addr & 0x0c);
+			break;
+		case 0x10: /* $BFDx */
+			new_state = (new_state & 0x0c) | ((addr & 0x0c) >> 2);
+			break;
+		default: /* 0x20 or 0x30, i.e. $BFEx or $BFFx */
+			new_state = 0x0f;
+			break;
+		}
+		new_state &= ((active_cart->size >> 5) - 1);
+	}
+
+	if (old_state != new_state) {
+		active_cart->state = new_state;
+		set_bank_5200_SUPER();
+	}
+}
+
+UBYTE CARTRIDGE_5200SuperCartGetByte(UWORD addr, int no_side_effects)
+{
+	if (!no_side_effects)
+		access_5200SuperCart(addr);
+	return MEMORY_dGetByte(addr);
+}
+
+void CARTRIDGE_5200SuperCartPutByte(UWORD addr, UBYTE value)
+{
+	access_5200SuperCart(addr);
 }
 
 static void ResetCartState(CARTRIDGE_image_t *cart)
@@ -1371,10 +1435,16 @@ void CARTRIDGE_ColdStart(void) {
 	ResetCartState(&CARTRIDGE_piggyback);
 	MapActiveCart();
 }
+
 #ifdef __LIBRETRO__
 #include "atari5200_hash.h"
-extern int autorun5200;
-#endif
+#include "atari800_hash.h"
+#include "esc.h"
+#include "pokeysnd.h"
+extern int autorunCartridge;
+extern void retro_message(const char* text, unsigned int frames, int alt);
+#endif /* __LIBRETRO __ */
+
 /* Loads a cartridge from FILENAME. Copies FILENAME to CART_FILENAME.
    Allocates a buffer with cartridge image data and puts it in *CART_IMAGE.
    Sets *CART_TYPE to the cartridge type. */
@@ -1385,7 +1455,8 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 	int type;
 	UBYTE header[16];
 #ifdef __LIBRETRO__
-		ULONG crc;
+	ULONG crc;
+	static int RetroMsgShown = FALSE;
 #endif
 	/* open file */
 	fp = fopen(filename, "rb");
@@ -1395,7 +1466,7 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 	len = Util_flen(fp);
 	Util_rewind(fp);
 #ifdef __LIBRETRO__
-		if(autorun5200){
+		if(autorunCartridge){
 			CRC32_FromFile(fp, &crc);
 			Util_rewind(fp);
 		}
@@ -1408,7 +1479,7 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 	/* if full kilobytes, assume it is raw image */
 	if ((len & 0x3ff) == 0) {
 		/* alloc memory and read data */
-		cart->image = (UBYTE *) Util_malloc(len);
+		cart->image = (UBYTE*)Util_malloc(len);
 		if (fread(cart->image, 1, len, fp) < len) {
 			Log_print("Error reading cartridge.\n");
 		}
@@ -1418,40 +1489,120 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 		len >>= 10;	/* number of kilobytes */
 		cart->size = len;
 #ifdef __LIBRETRO__
-		if(autorun5200){
-			int match=0,i=0;
-			printf("Hack Libretro:crc A5200 ON sz:%d crc:%x\n",cart->size,crc);
-			while(a5200_game[i].type!=-1){
-				if(crc==a5200_game[i].crc){
-					match=1;
-					if(a5200_game[i].type==0)
-						switch(cart->size*1024){
-							case 4096:
-								cart->type =CARTRIDGE_5200_4;
-								break;
-							case 8192:
-								cart->type =CARTRIDGE_5200_8;
-								break;
-							case 16384:
-								cart->type =CARTRIDGE_5200_NS_16;
-								break;
-							case 32768:
-								cart->type =CARTRIDGE_5200_32;
-								break;
-
+		if (autorunCartridge == 1) {
+			int match = 0, i = 0;
+			printf("Hack Libretro:crc A5200 ON sz:%d crc:%x\n", cart->size, crc);
+			while (a5200_game[i].type != -1) {
+				if (crc == a5200_game[i].crc) {
+					match = 1;
+					if (a5200_game[i].type == 0)
+						switch (cart->size * 1024) {
+						case 4096:
+							cart->type = CARTRIDGE_5200_4;
+							break;
+						case 8192:
+							cart->type = CARTRIDGE_5200_8;
+							break;
+						case 16384:
+							cart->type = CARTRIDGE_5200_NS_16;
+							break;
+						case 32768:
+							cart->type = CARTRIDGE_5200_32;
+							break;
 						}
-					else if(a5200_game[i].type==1)cart->type =CARTRIDGE_5200_40;
-					else if(a5200_game[i].type==2)cart->type =CARTRIDGE_5200_EE_16;
-					printf("Hack Libretro:A5200 cart->type:%d %x\n",cart->type,crc);
+					else if (a5200_game[i].type == a5200_40) {
+						/* Bounty Bob don't like stereo pokey (game locks) */
+						cart->type = CARTRIDGE_5200_40;
+						POKEYSND_stereo_enabled = FALSE;
+					}
+					else if (a5200_game[i].type == a5200_ee_16)
+						cart->type = CARTRIDGE_5200_EE_16;
+					else if (a5200_game[i].type == a5200_64)
+						cart->type = CARTRIDGE_5200_SUPER_64;
+					else if (a5200_game[i].type == a5200_128)
+						cart->type = CARTRIDGE_5200_SUPER_128;	// I've yet to see this type
+					else if (a5200_game[i].type == a5200_256)
+						cart->type = CARTRIDGE_5200_SUPER_256;  // I've yet to see this type
+					else if (a5200_game[i].type == a5200_512)
+						cart->type = CARTRIDGE_5200_SUPER_512;
+
+					printf("Hack Libretro:A5200 cart->type:%d %x\n", cart->type, crc);
 					break;
 				}
-					
 				i++;
 			}
 
-			if(match==1)goto label_fin;
-		}		
-#endif
+			if (match == 1) {
+				if (!RetroMsgShown)
+					retro_message("5200 Cart found in DB.", 1000, 0);
+
+				goto label_fin;
+			}
+		}
+		else if (autorunCartridge == 2) {
+			int match = 0, i = 0;
+			printf("Hack Libretro:crc A800 ON sz:%d crc:%x\n", cart->size, crc);
+			while (a800_game[i].type != -1) {
+				if (crc == a800_game[i].crc) {
+					match = 1;
+					if (a800_game[i].type == 0)
+						switch (cart->size * 1024) {
+						case 8192:
+							cart->type = CARTRIDGE_STD_8;
+							break;
+						case 16384:
+							cart->type = CARTRIDGE_STD_16;
+							break;
+						case 32768:
+							cart->type = CARTRIDGE_XEGS_32;
+							break;
+						}
+					else if (a800_game[i].type == a800_40) {
+						/* Bounty Bob don't like stereo pokey (game locks) */
+						cart->type = CARTRIDGE_BBSB_40;
+						POKEYSND_stereo_enabled = FALSE;
+					}
+					else if (a800_game[i].type == a800_WILL_64)
+						cart->type = CARTRIDGE_WILL_64;
+					else if (a800_game[i].type == a800_XE_07_64)
+						cart->type = CARTRIDGE_XEGS_07_64;
+					else if (a800_game[i].type == a800_XE_128)
+						cart->type = CARTRIDGE_XEGS_128;
+					else if (a800_game[i].type == a800_MAX_128) {
+						/* Some ATMAX 1024 carts dislike Hi Speed SIO*/
+						match = 2;
+						cart->type = CARTRIDGE_ATMAX_128;
+					}
+					else if (a800_game[i].type == a800_MAX_1024) {
+						/* Some ATMAX 1024 carts dislike Hi Speed SIO*/
+						match = 2;
+						cart->type = CARTRIDGE_ATMAX_1024;
+					}
+
+					printf("Hack Libretro:A800 cart->type:%d %x\n", cart->type, crc);
+					break;
+				}
+				i++;
+			}
+
+			if (match == 1) {
+				if (!RetroMsgShown)
+					retro_message("800 Cart found in DB.", 1000, 0);
+
+				goto label_fin;
+			}
+			else if (match == 2) {
+				if (!RetroMsgShown)
+					retro_message("800 Cart found in DB.  Some ATMAX carts need SIO Accleration disabled.", 1000, 0);
+
+				goto label_fin;
+			}
+			else if (!RetroMsgShown)
+				retro_message("800 Cart NOT found in DB.", 6000, 0);
+		}
+
+		RetroMsgShown = TRUE;
+#endif /* __LIBRETRO__ */
 		for (type = 1; type <= CARTRIDGE_LAST_SUPPORTED; type++)
 			if (CARTRIDGE_kb[type] == len) {
 				if (cart->type == CARTRIDGE_NONE) {
@@ -1465,6 +1616,8 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 #ifdef __LIBRETRO__
 label_fin:
 #endif
+		RetroMsgShown = TRUE;
+
 		if (cart->type != CARTRIDGE_NONE) {
 			InitCartridge(cart);
 			return 0;	/* ok */
@@ -1712,6 +1865,30 @@ void CARTRIDGE_Exit(void)
 
 #ifndef BASIC
 
+void CARTRIDGE_StateSave(void)
+{
+	int cart_save = CARTRIDGE_main.type;
+
+	if (CARTRIDGE_piggyback.type != CARTRIDGE_NONE)
+		/* Save the cart type as negative, to indicate to CARTStateRead that there is a
+		   second cartridge */
+		cart_save = -cart_save;
+
+	/* Save the cartridge type, or CARTRIDGE_NONE if there isn't one...*/
+	StateSav_SaveINT(&cart_save, 1);
+	if (CARTRIDGE_main.type != CARTRIDGE_NONE) {
+		StateSav_SaveFNAME(CARTRIDGE_main.filename);
+		StateSav_SaveINT(&CARTRIDGE_main.state, 1);
+	}
+
+	if (CARTRIDGE_piggyback.type != CARTRIDGE_NONE) {
+		/* Save the second cartridge type and name*/
+		StateSav_SaveINT(&CARTRIDGE_piggyback.type, 1);
+		StateSav_SaveFNAME(CARTRIDGE_piggyback.filename);
+		StateSav_SaveINT(&CARTRIDGE_piggyback.state, 1);
+	}
+}
+
 void CARTRIDGE_StateRead(UBYTE version)
 {
 	int saved_type = CARTRIDGE_NONE;
@@ -1777,29 +1954,96 @@ void CARTRIDGE_StateRead(UBYTE version)
 	MapActiveCart();
 }
 
-void CARTRIDGE_StateSave(void)
+#if defined(__LIBRETRO__)
+void Retro_CARTRIDGE_StateSave(void)
 {
 	int cart_save = CARTRIDGE_main.type;
-	
+
 	if (CARTRIDGE_piggyback.type != CARTRIDGE_NONE)
-		/* Save the cart type as negative, to indicate to CARTStateRead that there is a 
+		/* Save the cart type as negative, to indicate to CARTStateRead that there is a
 		   second cartridge */
 		cart_save = -cart_save;
-	
+
 	/* Save the cartridge type, or CARTRIDGE_NONE if there isn't one...*/
-	StateSav_SaveINT(&cart_save, 1);
+	Retro_SaveINT(&cart_save, 1);
 	if (CARTRIDGE_main.type != CARTRIDGE_NONE) {
-		StateSav_SaveFNAME(CARTRIDGE_main.filename);
-		StateSav_SaveINT(&CARTRIDGE_main.state, 1);
+		Retro_SaveFNAME(CARTRIDGE_main.filename);
+		Retro_SaveINT(&CARTRIDGE_main.state, 1);
 	}
 
 	if (CARTRIDGE_piggyback.type != CARTRIDGE_NONE) {
 		/* Save the second cartridge type and name*/
-		StateSav_SaveINT(&CARTRIDGE_piggyback.type, 1);
-		StateSav_SaveFNAME(CARTRIDGE_piggyback.filename);
-		StateSav_SaveINT(&CARTRIDGE_piggyback.state, 1);
+		Retro_SaveINT(&CARTRIDGE_piggyback.type, 1);
+		Retro_SaveFNAME(CARTRIDGE_piggyback.filename);
+		Retro_SaveINT(&CARTRIDGE_piggyback.state, 1);
 	}
 }
+
+void Retro_CARTRIDGE_StateRead(UBYTE version)
+{
+	int saved_type = CARTRIDGE_NONE;
+	char filename[FILENAME_MAX];
+
+	/* Read the cart type from the file.  If there is no cart type, becaused we have
+	   reached the end of the file, this will just default to CART_NONE */
+	Retro_ReadINT(&saved_type, 1);
+	if (saved_type != CARTRIDGE_NONE) {
+		Retro_ReadFNAME(filename);
+		if (filename[0]) {
+			/* Insert the cartridge... */
+			if (CARTRIDGE_Insert(filename) >= 0) {
+				/* And set the type to the saved type, in case it was a raw cartridge image */
+				CARTRIDGE_main.type = saved_type;
+			}
+		}
+		if (version >= 7)
+			/* Read the cartridge's state (current bank etc.). */
+			Retro_ReadINT(&CARTRIDGE_main.state, 1);
+	}
+	else
+		CARTRIDGE_main.type = saved_type;
+
+	if (saved_type < 0) {
+		/* Minus value indicates a piggyback cartridge present. */
+		CARTRIDGE_main.type = -saved_type;
+
+		Retro_ReadINT(&saved_type, 1);
+		Retro_ReadFNAME(filename);
+		if (filename[0]) {
+			/* Insert the cartridge... */
+			if (CARTRIDGE_Insert_Second(filename) >= 0) {
+				/* And set the type to the saved type, in case it was a raw cartridge image */
+				CARTRIDGE_piggyback.type = saved_type;
+			}
+		}
+		if (version >= 7)
+			/* Read the cartridge's state (current bank etc.). */
+			Retro_ReadINT(&CARTRIDGE_piggyback.state, 1);
+		else {
+			/* Savestate version 6 explicitely stored information about
+			   the active cartridge. */
+			int piggyback_active;
+			Retro_ReadINT(&piggyback_active, 1);
+			if (piggyback_active)
+				active_cart = &CARTRIDGE_piggyback;
+			else
+				active_cart = &CARTRIDGE_main;
+			/* The "Determine active cartridge" code below makes no
+			   sense when loading ver.6 savestates, because they
+			   did not store the cartridge state. */
+			return;
+		}
+	}
+
+	/* Determine active cartridge (main or piggyback. */
+	if (CartIsPassthrough(CARTRIDGE_main.type) && (CARTRIDGE_main.state & 0x0c) == 0x08)
+		active_cart = &CARTRIDGE_piggyback;
+	else
+		active_cart = &CARTRIDGE_main;
+
+	MapActiveCart();
+}
+#endif /* __LIBRETRO__ */
 
 #endif
 
