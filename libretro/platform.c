@@ -261,7 +261,7 @@ int PLATFORM_Keyboard(void)
 				if (atari_devices[i] == RETRO_DEVICE_ATARI_JOYSTICK)
 					whichButton = RETRO_DEVICE_ID_JOYPAD_X;
 				else if (atari_devices[i] == RETRO_DEVICE_ATARI_5200_JOYSTICK)
-					whichButton = RETRO_DEVICE_ID_JOYPAD_B;
+					whichButton = RETRO_DEVICE_ID_JOYPAD_A;
 				else if (atari_devices[i] == RETRO_DEVICE_ATARI_KEYBOARD && (Key_State[RETROK_RCTRL]))
 					INPUT_key_shift = 1;
 
@@ -651,13 +651,13 @@ int PLATFORM_Keyboard(void)
 					INPUT_key_consol &= (~INPUT_CONSOL_OPTION);
 				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_R])
 					return AKEY_UI;
-				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_L2])
-					return AKEY_SPACE;
-				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_R2])
-					return AKEY_ESCAPE;
-				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_B])
-					return AKEY_RETURN;
 				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_Y])
+					return AKEY_SPACE;
+				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_L2])
+					return AKEY_ESCAPE;
+				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_X])
+					return AKEY_RETURN;
+				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_R2])
 					return AKEY_HELP;
 			}
 
@@ -712,7 +712,7 @@ int PLATFORM_Keyboard(void)
 	//			return AKEY_DOWN;
 
 	//		if (atari_devices[i] == RETRO_DEVICE_ATARI_JOYSTICK)
-	//			whichButton = RETRO_DEVICE_ID_JOYPAD_B;
+	//			whichButton = RETRO_DEVICE_ID_JOYPAD_A;
 	//		else if (atari_devices[i] == RETRO_DEVICE_ATARI_5200_JOYSTICK)
 	//			whichButton = RETRO_DEVICE_ID_JOYPAD_B;
 	//		if (mbt[i][whichButton])

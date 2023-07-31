@@ -46,16 +46,16 @@ int retroh = 300;
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Down" },              \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left" },              \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },            \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Return" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire1" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Help" },                 \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "Fire2" },               \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Fire 1" },               \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire 2" },               \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Space" },                 \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "Return" },               \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },          \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },            \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "Option" },               \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "Atari800 Menu" },        \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "Space" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Esc" },                 \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "Esc" },               \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Help" },                 \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Virtual Keyboard" },    \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "R3" }
 
@@ -75,8 +75,8 @@ static struct retro_input_descriptor inputDescriptors_a800[] =
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Joystick Down (Digital)" },   \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Joystick Left (Digital)" },   \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Joystick Right (Digital)" }, \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Fire1" },                       \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire2" },                       \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Fire 1" },                       \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire 2" },                       \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Numpad #" },                     \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "Numpad *" },                     \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Pause" },                   \
@@ -960,6 +960,12 @@ void retro_shutdown_core(void)
 
 void retro_reset(void) {
 
+    if (dc)
+    {
+        retro_set_eject_state(TRUE);
+        retro_set_image_index(0);
+    }
+
     AFILE_OpenFile(RPATH, 1, 1, 0);
 }
 
@@ -1225,7 +1231,7 @@ static void keyboard_cb(bool down, unsigned keycode,
 bool retro_load_game(const struct retro_game_info* info)
 {
     const char* full_path;
-    bool media_is_disk = TRUE;
+    bool media_is_disk_tape = TRUE;
 
     (void)info;
 
@@ -1252,21 +1258,22 @@ bool retro_load_game(const struct retro_game_info* info)
     else if (strendswith(full_path, "XFD") ||
              strendswith(full_path, "ATR") ||
              strendswith(full_path, "DCM") ||
-             strendswith(full_path, "ATX"))
+             strendswith(full_path, "ATX") ||
+             strendswith(full_path, "CAS"))
     {
         // Add the file to disk control context
         // Maybe, in a later version of retroarch, we could add disk on the fly (didn't find how to do this)
         dc_add_file(dc, full_path);
     }
     else
-        media_is_disk = FALSE;
+        media_is_disk_tape = FALSE;
 
-    if (media_is_disk)
+    if (media_is_disk_tape)
     {
         // Init first disk
         dc->index = 0;
         dc->eject_state = false;
-        log_cb(RETRO_LOG_INFO, "Disk (%d) inserted into drive 1 : %s\n", dc->index + 1, dc->files[dc->index]);
+        log_cb(RETRO_LOG_INFO, "Disk/Cassette (%d) inserted into drive 1 : %s\n", dc->index + 1, dc->files[dc->index]);
         strcpy(RPATH, dc->files[0]);
     }
     else
