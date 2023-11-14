@@ -1171,7 +1171,7 @@ void retro_audio_cb(short l, short r)
 
 /* Forward declarations */
 void retro_sound_update(void);
-void Retro_PollEvent(void);
+int Retro_PollEvent(void);
 
 void retro_run(void)
 {
