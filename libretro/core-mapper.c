@@ -155,7 +155,7 @@ void retro_sound_update(void)
 
    if (! UI_is_active)
    {
-      Sound_Callback(SNDBUF, 1024*2*2);
+      Sound_Callback((UBYTE *)SNDBUF, 1024*2*2);
       for(x=0;x<stop*2;x+=2)
          retro_audio_cb(SNDBUF[x],SNDBUF[x+2]);
 
