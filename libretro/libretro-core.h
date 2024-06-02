@@ -36,8 +36,7 @@
 extern cothread_t mainThread;
 extern cothread_t emuThread;
 
-extern char Key_Sate[512];
-extern char Key_Sate2[512];
+extern char Key_State[512];
 
 extern int pauseg; 
 
@@ -76,4 +75,13 @@ extern int pauseg;
 #endif
 #define uint32 unsigned int
 #define uint8 unsigned char
+
+//Paddle & 5200 POT
+#define LIBRETRO_ANALOG_RANGE 0x8000
+#define JOY_5200_MIN 6
+#define JOY_5200_MAX 220
+#define JOY_5200_CENTER 114
+
+void retro_message(const char* text, unsigned int frames, int alt);
+void retro_audio_cb(short l, short r);
 #endif

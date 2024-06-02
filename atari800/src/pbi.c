@@ -320,6 +320,22 @@ void PBI_D7PutByte(UWORD addr, UBYTE byte)
 
 #ifndef BASIC
 
+#if defined(__LIBRETRO__)
+void Retro_PBI_StateSave(void)
+{
+	Retro_SaveUBYTE(&D1FF_LATCH, 1);
+	Retro_SaveINT(&PBI_D6D7ram, 1);
+	Retro_SaveINT(&PBI_IRQ, 1);
+}
+
+void Retro_PBI_StateRead(void)
+{
+	Retro_ReadUBYTE(&D1FF_LATCH, 1);
+	Retro_ReadINT(&PBI_D6D7ram, 1);
+	Retro_ReadINT(&PBI_IRQ, 1);
+}
+#endif
+
 void PBI_StateSave(void)
 {
 	StateSav_SaveUBYTE(&D1FF_LATCH, 1);

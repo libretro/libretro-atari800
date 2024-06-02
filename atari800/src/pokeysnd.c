@@ -165,7 +165,11 @@ int POKEYSND_bienias_fix = TRUE;  /* when TRUE, high frequencies get emulated: b
 #define BIENIAS_FIX POKEYSND_bienias_fix
 #endif
 #ifndef ASAP
+#if defined(__LIBRETRO__)
+int POKEYSND_stereo_enabled = TRUE;
+#else /* __LIBRETRO__ */
 int POKEYSND_stereo_enabled = FALSE;
+#endif
 #endif
 
 int POKEYSND_volume = 0x100;

@@ -94,6 +94,11 @@ void ANTIC_SetPrior(UBYTE prior);
 void ANTIC_StateSave(void);
 void ANTIC_StateRead(void);
 
+#if defined(__LIBRETRO__)
+void Retro_ANTIC_StateSave(void);
+void Retro_ANTIC_StateRead(void);
+#endif
+
 /* Pointer to 16 KB seen by ANTIC in 0x4000-0x7fff.
    If it's the same what the CPU sees (and what's in memory[0x4000..0x7fff],
    then NULL. */

@@ -4085,6 +4085,63 @@ case we have ANTIC_cpu2antic_ptr[ANTIC_WSYNC_C+1]-1 = 8 and in the 2nd =12  */
 
 #ifndef BASIC
 
+#if defined(__LIBRETRO__)
+void Retro_ANTIC_StateSave(void)
+{
+	Retro_SaveUBYTE(&ANTIC_DMACTL, 1);
+	Retro_SaveUBYTE(&ANTIC_CHACTL, 1);
+	Retro_SaveUBYTE(&ANTIC_HSCROL, 1);
+	Retro_SaveUBYTE(&ANTIC_VSCROL, 1);
+	Retro_SaveUBYTE(&ANTIC_PMBASE, 1);
+	Retro_SaveUBYTE(&ANTIC_CHBASE, 1);
+	Retro_SaveUBYTE(&ANTIC_NMIEN, 1);
+	Retro_SaveUBYTE(&ANTIC_NMIST, 1);
+	Retro_SaveUBYTE(&IR, 1);
+	Retro_SaveUBYTE(&anticmode, 1);
+	Retro_SaveUBYTE(&dctr, 1);
+	Retro_SaveUBYTE(&lastline, 1);
+	Retro_SaveUBYTE(&need_dl, 1);
+	Retro_SaveUBYTE(&vscrol_off, 1);
+
+	Retro_SaveUWORD(&ANTIC_dlist, 1);
+	Retro_SaveUWORD(&screenaddr, 1);
+
+	Retro_SaveINT(&ANTIC_xpos, 1);
+	Retro_SaveINT(&ANTIC_xpos_limit, 1);
+	Retro_SaveINT(&ANTIC_ypos, 1);
+}
+
+void Retro_ANTIC_StateRead(void)
+{
+	Retro_ReadUBYTE(&ANTIC_DMACTL, 1);
+	Retro_ReadUBYTE(&ANTIC_CHACTL, 1);
+	Retro_ReadUBYTE(&ANTIC_HSCROL, 1);
+	Retro_ReadUBYTE(&ANTIC_VSCROL, 1);
+	Retro_ReadUBYTE(&ANTIC_PMBASE, 1);
+	Retro_ReadUBYTE(&ANTIC_CHBASE, 1);
+	Retro_ReadUBYTE(&ANTIC_NMIEN, 1);
+	Retro_ReadUBYTE(&ANTIC_NMIST, 1);
+	Retro_ReadUBYTE(&IR, 1);
+	Retro_ReadUBYTE(&anticmode, 1);
+	Retro_ReadUBYTE(&dctr, 1);
+	Retro_ReadUBYTE(&lastline, 1);
+	Retro_ReadUBYTE(&need_dl, 1);
+	Retro_ReadUBYTE(&vscrol_off, 1);
+
+	Retro_ReadUWORD(&ANTIC_dlist, 1);
+	Retro_ReadUWORD(&screenaddr, 1);
+
+	Retro_ReadINT(&ANTIC_xpos, 1);
+	Retro_ReadINT(&ANTIC_xpos_limit, 1);
+	Retro_ReadINT(&ANTIC_ypos, 1);
+
+	ANTIC_PutByte(ANTIC_OFFSET_DMACTL, ANTIC_DMACTL);
+	ANTIC_PutByte(ANTIC_OFFSET_CHACTL, ANTIC_CHACTL);
+	ANTIC_PutByte(ANTIC_OFFSET_PMBASE, ANTIC_PMBASE);
+	ANTIC_PutByte(ANTIC_OFFSET_CHBASE, ANTIC_CHBASE);
+}
+#endif /* __LIBRETRO__ */
+
 void ANTIC_StateSave(void)
 {
 	StateSav_SaveUBYTE(&ANTIC_DMACTL, 1);

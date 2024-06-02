@@ -231,7 +231,9 @@ int Sound_Setup(void)
 		return FALSE;
 	}
 
+#ifndef __LIBRETRO__
 	POKEYSND_stereo_enabled = Sound_out.channels == 2;
+#endif /* __LIBRETRO__ */
 #ifndef SOUND_CALLBACK
 	free(process_buffer);
 	process_buffer_size = Sound_out.buffer_frames * Sound_out.channels * Sound_out.sample_size;

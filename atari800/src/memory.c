@@ -339,6 +339,351 @@ void MEMORY_InitialiseMachine(void)
 
 #ifndef BASIC
 
+#if defined(__LIBRETRO__)
+void Retro_MEMORY_StateSave(UBYTE SaveVerbose)
+{
+	int temp;
+	UBYTE byte;
+
+	/* Axlon/Mosaic for 400/800 */
+	if (Atari800_machine_type == Atari800_MACHINE_800) {
+		Retro_SaveINT(&MEMORY_axlon_num_banks, 1);
+		if (MEMORY_axlon_num_banks > 0) {
+			Retro_SaveINT(&axlon_curbank, 1);
+			Retro_SaveINT(&MEMORY_axlon_0f_mirror, 1);
+			Retro_SaveUBYTE(axlon_ram, MEMORY_axlon_num_banks * 0x4000);
+		}
+		Retro_SaveINT(&mosaic_current_num_banks, 1);
+		if (mosaic_current_num_banks > 0) {
+			Retro_SaveINT(&mosaic_curbank, 1);
+			Retro_SaveUBYTE(mosaic_ram, mosaic_current_num_banks * 0x1000);
+		}
+	}
+
+	/* Save amount of base RAM in kilobytes. */
+	temp = MEMORY_ram_size > 64 ? 64 : MEMORY_ram_size;
+	Retro_SaveINT(&temp, 1);
+	Retro_SaveUBYTE(&MEMORY_mem[0], 65536);
+#ifndef PAGED_ATTRIB
+	Retro_SaveUBYTE(&MEMORY_attrib[0], 65536);
+#else
+	{
+		/* I assume here that consecutive calls to StateSav_SaveUBYTE()
+		   are equivalent to a single call with all the values
+		   (i.e. StateSav_SaveUBYTE() doesn't write any headers). */
+		UBYTE attrib_page[256];
+		int i;
+		for (i = 0; i < 256; i++) {
+			if (MEMORY_writemap[i] == NULL)
+				memset(attrib_page, MEMORY_RAM, 256);
+			else if (MEMORY_writemap[i] == MEMORY_ROM_PutByte)
+				memset(attrib_page, MEMORY_ROM, 256);
+			else if (i == 0x4f || i == 0x5f || i == 0x8f || i == 0x9f) {
+				/* special case: Bounty Bob bank switching registers */
+				memset(attrib_page, MEMORY_ROM, 256);
+				attrib_page[0xf6] = MEMORY_HARDWARE;
+				attrib_page[0xf7] = MEMORY_HARDWARE;
+				attrib_page[0xf8] = MEMORY_HARDWARE;
+				attrib_page[0xf9] = MEMORY_HARDWARE;
+			}
+			else {
+				memset(attrib_page, MEMORY_HARDWARE, 256);
+			}
+			Retro_SaveUBYTE(&attrib_page[0], 256);
+		}
+	}
+#endif
+
+	if (Atari800_machine_type == Atari800_MACHINE_XLXE) {
+		if (SaveVerbose != 0)
+			Retro_SaveUBYTE(&MEMORY_basic[0], 8192);
+		Retro_SaveUBYTE(&under_cartA0BF[0], 8192);
+
+		if (SaveVerbose != 0)
+			Retro_SaveUBYTE(&MEMORY_os[0], 16384);
+		Retro_SaveUBYTE(&under_atarixl_os[0], 16384);
+		if (SaveVerbose != 0)
+			Retro_SaveUBYTE(MEMORY_xegame, 0x2000);
+	}
+
+	/* Save amount of XE RAM in 16KB banks. */
+	temp = (MEMORY_ram_size - 64) / 16;
+	if (temp < 0)
+		temp = 0;
+	Retro_SaveINT(&temp, 1);
+	if (MEMORY_ram_size == MEMORY_RAM_320_RAMBO || MEMORY_ram_size == MEMORY_RAM_320_COMPY_SHOP) {
+		/* Save specific banking type. */
+		temp = MEMORY_ram_size - 320;
+		Retro_SaveINT(&temp, 1);
+	}
+	byte = PIA_PORTB | PIA_PORTB_mask;
+	Retro_SaveUBYTE(&byte, 1);
+
+	Retro_SaveINT(&MEMORY_cartA0BF_enabled, 1);
+
+	if (MEMORY_ram_size > 64) {
+		Retro_SaveUBYTE(&atarixe_memory[0], atarixe_memory_size);
+		if (ANTIC_xe_ptr != NULL && MEMORY_selftest_enabled)
+			Retro_SaveUBYTE(antic_bank_under_selftest, 0x800);
+	}
+
+	/* Simius XL/XE MapRAM expansion */
+	if (Atari800_machine_type == Atari800_MACHINE_XLXE && MEMORY_ram_size > 20) {
+		Retro_SaveINT(&MEMORY_enable_mapram, 1);
+		if (MEMORY_enable_mapram) {
+			Retro_SaveUBYTE(mapram_memory, 0x800);
+		}
+	}
+}
+
+void Retro_MEMORY_StateRead(UBYTE SaveVerbose, UBYTE StateVersion)
+{
+	int base_ram_kb;
+	int num_xe_banks;
+	UBYTE portb;
+
+	/* Axlon/Mosaic for 400/800 */
+	if (Atari800_machine_type == Atari800_MACHINE_800 && StateVersion >= 5) {
+		Retro_ReadINT(&MEMORY_axlon_num_banks, 1);
+		if (MEMORY_axlon_num_banks > 0) {
+			Retro_ReadINT(&axlon_curbank, 1);
+			if (StateVersion < 7) {
+				/* Read bank mask, then increase by 1 to get number of banks. */
+				Retro_ReadINT(&MEMORY_axlon_num_banks, 1);
+				++MEMORY_axlon_num_banks;
+			}
+			Retro_ReadINT(&MEMORY_axlon_0f_mirror, 1);
+			if (StateVersion < 7) {
+				int temp;
+				/* Ignore saved RAM size - can be derived. */
+				Retro_ReadINT(&temp, 1);
+			}
+			alloc_axlon_memory();
+			Retro_ReadUBYTE(axlon_ram, MEMORY_axlon_num_banks * 0x4000);
+		}
+		Retro_ReadINT(&MEMORY_mosaic_num_banks, 1);
+		if (MEMORY_mosaic_num_banks > 0) {
+			Retro_ReadINT(&mosaic_curbank, 1);
+			if (StateVersion < 7) {
+				int temp;
+				/* Read max bank number, then increase by 1 to get number of banks. */
+				Retro_ReadINT(&MEMORY_mosaic_num_banks, 1);
+				++MEMORY_mosaic_num_banks;
+				Retro_ReadINT(&temp, 1); /* Ignore Mosaic RAM size - can be derived. */
+			}
+			alloc_mosaic_memory();
+			Retro_ReadUBYTE(mosaic_ram, mosaic_current_num_banks * 0x1000);
+		}
+	}
+
+	if (StateVersion >= 7)
+		/* Read amount of base RAM in kilobytes. */
+		Retro_ReadINT(&base_ram_kb, 1);
+	Retro_ReadUBYTE(&MEMORY_mem[0], 65536);
+#ifndef PAGED_ATTRIB
+	Retro_ReadUBYTE(&MEMORY_attrib[0], 65536);
+#else
+	{
+		UBYTE attrib_page[256];
+		int i;
+		for (i = 0; i < 256; i++) {
+			Retro_ReadUBYTE(&attrib_page[0], 256);
+			/* note: 0x40 is intentional here:
+			   we want ROM on page 0xd1 if H: patches are enabled */
+			switch (attrib_page[0x40]) {
+			case MEMORY_RAM:
+				MEMORY_readmap[i] = NULL;
+				MEMORY_writemap[i] = NULL;
+				break;
+			case MEMORY_ROM:
+				if (i != 0xd1 && attrib_page[0xf6] == MEMORY_HARDWARE) {
+					if (i == 0x4f || i == 0x8f) {
+						MEMORY_readmap[i] = CARTRIDGE_BountyBob1GetByte;
+						MEMORY_writemap[i] = CARTRIDGE_BountyBob1PutByte;
+					}
+					else if (i == 0x5f || i == 0x9f) {
+						MEMORY_readmap[i] = CARTRIDGE_BountyBob2GetByte;
+						MEMORY_writemap[i] = CARTRIDGE_BountyBob2PutByte;
+					}
+					else if (i == 0xbf) {
+						MEMORY_readmap[i] = CARTRIDGE_5200SuperCartGetByte;
+						MEMORY_writemap[i] = CARTRIDGE_5200SuperCartPutByte;
+					}
+					/* else something's wrong, so we keep current values */
+				}
+				else {
+					MEMORY_readmap[i] = NULL;
+					MEMORY_writemap[i] = MEMORY_ROM_PutByte;
+				}
+				break;
+			case MEMORY_HARDWARE:
+				switch (i) {
+				case 0xc0:
+				case 0xd0:
+					MEMORY_readmap[i] = GTIA_GetByte;
+					MEMORY_writemap[i] = GTIA_PutByte;
+					break;
+				case 0xd1:
+					MEMORY_readmap[i] = PBI_D1GetByte;
+					MEMORY_writemap[i] = PBI_D1PutByte;
+					break;
+				case 0xd2:
+				case 0xe8:
+				case 0xeb:
+					MEMORY_readmap[i] = POKEY_GetByte;
+					MEMORY_writemap[i] = POKEY_PutByte;
+					break;
+				case 0xd3:
+					MEMORY_readmap[i] = PIA_GetByte;
+					MEMORY_writemap[i] = PIA_PutByte;
+					break;
+				case 0xd4:
+					MEMORY_readmap[i] = ANTIC_GetByte;
+					MEMORY_writemap[i] = ANTIC_PutByte;
+					break;
+				case 0xd5:
+					MEMORY_readmap[i] = CARTRIDGE_GetByte;
+					MEMORY_writemap[i] = CARTRIDGE_PutByte;
+					break;
+				case 0xd6:
+					MEMORY_readmap[i] = PBI_D6GetByte;
+					MEMORY_writemap[i] = PBI_D6PutByte;
+					break;
+				case 0xd7:
+					MEMORY_readmap[i] = PBI_D7GetByte;
+					MEMORY_writemap[i] = PBI_D7PutByte;
+					break;
+				case 0xff:
+					if (MEMORY_mosaic_num_banks > 0) MEMORY_writemap[0xff] = MosaicPutByte;
+					break;
+				case 0xcf:
+					if (MEMORY_axlon_num_banks > 0) MEMORY_writemap[0xcf] = AxlonPutByte;
+					break;
+				case 0x0f:
+					if (MEMORY_axlon_num_banks > 0 && MEMORY_axlon_0f_mirror) MEMORY_writemap[0x0f] = AxlonPutByte;
+					break;
+				default:
+					/* something's wrong, so we keep current values */
+					break;
+				}
+				break;
+			default:
+				/* something's wrong, so we keep current values */
+				break;
+			}
+		}
+	}
+#endif
+
+	if (Atari800_machine_type == Atari800_MACHINE_XLXE) {
+		if (SaveVerbose)
+			Retro_ReadUBYTE(&MEMORY_basic[0], 8192);
+		Retro_ReadUBYTE(&under_cartA0BF[0], 8192);
+
+		if (SaveVerbose)
+			Retro_ReadUBYTE(&MEMORY_os[0], 16384);
+		Retro_ReadUBYTE(&under_atarixl_os[0], 16384);
+		if (StateVersion >= 7 && SaveVerbose)
+			Retro_ReadUBYTE(MEMORY_xegame, 0x2000);
+	}
+
+	if (StateVersion >= 7) {
+		/* Read amount of XE RAM in 16KB banks. */
+		Retro_ReadINT(&num_xe_banks, 1);
+		/* Compute value of MEMORY_ram_size. */
+		MEMORY_ram_size = base_ram_kb + num_xe_banks * 16;
+		if (MEMORY_ram_size == 320) {
+			/* There are 2 different memory mappings for 320 KB. */
+			/* In savestate version <= 6 this variable is read in PIA_StateRead. */
+			int xe_type;
+			Retro_ReadINT(&xe_type, 1);
+			MEMORY_ram_size += xe_type;
+		}
+		if (!MEMORY_SizeValid(MEMORY_ram_size)) {
+			MEMORY_ram_size = 64;
+			Log_print("Warning: Bad RAM size read in from state save, defaulting to 64 KB");
+		}
+
+		/* Read PORTB and set variables that are based on it. */
+		Retro_ReadUBYTE(&portb, 1);
+		MEMORY_xe_bank = 0;
+		if (MEMORY_ram_size > 64 && (portb & 0x30) != 0x30) {
+			switch (MEMORY_ram_size) {
+			case 128:
+				MEMORY_xe_bank = ((portb & 0x0c) >> 2) + 1;
+				break;
+			case 192:
+				MEMORY_xe_bank = (((portb & 0x0c) + ((portb & 0x40) >> 2)) >> 2) + 1;
+				break;
+			case MEMORY_RAM_320_RAMBO:
+				MEMORY_xe_bank = (((portb & 0x0c) + ((portb & 0x60) >> 1)) >> 2) + 1;
+				break;
+			case MEMORY_RAM_320_COMPY_SHOP:
+				MEMORY_xe_bank = (((portb & 0x0c) + ((portb & 0xc0) >> 2)) >> 2) + 1;
+				break;
+			case 576:
+				MEMORY_xe_bank = (((portb & 0x0e) + ((portb & 0x60) >> 1)) >> 1) + 1;
+				break;
+			case 1088:
+				MEMORY_xe_bank = (((portb & 0x0e) + ((portb & 0xe0) >> 1)) >> 1) + 1;
+				break;
+			}
+		}
+		/* In savestate version <= 6 this variable is read in PIA_StateRead. */
+		MEMORY_selftest_enabled = (portb & 0x81) == 0x01
+			&& !((portb & 0x30) != 0x30 && MEMORY_ram_size == MEMORY_RAM_320_COMPY_SHOP)
+			&& !((portb & 0x10) == 0 && MEMORY_ram_size == 1088);
+
+		Retro_ReadINT(&MEMORY_cartA0BF_enabled, 1);
+		if (Atari800_machine_type == Atari800_MACHINE_XLXE) {
+			GTIA_TRIG[3] = MEMORY_cartA0BF_enabled;
+			if (MEMORY_cartA0BF_enabled == 0 && (GTIA_GRACTL & 4))
+				GTIA_TRIG_latch[3] = 0;
+		}
+	}
+	ANTIC_xe_ptr = NULL;
+	AllocXEMemory();
+	if (MEMORY_ram_size > 64) {
+		Retro_ReadUBYTE(&atarixe_memory[0], atarixe_memory_size);
+		/* a hack that makes state files compatible with previous versions:
+		   for 130 XE there's written 192 KB of unused data */
+		if (MEMORY_ram_size == 128 && StateVersion <= 6) {
+			UBYTE buffer[256];
+			int i;
+			for (i = 0; i < 192 * 4; i++)
+				Retro_ReadUBYTE(&buffer[0], 256);
+		}
+		if (StateVersion >= 7 && (MEMORY_ram_size == 128 || MEMORY_ram_size == MEMORY_RAM_320_COMPY_SHOP)) {
+			switch (portb & 0x30) {
+			case 0x20:	/* ANTIC: base, CPU: extended */
+				ANTIC_xe_ptr = atarixe_memory;
+				break;
+			case 0x10:	/* ANTIC: extended, CPU: base */
+				ANTIC_xe_ptr = atarixe_memory + (MEMORY_xe_bank << 14);
+				break;
+			default:	/* ANTIC same as CPU */
+				ANTIC_xe_ptr = NULL;
+				break;
+			}
+
+			if (ANTIC_xe_ptr != NULL && MEMORY_selftest_enabled)
+				/* Also read ANTIC-visible memory shadowed by Self Test. */
+				Retro_ReadUBYTE(antic_bank_under_selftest, 0x800);
+
+		}
+	}
+
+	/* Simius XL/XE MapRAM expansion */
+	if (StateVersion >= 7 && Atari800_machine_type == Atari800_MACHINE_XLXE && MEMORY_ram_size > 20) {
+		Retro_ReadINT(&MEMORY_enable_mapram, 1);
+		AllocMapRAM();
+		if (mapram_memory != NULL) {
+			Retro_ReadUBYTE(mapram_memory, 0x800);
+		}
+	}
+}
+#endif /* __LIBRETRO__ */
+
 void MEMORY_StateSave(UBYTE SaveVerbose)
 {
 	int temp;
@@ -503,6 +848,10 @@ void MEMORY_StateRead(UBYTE SaveVerbose, UBYTE StateVersion)
 					else if (i == 0x5f || i == 0x9f) {
 						MEMORY_readmap[i] = CARTRIDGE_BountyBob2GetByte;
 						MEMORY_writemap[i] = CARTRIDGE_BountyBob2PutByte;
+					}
+					else if (i == 0xbf) {
+						MEMORY_readmap[i] = CARTRIDGE_5200SuperCartGetByte;
+						MEMORY_writemap[i] = CARTRIDGE_5200SuperCartPutByte;
 					}
 					/* else something's wrong, so we keep current values */
 				}
@@ -1068,13 +1417,16 @@ UBYTE MEMORY_HwGetByte(UWORD addr, int no_side_effects)
 	case 0x8f00:
 		if (!no_side_effects)
 			CARTRIDGE_BountyBob1(addr);
-		byte = 0;
+		byte = MEMORY_dGetByte(addr);
 		break;
 	case 0x5f00:
 	case 0x9f00:
 		if (!no_side_effects)
 			CARTRIDGE_BountyBob2(addr);
-		byte = 0;
+		byte = MEMORY_dGetByte(addr);
+		break;
+	case 0xbf00:
+		byte = CARTRIDGE_5200SuperCartGetByte(addr, no_side_effects);
 		break;
 	case 0xd000:				/* GTIA */
 	case 0xc000:				/* GTIA - 5200 */
@@ -1152,6 +1504,9 @@ void MEMORY_HwPutByte(UWORD addr, UBYTE byte)
 	case 0x5f00:
 	case 0x9f00:
 		CARTRIDGE_BountyBob2(addr);
+		break;
+	case 0xbf00:
+		CARTRIDGE_5200SuperCartPutByte(addr, byte);
 		break;
 	case 0xd000:				/* GTIA */
 	case 0xc000:				/* GTIA - 5200 */
