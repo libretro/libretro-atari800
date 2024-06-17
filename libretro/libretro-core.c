@@ -135,7 +135,7 @@ extern int ToggleTV;
 extern int CURRENT_TV;
 
 extern int SHIFTON, pauseg, SND;
-extern unsigned char SNDBUF[];
+extern short signed int SNDBUF[1024 * 2];
 
 char RPATH[512];
 char RETRO_DIR[512];
