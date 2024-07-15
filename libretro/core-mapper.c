@@ -155,7 +155,7 @@ void retro_sound_update(void)
 
    if (! UI_is_active)
    {
-      uint16_t *p = (uint16_t *)SNDBUF;
+      int16_t *p = (int16_t *)SNDBUF;
 
       Sound_Callback(SNDBUF, sizeof SNDBUF);
       for (x = 0; x < stop; p += 2, x++)
