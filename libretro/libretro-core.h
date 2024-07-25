@@ -83,5 +83,5 @@ extern int pauseg;
 #define JOY_5200_CENTER 114
 
 void retro_message(const char* text, unsigned int frames, int alt);
-void retro_audio_cb(short l, short r);
+void retro_audio_cb(int16_t l, int16_t r);
 #endif
