@@ -135,7 +135,7 @@ extern int ToggleTV;
 extern int CURRENT_TV;
 
 extern int SHIFTON, pauseg, SND;
-extern unsigned char SNDBUF[];
+extern UBYTE SNDBUF[];
 
 char RPATH[512];
 char RETRO_DIR[512];
@@ -1164,7 +1164,7 @@ void retro_set_video_refresh(retro_video_refresh_t cb)
     video_cb = cb;
 }
 
-void retro_audio_cb(short l, short r)
+void retro_audio_cb(int16_t l, int16_t r)
 {
     audio_cb(l, r);
 }

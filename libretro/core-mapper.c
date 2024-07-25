@@ -26,7 +26,7 @@ unsigned long  Ktime=0 , LastFPSTime=0;
 #endif 
 
 //SOUND
-unsigned char SNDBUF[1024*2*2];
+UBYTE SNDBUF[1024*2*2];
 int snd_sampler_pal = 44100 / 50;
 int snd_sampler_ntsc = 44100 / 60;
 
@@ -155,9 +155,11 @@ void retro_sound_update(void)
 
    if (! UI_is_active)
    {
-      Sound_Callback(SNDBUF, 1024*2*2);
-      for(x=0;x<stop*2;x+=2)
-         retro_audio_cb(SNDBUF[x],SNDBUF[x+2]);
+      int16_t *p = (int16_t *)SNDBUF;
+
+      Sound_Callback(SNDBUF, sizeof SNDBUF);
+      for (x = 0; x < stop; p += 2, x++)
+         retro_audio_cb(*p, *p + 1);
 
    }
 }
