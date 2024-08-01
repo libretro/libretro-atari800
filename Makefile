@@ -246,16 +246,15 @@ else ifneq (,$(filter $(platform), ngc wii wiiu))
    CXX = $(DEVKITPPC)/bin/powerpc-eabi-g++$(EXE_EXT)
    AR = $(DEVKITPPC)/bin/powerpc-eabi-ar$(EXE_EXT)  
    PLATFORM_DEFINES += -DGEKKO -mcpu=750 -meabi -mhard-float -DHAVE_STRTOF_L -DHAVE_LOCALE
-   PLATFORM_DEFINES += -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int -D_GNU_SOURCE
    STATIC_LINKING = 1
    HAVE_COMPAT = 1
    ifneq (,$(findstring wiiu,$(platform)))
-      CFLAGS += -DDEFAULT_CFG_NAME="\"sd:/retroarch/cores/system/atari800.cfg\""
-      PLATFORM_DEFINES += -DWIIU -DHW_RVL
+      CFLAGS += -DDEFAULT_CFG_NAME="\"fs:/vol/external01/retroarch/cores/system/atari800.cfg\""
+      PLATFORM_DEFINES += -DWIIU -DHW_RVL -ffunction-sections -fdata-sections -D__wiiu__ -D__wut__ -D_GNU_SOURCE
    else ifneq (,$(findstring wii,$(platform)))
-      PLATFORM_DEFINES += -DHW_RVL -mrvl
+      PLATFORM_DEFINES += -DHW_RVL -mrvl -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int -D_GNU_SOURCE
    else ifneq (,$(findstring ngc,$(platform)))
-      PLATFORM_DEFINES += -DHW_DOL -mrvl
+      PLATFORM_DEFINES += -DHW_DOL -mrvl -U__INT32_TYPE__ -U __UINT32_TYPE__ -D__INT32_TYPE__=int -D_GNU_SOURCE
    endif
 
 # Nintendo Switch (libnx)
