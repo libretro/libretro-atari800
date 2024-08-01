@@ -1160,8 +1160,8 @@ static int FileSelector(char *path, int select_dir, char pDirectories[][FILENAME
 #endif
 #ifdef WIIU
 // FIXME for now only sd: ,please add usb:
-				else if (strcmp(selected_filename, "[sd:]") == 0) {
-					strcpy(new_dir, "sd:/");
+				else if (strcmp(selected_filename, "[fs:/vol/external01]") == 0) {
+					strcpy(new_dir, "fs:/vol/external01/");
 				}
 #endif
 #ifdef DOS_DRIVES
