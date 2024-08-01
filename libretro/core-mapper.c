@@ -26,7 +26,7 @@ unsigned long  Ktime=0 , LastFPSTime=0;
 #endif 
 
 //SOUND
-short signed int SNDBUF[1024*2];
+unsigned char SNDBUF[1024*2*2];
 int snd_sampler_pal = 44100 / 50;
 int snd_sampler_ntsc = 44100 / 60;
 
