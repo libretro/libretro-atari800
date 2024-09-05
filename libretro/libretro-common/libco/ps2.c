@@ -31,7 +31,6 @@ cothread_t co_create(unsigned int size, void (*entrypoint)(void))
 
   if ( threadStack== NULL)
 	{
-		printf("libco: ERROR: creating threadStack\n");
 		return(-1);
 	}
 
@@ -43,8 +42,6 @@ cothread_t co_create(unsigned int size, void (*entrypoint)(void))
   thread.initial_priority = 1;
 
   int32_t new_thread_id = CreateThread(&thread);
-	if (new_thread_id < 0)
-		printf("libco: ERROR: creating thread\n");
 
   StartThread(new_thread_id, NULL);
   *(uint32_t *)handle = new_thread_id;
