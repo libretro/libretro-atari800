@@ -939,8 +939,8 @@ static void GetDirectory(const char *directory)
 	FilenamesAdd(Util_strdup("[mc0:]"));
 #endif
 #ifdef WIIU
-// FIXME: limited to sd: add usb:
-	FilenamesAdd(Util_strdup("[sd:]"));
+// FIXME: limited to fs:/vol/external01 add usb:
+	FilenamesAdd(Util_strdup("[fs:/vol/external01]"));
 #endif
 
 #ifdef DOS_DRIVES
@@ -1159,9 +1159,9 @@ static int FileSelector(char *path, int select_dir, char pDirectories[][FILENAME
 				}
 #endif
 #ifdef WIIU
-// FIXME for now only sd: ,please add usb:
-				else if (strcmp(selected_filename, "[sd:]") == 0) {
-					strcpy(new_dir, "sd:/");
+// FIXME for now only fs:/vol/external01 ,please add usb:
+				else if (strcmp(selected_filename, "[fs:/vol/external01]") == 0) {
+					strcpy(new_dir, "fs:/vol/external01/");
 				}
 #endif
 #ifdef DOS_DRIVES

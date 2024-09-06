@@ -451,7 +451,7 @@ int Atari800_Initialise(int *argc, char *argv[])
 #endif
 
 #if defined(WIIU) && defined(__LIBRETRO__)
-SYSROM_FindInDir("sd:/retroarch/cores/system/atari800", TRUE);
+SYSROM_FindInDir("fs:/vol/external01/retroarch/cores/system/atari800", TRUE);
 #endif
 
 	if (*argc > 0 && argv[0] != NULL) {
