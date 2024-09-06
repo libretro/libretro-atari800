@@ -48,7 +48,7 @@ int retroh = 300;
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },            \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Fire 1" },               \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire 2" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Space" },                 \
+       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Space/Fire 3" },                 \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "Return" },               \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },          \
        { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },            \
@@ -538,7 +538,7 @@ static void update_variables(void)
             autorunCartridge = 0;
     }
 
-    /* Controller Hack for Dual Stick or Swap Ports*/
+    /* Controller Hack for Dual Stick, Swap Ports or Joy 2B+*/
     var.key = "atari800_opt2";
     var.value = NULL;
 
@@ -549,6 +549,8 @@ static void update_variables(void)
             atari_joyhack = 1;
         else if ( strcmp(var.value,"Swap Ports") == 0)
             atari_joyhack = 2;
+        else if ( strcmp(var.value,"Joy 2B+") == 0)
+            atari_joyhack = 3;
         else
             atari_joyhack = 0;
     }

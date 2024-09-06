@@ -538,6 +538,17 @@ int Retro_PollEvent()
        else if (al[0][0] >= JOYRANGE_RIGHT_VALUE)
            MXjoy[1] |= 0x08;
    }
+   else if (atari_joyhack == 3 && !paddle_mode) //hack for supporting Joy 2B+ games
+   {
+      //use paddles' potentiometers for fire 2 and fire 3
+      POKEY_POT_input[0] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_A)) ? INPUT_mouse_pot_max : INPUT_mouse_pot_min;
+      POKEY_POT_input[1] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_Y)) ? INPUT_mouse_pot_max : INPUT_mouse_pot_min;
+      POKEY_POT_input[2] = (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_A)) ? INPUT_mouse_pot_max : INPUT_mouse_pot_min;
+      POKEY_POT_input[3] = (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_Y)) ? INPUT_mouse_pot_max : INPUT_mouse_pot_min;
+      //prevent propagation of RETRO_DEVICE_ID_JOYPAD_Y that is interpreted as space key
+      joypad_bits[0] &= ~(1 << RETRO_DEVICE_ID_JOYPAD_Y);
+      joypad_bits[1] &= ~(1 << RETRO_DEVICE_ID_JOYPAD_Y);
+   }
 
    if ( atari_devices[0] != RETRO_DEVICE_ATARI_KEYBOARD)
    {
