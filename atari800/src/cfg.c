@@ -83,8 +83,8 @@ extern const char *retro_system_directory;
 #endif
 
 #ifdef WIIU
-#define DEFAULT_CFG_NAME "sd:/retroarch/cores/system/atari800.cfg"
-#define SYSTEM_WIDE_CFG_FILE "sd:/retroarch/cores/system/atari800.cfg"
+#define DEFAULT_CFG_NAME "fs:/vol/external01/retroarch/cores/system/atari800.cfg"
+#define SYSTEM_WIDE_CFG_FILE "fs:/vol/external01/retroarch/cores/system/atari800.cfg"
 #endif
 
 static char rtconfig_filename[FILENAME_MAX];
