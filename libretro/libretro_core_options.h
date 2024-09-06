@@ -60,7 +60,7 @@ struct retro_core_option_v2_category option_cats_us[] = {
    {
       "input",
       "Input",
-      "Configure 5200 Digital and Analog Joystick sensitivity and Analog deadzone.  Activate Swap or Dual Joysticks.  Activate Paddle mode and set Paddle speed.  Set retroarch keyboard type."
+      "Configure 5200 Digital and Analog Joystick sensitivity and Analog deadzone.  Activate Swap, Dual Joysticks or Joy 2B+. Activate Paddle mode and set Paddle speed.  Set retroarch keyboard type."
    },
    { NULL, NULL, NULL },
 };
@@ -119,13 +119,14 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "atari800_opt2",
       "Controller Hacks",
       NULL,
-      "Apply gamepad input hacks required for specific games. 'Dual Stick' maps Player 2's joystick to the right analog stick of Player 1's RetroPad, enabling dual stick control in 'Robotron 2084' and 'Space Dungeon'. 'Swap Ports' maps Player 1 to port 2 and Player 2 to port 1 of the emulated console, correcting the swapped inputs of 'Wizard of Wor', 'Apple Panic' and a few other games",
+      "Apply gamepad input hacks required for specific games. 'Dual Stick' maps Player 2's joystick to the right analog stick of Player 1's RetroPad, enabling dual stick control in 'Robotron 2084' and 'Space Dungeon'. 'Swap Ports' maps Player 1 to port 2 and Player 2 to port 1 of the emulated console, correcting the swapped inputs of 'Wizard of Wor', 'Apple Panic' and a few other games. 'Joy 2B+' enables multibutton joysticks support.",
       NULL,
       "input",
       {
          { "none", NULL },
          { "enabled",  "Dual Stick" },
          { "Swap Ports",  "Swap Ports" },
+         { "Joy 2B+",  "Joy 2B+" },
          { NULL, NULL },
       },
       "none"
