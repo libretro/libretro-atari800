@@ -39,7 +39,9 @@
 #include <zlib.h>
 #endif
 #include <stdio.h>
-
+#ifdef __LIBRETRO__
+#include "crc32.h"
+#endif
 
 int AFILE_DetectFileType(const char *filename)
 {
@@ -48,6 +50,16 @@ int AFILE_DetectFileType(const char *filename)
 	FILE *fp = fopen(filename, "rb");
 	if (fp == NULL)
 		return AFILE_ERROR;
+	// Commando CART hack		
+	#ifdef __LIBRETRO__
+	ULONG crc;
+	CRC32_FromFile(fp, &crc);
+	Util_rewind(fp);
+	if (crc == 0x28288df4) { // Commando cart CRC
+		fclose(fp);
+		return AFILE_CART;
+	}
+	#endif
 	if (fread(header, 1, 4, fp) != 4) {
 		fclose(fp);
 		return AFILE_ERROR;
