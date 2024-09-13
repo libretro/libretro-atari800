@@ -67,7 +67,7 @@ a800_rom a800_game[] = {
  { a800_XE_07_64,"Choplifter!",65536,0xd426eccc},
  { a800,"Claim Jumper",16384,0x1a333c4a},
  { a800,"Cloudburts",8192,0x259aa18b},
- { a800_XE_128,"Commando",131072,0x28288df4},					// falsely autodetected as an xex file
+ { a800_XE_128,"Commando",131072,0x28288df4}, // Autodetected as xex. Check afile.c for correct detection hack.
  { a800,"Computer Chess",8192,0x5ce06e94},
  { a800,"Computer War",16384,0x4922aac6},
  { a800_MAX_1024,"Conan (MF)",1048576,0x25feb642},
@@ -80,6 +80,7 @@ a800_rom a800_game[] = {
  { a800_XE_07_64,"Dark Chambers",65536,0xfa2f132c},
  { a800_XE_07_64,"David's Midnight Magic",65536,0xb7ca61a2},
  { a800,"Defender",16384,0x782a81e4},
+ { a800_XE_07_64,"Deflektor",65536,0xe4ed154e},
  { a800,"Deluxe Invaders",8192,0x15dc9b31},
  { a800,"Demo Cart",16384,0x9bedcdf3},
  { a800,"Demon Attack",8192,0x91328072},
@@ -161,6 +162,7 @@ a800_rom a800_game[] = {
  { a800,"Millipede",16384,0xfb7e45da},
  { a800,"Miner 2049er",16384,0x6b1478bf},
  { a800,"Missile Command",8192,0xd2e36392},
+ { a800,"Missile Command (XEGS built in)",8192,0xbdca01fb},
  { a800,"Mogul Maniac",16384,0x0c391600},
  { a800,"Monster Maze",16384,0x37049e57},
  { a800,"Moon Patrol",16384,0xb845edb8},
