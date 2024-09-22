@@ -824,6 +824,8 @@ SYSROM_FindInDir("fs:/vol/external01/retroarch/cores/system/atari800", TRUE);
 	/* Auto-start files left on the command line */
 	j = 1; /* diskno */
 	for (i = 1; i < *argc; i++) {
+		if (strcmp(argv[i], "") == 0)	// Core started with no content
+			break;
 		if (j > 8) {
 			/* The remaining arguments are not necessary disk images, but ignore them... */
 			Log_print("Too many disk image filenames on the command line (max. 8).");
