@@ -111,6 +111,7 @@ int autorunCartridge = 0;
 int atari_joyhack = 0;
 int paddle_mode = 0;
 int paddle_speed = 3;
+int atarixegs_keyboard_detached = 0;
 
 extern int INPUT_joy_5200_center;
 extern int INPUT_joy_5200_min;
@@ -514,6 +515,9 @@ void retro_set_environment(retro_environment_t cb)
     libretro_set_core_options(environ_cb, &option_cats_supported);
 
     cb(RETRO_ENVIRONMENT_SET_CONTROLLER_INFO, (void*)ports);
+
+    bool no_content = true;
+    cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &no_content);
 }
 
 static void update_variables(void)
@@ -525,7 +529,9 @@ static void update_variables(void)
     var.value = NULL;
 
     /* Moved here for better consistency and when system options that require EMU reset to occur */
-    if (HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52"))
+    if (strcmp(RPATH, "") == 0)  // Start core with no content
+        autorunCartridge = 0;
+    else if (HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52"))
         autorunCartridge = 1;
     else if (HandleExtension((char*)RPATH, "bin") || HandleExtension((char*)RPATH, "BIN")
             || HandleExtension((char*)RPATH, "rom") || HandleExtension((char*)RPATH, "ROM"))
@@ -665,6 +671,17 @@ static void update_variables(void)
             Atari800_builtin_game = FALSE;
             Atari800_keyboard_detached = FALSE;
         }
+        else if (strcmp(var.value, "XEGS") == 0)
+        {
+            Atari800_machine_type = Atari800_MACHINE_XLXE;
+            MEMORY_ram_size = 64;
+            Atari800_builtin_basic = TRUE;
+            Atari800_keyboard_leds = FALSE;
+            Atari800_f_keys = FALSE;
+            Atari800_jumper = FALSE;
+            Atari800_builtin_game = TRUE;
+            Atari800_keyboard_detached = atarixegs_keyboard_detached;
+        } 
 
         if (!libretro_runloop_active || (strcmp(var.value, old_Atari800_machine_type) != 0 ))
         {
@@ -842,6 +859,21 @@ static void update_variables(void)
         else if (strcmp(var.value, "callback") == 0)
         {
             keyboard_type = 1;
+        }
+    }
+
+    var.key = "atarixegs_keyboard_detached";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "attached") == 0)
+        {
+            atarixegs_keyboard_detached = 0;
+        }
+        else if (strcmp(var.value, "detached") == 0)
+        {
+            atarixegs_keyboard_detached = 1;
         }
     }
 
@@ -1232,54 +1264,55 @@ static void keyboard_cb(bool down, unsigned keycode,
 
 bool retro_load_game(const struct retro_game_info* info)
 {
-    const char* full_path;
-    bool media_is_disk_tape = TRUE;
-
-    (void)info;
-
     struct retro_keyboard_callback cb = { keyboard_cb };
+    environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &cb);    
 
-    environ_cb(RETRO_ENVIRONMENT_SET_KEYBOARD_CALLBACK, &cb);
+    if (info!=NULL) {
+        const char* full_path;
+        bool media_is_disk_tape = TRUE;
 
-    full_path = info->path;
+        (void)info;
 
-    // If it's a m3u file
-    if (strendswith(full_path, "M3U"))
-    {
-        // Parse the m3u file
-        dc_parse_m3u(dc, full_path);
+        full_path = info->path;
 
-        // Some debugging
-        //log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
-        //for (unsigned i = 0; i < dc->count; i++)
-        //{
-        //    fprintf(fp, "file %d: %s\n", i + 1, dc->files[i]);
-        //    log_cb(RETRO_LOG_INFO, "file %d: %s\n", i + 1, dc->files[i]);
-        //}
+        // If it's a m3u file
+        if (strendswith(full_path, "M3U"))
+        {
+            // Parse the m3u file
+            dc_parse_m3u(dc, full_path);
+
+            // Some debugging
+            //log_cb(RETRO_LOG_INFO, "m3u file parsed, %d file(s) found\n", dc->count);
+            //for (unsigned i = 0; i < dc->count; i++)
+            //{
+            //    fprintf(fp, "file %d: %s\n", i + 1, dc->files[i]);
+            //    log_cb(RETRO_LOG_INFO, "file %d: %s\n", i + 1, dc->files[i]);
+            //}
+        }
+        else if (strendswith(full_path, "XFD") ||
+                strendswith(full_path, "ATR") ||
+                strendswith(full_path, "DCM") ||
+                strendswith(full_path, "ATX") ||
+                strendswith(full_path, "CAS"))
+        {
+            // Add the file to disk control context
+            // Maybe, in a later version of retroarch, we could add disk on the fly (didn't find how to do this)
+            dc_add_file(dc, full_path);
+        }
+        else
+            media_is_disk_tape = FALSE;
+
+        if (media_is_disk_tape)
+        {
+            // Init first disk
+            dc->index = 0;
+            dc->eject_state = false;
+            log_cb(RETRO_LOG_INFO, "Disk/Cassette (%d) inserted into drive 1 : %s\n", dc->index + 1, dc->files[dc->index]);
+            strcpy(RPATH, dc->files[0]);
+        }
+        else
+            strcpy(RPATH, full_path);
     }
-    else if (strendswith(full_path, "XFD") ||
-             strendswith(full_path, "ATR") ||
-             strendswith(full_path, "DCM") ||
-             strendswith(full_path, "ATX") ||
-             strendswith(full_path, "CAS"))
-    {
-        // Add the file to disk control context
-        // Maybe, in a later version of retroarch, we could add disk on the fly (didn't find how to do this)
-        dc_add_file(dc, full_path);
-    }
-    else
-        media_is_disk_tape = FALSE;
-
-    if (media_is_disk_tape)
-    {
-        // Init first disk
-        dc->index = 0;
-        dc->eject_state = false;
-        log_cb(RETRO_LOG_INFO, "Disk/Cassette (%d) inserted into drive 1 : %s\n", dc->index + 1, dc->files[dc->index]);
-        strcpy(RPATH, dc->files[0]);
-    }
-    else
-        strcpy(RPATH, full_path);
 
     update_variables();
 
@@ -1333,10 +1366,6 @@ size_t retro_serialize_size(void)
     size = Retro_SaveAtariState(data_, A800_SAVE_STATE_SIZE, 1);
     free(data_);
 
-    //FILE* fp1 = fopen("E:\\debugme.txt", "a");
-    //fprintf(fp1, "Estimated savestate size %i\n", size);
-    //fclose(fp1);
-
     return size;
 }
 
@@ -1346,10 +1375,6 @@ bool retro_serialize(void* data_, size_t size)
 
     returned_size = Retro_SaveAtariState(data_, size, 1);
 
-    //FILE* fp1 = fopen("E:\\debugme.txt", "a");
-    //fprintf(fp1, "Actual savestate size %i\n", returned_size);
-    //fclose(fp1);
-
     return returned_size;
 }
 
@@ -1358,10 +1383,6 @@ bool retro_unserialize(const void* data_, size_t size)
     int returned_size;
 
     returned_size = Retro_ReadAtariState(data_, size);
-
-    //FILE* fp1 = fopen("E:\\debugme.txt", "a");
-    //fprintf(fp1, "Savestate size read in %i\nFor game %s\n", returned_size,RPATH);
-    //fclose(fp1);
 
     return returned_size;
 }
