@@ -270,6 +270,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "poll"
    },
    {
+      "atarixegs_keyboard_detached",
+      "Atari XEGS keyboard",
+      NULL,
+      "Set whether the Atari XEGS keyboard is attached or detached. If 'Internal BASIC' is enabled and the keyboard is attached, it will boot to BASIC. If 'Internal BASIC' is enabled and the keyboard is detached it will boot to the in-built game (Missile Command). If 'Internal BASIC' is disabled, it will boot to the Self Test screen",
+      NULL,
+      "input",
+      {
+         { "attached", NULL },
+         { "detached",  NULL },
+         { NULL, NULL },
+      },
+      "attached"
+   },
+   {
       "keyboard_defines",
       "Atari Keyboard Defines",
       NULL,
@@ -286,7 +300,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "atari800_system",
       "Atari System",
       NULL,
-      "Select system emulated.  Atari 5200 for Atari 5200 console games.  400/800 (OS B) for <48K games or ones that require OS/B.  800XL (64K) works for most content.  130XE (128K), Modern XL/XE(320K Compy Shop),  Modern XL/XE(576K), Modern XL/XE(1088K) for content that needs more than 64K.",
+      "Select system emulated.  Atari 5200 for Atari 5200 console games.  400/800 (OS B) for <48K games or ones that require OS/B.  800XL (64K) works for most content.  130XE (128K), Modern XL/XE(320K Compy Shop),  Modern XL/XE(576K), Modern XL/XE(1088K) for content that needs more than 64K.  Atari XE Game System for the Atari XE Game System or XEGS console games.",
       NULL,
       NULL,
       {
@@ -296,6 +310,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "Modern XL/XE(320K CS)", "Modern Atari XL/XE(320K Compy Shop)" },
          { "Modern XL/XE(576K)", "Modern Atari XL/XE(576K)" },
          { "Modern XL/XE(1088K)", "Modern Atari XL/XE(1088K)" },
+         { "XEGS", "Atari XE Game System"},
          { "5200", "Atari 5200 Super System" },
          { NULL, NULL },
       },
