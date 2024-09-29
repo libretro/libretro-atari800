@@ -25,6 +25,7 @@ SOURCES_C := \
 	$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c
 
 SOURCES_C += \
+	$(CORE_DIR)/libretro/carts_hash.c \
 	$(CORE_DIR)/libretro/libretro-core.c \
 	$(CORE_DIR)/libretro/core-mapper.c \
 	$(CORE_DIR)/libretro/graph.c \
