@@ -41,6 +41,7 @@
 #include <stdio.h>
 #ifdef __LIBRETRO__
 #include "crc32.h"
+#include "carts_hash.h"
 #endif
 
 int AFILE_DetectFileType(const char *filename)
@@ -50,16 +51,18 @@ int AFILE_DetectFileType(const char *filename)
 	FILE *fp = fopen(filename, "rb");
 	if (fp == NULL)
 		return AFILE_ERROR;
-	// Commando CART hack		
+	
 	#ifdef __LIBRETRO__
+	// False positives - hack for raw images
 	ULONG crc;
 	CRC32_FromFile(fp, &crc);
 	Util_rewind(fp);
-	if (crc == 0x28288df4) { // Commando cart CRC
+	if (is_cart(crc)) {
 		fclose(fp);
-		return AFILE_CART;
+		return AFILE_ROM;
 	}
-	#endif
+	#endif // __LIBRETRO__
+
 	if (fread(header, 1, 4, fp) != 4) {
 		fclose(fp);
 		return AFILE_ERROR;

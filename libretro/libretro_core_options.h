@@ -51,6 +51,351 @@ extern "C" {
 //   { NULL, NULL, NULL },
 //};
 
+#define RANGE_1 \
+   { \
+      {"-1.00", NULL}, \
+      {"-0.98", NULL}, \
+      {"-0.96", NULL}, \
+      {"-0.94", NULL}, \
+      {"-0.92", NULL}, \
+      {"-0.90", NULL}, \
+      {"-0.88", NULL}, \
+      {"-0.86", NULL}, \
+      {"-0.84", NULL}, \
+      {"-0.82", NULL}, \
+      {"-0.80", NULL}, \
+      {"-0.78", NULL}, \
+      {"-0.76", NULL}, \
+      {"-0.74", NULL}, \
+      {"-0.72", NULL}, \
+      {"-0.70", NULL}, \
+      {"-0.68", NULL}, \
+      {"-0.66", NULL}, \
+      {"-0.64", NULL}, \
+      {"-0.62", NULL}, \
+      {"-0.60", NULL}, \
+      {"-0.58", NULL}, \
+      {"-0.56", NULL}, \
+      {"-0.54", NULL}, \
+      {"-0.52", NULL}, \
+      {"-0.50", NULL}, \
+      {"-0.48", NULL}, \
+      {"-0.46", NULL}, \
+      {"-0.44", NULL}, \
+      {"-0.42", NULL}, \
+      {"-0.40", NULL}, \
+      {"-0.38", NULL}, \
+      {"-0.36", NULL}, \
+      {"-0.34", NULL}, \
+      {"-0.32", NULL}, \
+      {"-0.30", NULL}, \
+      {"-0.28", NULL}, \
+      {"-0.26", NULL}, \
+      {"-0.24", NULL}, \
+      {"-0.22", NULL}, \
+      {"-0.20", NULL}, \
+      {"-0.18", NULL}, \
+      {"-0.16", NULL}, \
+      {"-0.14", NULL}, \
+      {"-0.12", NULL}, \
+      {"-0.10", NULL}, \
+      {"-0.08", NULL}, \
+      {"-0.06", NULL}, \
+      {"-0.04", NULL}, \
+      {"-0.02", NULL}, \
+      {"0.00", "0.00 (Default)"}, \
+      {"0.02", NULL}, \
+      {"0.04", NULL}, \
+      {"0.06", NULL}, \
+      {"0.08", NULL}, \
+      {"0.10", NULL}, \
+      {"0.12", NULL}, \
+      {"0.14", NULL}, \
+      {"0.16", NULL}, \
+      {"0.18", NULL}, \
+      {"0.20", NULL}, \
+      {"0.22", NULL}, \
+      {"0.24", NULL}, \
+      {"0.26", NULL}, \
+      {"0.28", NULL}, \
+      {"0.30", NULL}, \
+      {"0.32", NULL}, \
+      {"0.34", NULL}, \
+      {"0.36", NULL}, \
+      {"0.38", NULL}, \
+      {"0.40", NULL}, \
+      {"0.42", NULL}, \
+      {"0.44", NULL}, \
+      {"0.46", NULL}, \
+      {"0.48", NULL}, \
+      {"0.50", NULL}, \
+      {"0.52", NULL}, \
+      {"0.54", NULL}, \
+      {"0.56", NULL}, \
+      {"0.58", NULL}, \
+      {"0.60", NULL}, \
+      {"0.62", NULL}, \
+      {"0.64", NULL}, \
+      {"0.66", NULL}, \
+      {"0.68", NULL}, \
+      {"0.70", NULL}, \
+      {"0.72", NULL}, \
+      {"0.74", NULL}, \
+      {"0.76", NULL}, \
+      {"0.78", NULL}, \
+      {"0.80", NULL}, \
+      {"0.82", NULL}, \
+      {"0.84", NULL}, \
+      {"0.86", NULL}, \
+      {"0.88", NULL}, \
+      {"0.90", NULL}, \
+      {"0.92", NULL}, \
+      {"0.94", NULL}, \
+      {"0.96", NULL}, \
+      {"0.98", NULL}, \
+      {"1.00", NULL}, \
+      { NULL, NULL }, \
+   }
+
+
+#define RANGE_2 \
+   { \
+      {"-2.00", NULL}, \
+      {"-1.96", NULL}, \
+      {"-1.92", NULL}, \
+      {"-1.88", NULL}, \
+      {"-1.84", NULL}, \
+      {"-1.80", NULL}, \
+      {"-1.76", NULL}, \
+      {"-1.72", NULL}, \
+      {"-1.68", NULL}, \
+      {"-1.64", NULL}, \
+      {"-1.60", NULL}, \
+      {"-1.56", NULL}, \
+      {"-1.52", NULL}, \
+      {"-1.48", NULL}, \
+      {"-1.44", NULL}, \
+      {"-1.40", NULL}, \
+      {"-1.36", NULL}, \
+      {"-1.32", NULL}, \
+      {"-1.28", NULL}, \
+      {"-1.24", NULL}, \
+      {"-1.20", NULL}, \
+      {"-1.16", NULL}, \
+      {"-1.12", NULL}, \
+      {"-1.08", NULL}, \
+      {"-1.04", NULL}, \
+      {"-1.00", NULL}, \
+      {"-0.96", NULL}, \
+      {"-0.92", NULL}, \
+      {"-0.88", NULL}, \
+      {"-0.84", NULL}, \
+      {"-0.80", NULL}, \
+      {"-0.76", NULL}, \
+      {"-0.72", NULL}, \
+      {"-0.68", NULL}, \
+      {"-0.64", NULL}, \
+      {"-0.60", NULL}, \
+      {"-0.56", NULL}, \
+      {"-0.52", NULL}, \
+      {"-0.48", NULL}, \
+      {"-0.44", NULL}, \
+      {"-0.40", NULL}, \
+      {"-0.36", NULL}, \
+      {"-0.32", NULL}, \
+      {"-0.28", NULL}, \
+      {"-0.24", NULL}, \
+      {"-0.20", NULL}, \
+      {"-0.16", NULL}, \
+      {"-0.12", NULL}, \
+      {"-0.08", NULL}, \
+      {"-0.04", NULL}, \
+      {"0.00", "0.00 (Default)"}, \
+      {"0.04", NULL}, \
+      {"0.08", NULL}, \
+      {"0.12", NULL}, \
+      {"0.16", NULL}, \
+      {"0.20", NULL}, \
+      {"0.24", NULL}, \
+      {"0.28", NULL}, \
+      {"0.32", NULL}, \
+      {"0.36", NULL}, \
+      {"0.40", NULL}, \
+      {"0.44", NULL}, \
+      {"0.48", NULL}, \
+      {"0.52", NULL}, \
+      {"0.56", NULL}, \
+      {"0.60", NULL}, \
+      {"0.64", NULL}, \
+      {"0.68", NULL}, \
+      {"0.72", NULL}, \
+      {"0.76", NULL}, \
+      {"0.80", NULL}, \
+      {"0.84", NULL}, \
+      {"0.88", NULL}, \
+      {"0.92", NULL}, \
+      {"0.96", NULL}, \
+      {"1.00", NULL}, \
+      {"1.04", NULL}, \
+      {"1.08", NULL}, \
+      {"1.12", NULL}, \
+      {"1.16", NULL}, \
+      {"1.20", NULL}, \
+      {"1.24", NULL}, \
+      {"1.28", NULL}, \
+      {"1.32", NULL}, \
+      {"1.36", NULL}, \
+      {"1.40", NULL}, \
+      {"1.44", NULL}, \
+      {"1.48", NULL}, \
+      {"1.52", NULL}, \
+      {"1.56", NULL}, \
+      {"1.60", NULL}, \
+      {"1.64", NULL}, \
+      {"1.68", NULL}, \
+      {"1.72", NULL}, \
+      {"1.76", NULL}, \
+      {"1.80", NULL}, \
+      {"1.84", NULL}, \
+      {"1.88", NULL}, \
+      {"1.92", NULL}, \
+      {"1.96", NULL}, \
+      {"2.00", NULL}, \
+      { NULL, NULL }, \
+   }
+
+#define RANGE_GAMMA \
+   { \
+      {"1.00", NULL}, \
+      {"1.02", NULL}, \
+      {"1.04", NULL}, \
+      {"1.06", NULL}, \
+      {"1.08", NULL}, \
+      {"1.10", NULL}, \
+      {"1.12", NULL}, \
+      {"1.14", NULL}, \
+      {"1.16", NULL}, \
+      {"1.18", NULL}, \
+      {"1.20", NULL}, \
+      {"1.22", NULL}, \
+      {"1.24", NULL}, \
+      {"1.26", NULL}, \
+      {"1.28", NULL}, \
+      {"1.30", NULL}, \
+      {"1.32", NULL}, \
+      {"1.34", NULL}, \
+      {"1.36", NULL}, \
+      {"1.38", NULL}, \
+      {"1.40", NULL}, \
+      {"1.42", NULL}, \
+      {"1.44", NULL}, \
+      {"1.46", NULL}, \
+      {"1.48", NULL}, \
+      {"1.50", NULL}, \
+      {"1.52", NULL}, \
+      {"1.54", NULL}, \
+      {"1.56", NULL}, \
+      {"1.58", NULL}, \
+      {"1.60", NULL}, \
+      {"1.62", NULL}, \
+      {"1.64", NULL}, \
+      {"1.66", NULL}, \
+      {"1.68", NULL}, \
+      {"1.70", NULL}, \
+      {"1.72", NULL}, \
+      {"1.74", NULL}, \
+      {"1.76", NULL}, \
+      {"1.78", NULL}, \
+      {"1.80", NULL}, \
+      {"1.82", NULL}, \
+      {"1.84", NULL}, \
+      {"1.86", NULL}, \
+      {"1.88", NULL}, \
+      {"1.90", NULL}, \
+      {"1.92", NULL}, \
+      {"1.94", NULL}, \
+      {"1.96", NULL}, \
+      {"1.98", NULL}, \
+      {"2.00", NULL}, \
+      {"2.02", NULL}, \
+      {"2.04", NULL}, \
+      {"2.06", NULL}, \
+      {"2.08", NULL}, \
+      {"2.10", NULL}, \
+      {"2.12", NULL}, \
+      {"2.14", NULL}, \
+      {"2.16", NULL}, \
+      {"2.18", NULL}, \
+      {"2.20", NULL}, \
+      {"2.22", NULL}, \
+      {"2.24", NULL}, \
+      {"2.26", NULL}, \
+      {"2.28", NULL}, \
+      {"2.30", NULL}, \
+      {"2.32", NULL}, \
+      {"2.34", NULL}, \
+      {"2.35", "2.35 (Default)"}, \
+      {"2.36", NULL}, \
+      {"2.38", NULL}, \
+      {"2.40", NULL}, \
+      {"2.42", NULL}, \
+      {"2.44", NULL}, \
+      {"2.46", NULL}, \
+      {"2.48", NULL}, \
+      {"2.50", NULL}, \
+      {"2.52", NULL}, \
+      {"2.54", NULL}, \
+      {"2.56", NULL}, \
+      {"2.58", NULL}, \
+      {"2.60", NULL}, \
+      {"2.62", NULL}, \
+      {"2.64", NULL}, \
+      {"2.66", NULL}, \
+      {"2.68", NULL}, \
+      {"2.70", NULL}, \
+      {"2.72", NULL}, \
+      {"2.74", NULL}, \
+      {"2.76", NULL}, \
+      {"2.78", NULL}, \
+      {"2.80", NULL}, \
+      {"2.82", NULL}, \
+      {"2.84", NULL}, \
+      {"2.86", NULL}, \
+      {"2.88", NULL}, \
+      {"2.90", NULL}, \
+      {"2.92", NULL}, \
+      {"2.94", NULL}, \
+      {"2.96", NULL}, \
+      {"2.98", NULL}, \
+      {"3.00", NULL}, \
+      {"3.02", NULL}, \
+      {"3.04", NULL}, \
+      {"3.06", NULL}, \
+      {"3.08", NULL}, \
+      {"3.10", NULL}, \
+      {"3.12", NULL}, \
+      {"3.14", NULL}, \
+      {"3.16", NULL}, \
+      {"3.18", NULL}, \
+      {"3.20", NULL}, \
+      {"3.22", NULL}, \
+      {"3.24", NULL}, \
+      {"3.26", NULL}, \
+      {"3.28", NULL}, \
+      {"3.30", NULL}, \
+      {"3.32", NULL}, \
+      {"3.34", NULL}, \
+      {"3.36", NULL}, \
+      {"3.38", NULL}, \
+      {"3.40", NULL}, \
+      {"3.42", NULL}, \
+      {"3.44", NULL}, \
+      {"3.46", NULL}, \
+      {"3.48", NULL}, \
+      {"3.50", NULL}, \
+      { NULL, NULL }, \
+   }
+
 struct retro_core_option_v2_category option_cats_us[] = {
    {
       "video",
@@ -114,6 +459,56 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { NULL, NULL },
       },
       "336x240"
+   },
+   {
+      "color_hue",
+      "Color tint/hue",
+      NULL,
+      "Set emulated color tint between -1.0 and 1.0",
+      NULL,
+      "video",
+      RANGE_1,
+      "0.00"
+   },
+   {
+      "color_saturation",
+      "Color saturation",
+      NULL,
+      "Set emulated color saturation between -1.0 and 1.0.",
+      NULL,
+      "video",
+      RANGE_1,
+      "0.00"
+   },
+   {
+      "color_contrast",
+      "Color contrast",
+      NULL,
+      "Set emulated color contrast between -2.0 and 2.0.",
+      NULL,
+      "video",
+      RANGE_2,
+      "0.00"
+   },
+   {
+      "color_brightness",
+      "Color brightness",
+      NULL,
+      "Set emulated color brightness between -2.0 and 2.0.",
+      NULL,
+      "video",
+      RANGE_2,
+      "0.00"
+   },
+   {
+      "color_gamma",
+      "Color gamma",
+      NULL,
+      "Set emulated color gamma between 1.0 and 3.5.",
+      NULL,
+      "video",
+      RANGE_GAMMA,
+      "2.35"
    },
    {
       "atari800_opt2",
@@ -273,7 +668,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "atarixegs_keyboard_detached",
       "Atari XEGS keyboard",
       NULL,
-      "Set whether the Atari XEGS keyboard is attached or detached. If 'Internal BASIC' is enabled and the keyboard is attached, it will boot to BASIC. If 'Internal BASIC' is enabled and the keyboard is detached it will boot to the in-built game (Missile Command). If 'Internal BASIC' is disabled, it will boot to the Self Test screen",
+      "Set whether the Atari XEGS keyboard is attached or detached. If 'Internal BASIC' is enabled and the keyboard is attached, it will boot to BASIC. If 'Internal BASIC' is enabled and the keyboard is detached it will boot to the in-built game (Missile Command). If 'Internal BASIC' is disabled, it will boot to the Self Test screen.",
       NULL,
       "input",
       {
@@ -282,6 +677,21 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { NULL, NULL },
       },
       "attached"
+   },
+   /* This legacy menu should be eliminated, as soon as all options are included in RetroArch Core Options */
+   {
+      "atari800_f10",
+      "Legacy menu key",
+      NULL,
+      "Set whether the Atari800 emulator's legacy menu is invoked by pressing F1 (default) or F10 (to avoid interference with RetroArch's own menu).",
+      NULL,
+      "input",
+      {
+         { "F1", NULL },
+         { "F10",  NULL },
+         { NULL, NULL },
+      },
+      "F1"
    },
    {
       "keyboard_defines",
@@ -314,7 +724,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { "5200", "Atari 5200 Super System" },
          { NULL, NULL },
       },
-      "400/800 (OS B)"
+      "800XL (64K)" // The Atari 800XL should be the default because most games will work on it, rather than the Atari 400/800.
    },
    {
       "atari800_internalbasic",
@@ -358,6 +768,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       },
       "disabled"
    },
+   /* Detection should be enabled always because now all file extensions are covered in update_variables
    {
       "atari800_opt1",
       "Autodetect Atari Cartridge Type (Restart)",
@@ -371,7 +782,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
          { NULL, NULL },
       },
       "disabled"
-   },
+   },*/
    /* Not sure if I want to implement this.  Only helps a small handful of games ( Kaboom, Super Breakout and Star Wars The Arcade Game
    {
       "pot_analog_center",

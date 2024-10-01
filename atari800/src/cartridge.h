@@ -75,13 +75,18 @@ enum {
 	CARTRIDGE_THECART_64M    = 66,
 	CARTRIDGE_XEGS_8F_64     = 67,
 
-	CARTRIDGE_5200_SUPER_64	 = 68, // 71
-	CARTRIDGE_5200_SUPER_128 = 69, // 72
-	CARTRIDGE_5200_SUPER_256 = 70, // 73
-	CARTRIDGE_5200_SUPER_512 = 71, // 74
-	CARTRIDGE_ATMAX_NEW_1024 = 72, // 75
+	CARTRIDGE_ATRAX_128_RAW	 = 68,
+	CARTRIDGE_ADAWLIAH_32    = 69,
+	CARTRIDGE_ADAWLIAH_64    = 70,
+	CARTRIDGE_5200_SUPER_64  = 71,
+	CARTRIDGE_5200_SUPER_128 = 72,
+	CARTRIDGE_5200_SUPER_256 = 73,
+	CARTRIDGE_5200_SUPER_512 = 74,
+	CARTRIDGE_ATMAX_NEW_1024 = 75,
 
-	CARTRIDGE_LAST_SUPPORTED = 72
+	CARTRIDGE_5200_40_ALT = 76, // Bounty Bob (5200) - Alternate layout
+
+	CARTRIDGE_LAST_SUPPORTED = 76
 };
 
 #define CARTRIDGE_MAX_SIZE	(128 * 1024 * 1024)
@@ -154,11 +159,15 @@ extern int const CARTRIDGE_kb[CARTRIDGE_LAST_SUPPORTED + 1];
 #define CARTRIDGE_THECART_32M_DESC   "The!Cart 32 MB cartridge"
 #define CARTRIDGE_THECART_64M_DESC   "The!Cart 64 MB cartridge"
 #define CARTRIDGE_XEGS_8F_64_DESC    "XEGS 64 KB cartridge (banks 8-15)"
+#define CARTRIDGE_ATRAX_128_RAW_DESC "Atrax 128 KB cartridge"
+#define CARTRIDGE_ADAWLIAH_32_DESC   "aDawliah 32 KB cartridge"
+#define CARTRIDGE_ADAWLIAH_64_DESC   "aDawliah 64 KB cartridge"
 #define CARTRIDGE_5200_SUPER_64_DESC "64 KB Atari 5200 Super Cart"
 #define CARTRIDGE_5200_SUPER_128_DESC "128 KB Atari 5200 Super Cart"
 #define CARTRIDGE_5200_SUPER_256_DESC "256 KB Atari 5200 Super Cart"
 #define CARTRIDGE_5200_SUPER_512_DESC "512 KB Atari 5200 Super Cart"
 #define CARTRIDGE_ATMAX_NEW_1024_DESC "Atarimax 1 MB Flash cartridge"
+#define CARTRIDGE_5200_40_ALT_DESC        "Bounty Bob (5200) - Alternate layout"
 
 /* Indicates whether the emulator should automatically reboot (coldstart)
    after inserting/removing a cartridge. (Doesn't affect the piggyback

@@ -1,3 +1,8 @@
+/* 	This file is no longer used.
+	It is only for differences between commits.
+	This file should be removed in the next commit.
+*/
+
 #define a800 0				// STD_8, STD_16, XEGS_32
 #define a800_40 1			// Bounty Bob
 #define a800_WILL_64 2		// 64 KB Williams cartridge
@@ -8,6 +13,15 @@
 //#define a800_XE_1024 6	// XEGS 1 MB cartridge.  Not sure if any exist.
 #define a800_MAX_128 5		// Atarimax 128 KB Flash cartridge
 #define a800_MAX_1024 6		// Atarimax 1 MB Flash cartridge (old)
+#define a800_OSS_M091_16 15	// OSS one chip 16 KB cartridge
+#define a800_TURBOSOFT_64 50	// Turbosoft  64 KB cartridge (Chile - Unlicensed)
+#define a800_TURBOSOFT_128 51	// Turbosoft 128 KB cartridge (Chile - Unlicensed)
+#define a800_TURBOSOFT_64_WILL 99	// Turbosoft  64 KB cartridge with Williams banking (Chile - Unlicensed)
+
+#define a800_unsupported  	100
+#define a800_incomplete		101
+#define a800_bad_dump		102
+
 typedef struct {
 	int type;
 	char name[50];
@@ -165,6 +179,7 @@ a800_rom a800_game[] = {
  { a800,"Missile Command (XEGS built in)",8192,0xbdca01fb},
  { a800,"Mogul Maniac",16384,0x0c391600},
  { a800,"Monster Maze",16384,0x37049e57},
+ { a800,"Montezuma's Revenge (prototype)",16384,0xbd4404d9},
  { a800,"Moon Patrol",16384,0xb845edb8},
  { a800,"Mountain King",8192,0x79748c93},
  { a800,"Mr. Cool",8192,0x1345d10c},
@@ -260,5 +275,147 @@ a800_rom a800_game[] = {
  { a800,"Zaxxon",16384,0x21579706},
  { a800,"Zenji",16384,0xebc6ec2e},
  { a800,"Zone Ranger",16384,0x8f1e72e7},
+ /* Turbosoft Chile Unlicensed multicarts - Retrogames.cl ROM dumps = 16 new */
+ /* Some games on the multicarts do not work, even with Atari800 5.2.0 or Altirra 4.21 emulators */
+ { a800_TURBOSOFT_64_WILL,"Turbosoft C1 (Retrogames.cl dump)",65536,0xb2b45500},
+ { a800_TURBOSOFT_64,"Turbosoft C2 (Retrogames.cl dump)",65536,0xade93e66},
+ { a800_TURBOSOFT_64_WILL,"Turbosoft C3 (Retrogames.cl dump)",65536,0xbedf99fe},
+ { a800_TURBOSOFT_64_WILL,"Turbosoft C4 (Retrogames.cl dump)",65536,0x97a8c904},	// Autodetected as non-cart. Check afile.c for correct detection hack.
+ { a800_TURBOSOFT_64_WILL,"Turbosoft C5 (Retrogames.cl dump)",65536,0x78dbb563},
+ { a800_TURBOSOFT_64_WILL,"Turbosoft C6 (Retrogames.cl dump)",65536,0x49e18f6e},
+ { a800_TURBOSOFT_128,"Turbosoft D1 (Retrogames.cl dump)",131072,0x4d1dd418},
+ { a800_TURBOSOFT_128,"Turbosoft D2 (Retrogames.cl dump)",131072,0x025ab67a},
+ { a800_TURBOSOFT_128,"Turbosoft D3 (Retrogames.cl dump)",131072,0xbca7d11b},
+ { a800_TURBOSOFT_128,"Turbosoft D4 (Retrogames.cl dump)",131072,0x72df4a5e},
+ { a800_MAX_128,"Turbosoft D5 (Retrogames.cl dump)",131072,0xa5aee6fd},	// Autodetected as non-cart. Check afile.c for correct detection hack. 
+ { a800_TURBOSOFT_128,"Turbosoft D6 (Retrogames.cl dump)",131072,0x5498c7dc},
+ { a800_TURBOSOFT_128,"Turbosoft D7 (Retrogames.cl dump)",131072,0x3fb92d9e},
+ { a800_TURBOSOFT_64,"Turbosoft D8 (Retrogames.cl dump)",131072,0x3d68152e},
+ { a800_MAX_128,"Turbosoft E1 (Retrogames.cl dump)",131072,0xfa100cbf},
+ { a800_TURBOSOFT_128,"Turbosoft E2 (Retrogames.cl dump)",131072,0xbede95cd},
+ /* End of Turbosoft multicarts*/
+ /* TOSEC BIN - excluding .bin files that are actual .car files and files in previous lines */
+ /* TOSEC v2006-03-29 = 3 new*/
+ { a800_OSS_M091_16,"Action!",16384,0x0bcd70c6},
+ { a800,"Asteroids",8192,0x7ed3e6a3},
+ { a800,"Defender",16384,0x161cbe09},
+ /* End of TOSEC v2006-03-29*/
+ /* TOSEC v2022-07-10 = 115 new*/
+ { a800,"3-D Tic-Tac-Toe (1979)(Atari)[!]",8192,0x4660c404},
+ { a800,"Alpha Shield (1983)(Sirius Softw",8192,0x484e8443},
+ { a800,"Animated Puzzle (1984)(Atari)(US",16384,0x1a4c75a7},
+ { a800,"Animated Puzzle (1984)(Atari)(US",16384,0x90f37afe},
+ { a800,"Ant Eater (1982)(Romox)(US)[a].b",8192,0x18702a0f},
+ { a800,"Ant Eater (1982)(Romox)[earlier ",8192,0x73a3a64c},
+ { a800,"Arex (1983)(Adventure Internatio",16384,0x2a080e7d},
+ { a800,"Atlantis (1983)(Imagic)(US)[!][7",8192,0xf929f40f},
+ { a800,"Baseball (1983)(Inhome Software)",16384,0x43c9d2a0},
+ { a800,"Basketball (1979)(Atari)(US)[!][",8192,0x1ba8d718},
+ { a800,"Beef Drop (demo) (2004-08-11)(Si",32768,0xd209e797},
+ { a800,"Berzerk (1983)(Atari)(proto).bin",16384,0xb1dedb79},
+ { a800_unsupported,"Bomb Jake (2009)(GR8 Software)(P",532480,0x8e89ca50}, // Corina 512K + 512K SRAM + 8K EEPROM cartridge not supported yet
+ { a800,"Boulders and Bombs (1982)(CBS So",8192,0xd6d51d3e},
+ { a800_40,"Bounty Bob Strikes Back! (1984)(",40960,0xcc7912ed},
+ { a800,"Carnival Massacre (1983)(Thorn E",16384,0x0c8e8d5b},
+ { a800,"Centipede (1981)(Atari)(US)(prot",8192,0xd54f0200},
+ { a800,"Chiffres et des Lettres, Des (19",16384,0xc7705c53},
+ { a800,"Chiffres et des Lettres, Des (19",16384,0x3d8f5c25},
+ { a800,"Claim Jumper (1982)(Synapse Soft",16384,0x374d14d9},
+ { a800,"Cloudburst (1982)(DANA)(US)[!].b",8192,0x32e5629e},
+ { a800,"Computer Chess (1979)(Atari)(US)",8192,0xc9614423},
+ { a800,"Congo Bongo (1983)(Sega)(US).bin",16384,0x7a588045},
+ { a800,"Conquest of the Crown (1994)(Lin",16384,0x94f56b90},
+ { a800,"Cosmic Life (1983)(Spinnaker Sof",8192,0xec65758b},
+ { a800,"Crystal Castles (1984)(Atari)(US",16384,0xe3ec1080},
+ { a800,"Crystal Castles (1984)(Atari)(US",16384,0x89bb9431},
+ { a800,"Crystal Castles (1984)(Atari)(US",16384,0x6c64892c},
+ { a800,"Crystal Raiders (2001)(Video 61 ",16384,0xf15b2306},
+ { a800,"Da' Fuzz (1983)(Roklan)(US).bin",16384,0xb94f66ea},
+ { a800,"Da' Fuzz (1983)(Roklan)(US)[a].b",8192,0xbcda6dba},
+ { a800,"Danger Ranger (1984)(Microdeal)[",8192,0xf5497ef3},
+ { a800,"Decathlon (1984)(Activision)(US)",16384,0x76845603},
+ { a800,"Decathlon (1984)(Activision)(US)",16384,0xaffbe54b},
+ { a800,"Defender (1982)(Atari)(US)[!][CX",16384,0x782a81e4},
+ { a800,"Defender Rev. 2 (1982)(Atari)(US",16384,0xfcb4b36f},
+ { a800,"Delta Drawing v3.23 (1983)(Spinn",8192,0x20cbad07},
+ { a800,"Demon Attack (1982)(Imagic)[!][O",8192,0x1cb8b52d},
+ { a800,"Destiny - The Cruiser (198x)(Adv",16384,0x0c847bb3},
+ { a800,"Dig Dug (1982)(Atari)(US).bin",16384,0x29b44ff6},
+ { a800,"Donkey Kong (1983)(Atari)(US)[!]",16384,0x8a406275},
+ { a800,"Donkey Kong Junior (1983)(Atari)",16384,0xa3e2d833},
+ { a800,"Droids (1983)(TG Software)(US).b",8192,0x440082e6},
+ { a800_WILL_64,"Dropzone (20xx)(Video 61).bin",65536,0x4870ed52},
+ { a800,"Espial (1984)(Tigervision)(US).b",16384,0xdcde7482},
+ { a800,"Excelsor (1986)(Players)[p].bin",8192,0xa854cc63},
+ { a800,"Explorer (1984)(Activision)(prot",16384,0x98a4e5b7},
+ { a800,"Fantastic Voyage (1982)(Sirius S",16384,0xea2c9b8f},
+ { a800,"Fantastic Voyage (1982)(Sirius S",8192,0xcd428e17},
+ { a800,"Fast Eddie (1982)(Sirius Softwar",8192,0x0939f2d0},
+ { a800,"Final Legacy (1984)(Atari)(US)[G",16384,0x506e4ed0},
+ { a800,"Final Orbit (1983)(Sirius Softwa",8192,0x4de5cd53},
+ { a800,"Firebird (1981)(Gebelli Software",8192,0xab4f2d14},
+ { a800,"Firebird (1981)(Gebelli Software",8192,0xb9557f4b},
+ { a800,"Fortune Hunter (1982)(Romox)(US)",8192,0xc0fea1f7},
+ { a800,"Fortune Hunter (1982)(Romox)(US)",8192,0x5cee3180},
+ { a800,"Frogger II - Threeedeep! (1984)(",16384,0x7a5b4f65},
+ { a800,"Frogger II - Threeedeep! (1984)(",8192,0xe924f2bc},
+ { a800,"Gateway to Apshai (1983)(Epyx)[6",16384,0x4ccdbef0},
+ { a800,"Gridrunner (1983)(HesWare)(US)[a",8192,0x02f44555},
+ { a800,"Gyruss (1984)(Parker Brothers)(C",8192,0x0d78e8a9},
+ { a800,"Gyruss (1984)(Parker Brothers)(P",8192,0xba14b37b},
+ { a800,"Hard Hat Willy (1983)(Inhome Sof",16384,0x214be698},
+ { a800_WILL_64,"Jinks (20xx)(Video 61 - Williams",65536,0x39fe57ee},
+ { a800,"Jr. Pac-Man (1997)(Video 61 - At",16384,0xebc1db55},
+ { a800,"K-Razy Antiks (1982)(CBS Softwar",8192,0xab7bdb79},
+ { a800,"K-Star Patrol (1982)(CBS Softwar",8192,0x89c82cc2},
+ { a800,"Kaboom! (1983)(Activision)(US)[!",8192,0xc2e2e645},
+ { a800,"Laser Gates (1984)(Imagic)[p].bi",16384,0xea2a103e},
+ { a800,"Last Starfighter, The (1984)(Ata",16384,0x3267eba7},
+ { a800,"Last Starfighter, The (1984)(Ata",16384,0xb4c640f1},
+ { a800,"Legacy, The rev7.1 (1984)(Atari)",16384,0xa445af7d},
+ { a800,"Lifespan (1983)(Roklan)(US)(prot",16384,0xe4d62c12},
+ { a800,"McDonald's Pac-Mac (1983)(Parker",8192,0x209d2e17},
+ { a800,"McDonald's Pac-Mac (1983)(Parker",8192,0xca961d16},
+ { a800,"Meteor (198x)(Germ-Soft)[p].bin",8192,0xc27ff7df},
+ { a800,"Millipede (1983)(Atari)(proto).b",16384,0x82457872},
+ { a800,"Miner 2049er (1982)(Big Five Sof",16384,0xeb770df4},
+ { a800,"Missile Command+ (2006)(Lee, Pau",16384,0x2acfd240},
+ { a800,"Moogles (1983)(Sirius)[p].bin",16384,0x0585fb5a},
+ { a800,"Mr Do!'s Castle (1984)(Parker Br",8192,0xabed3b88},
+ { a800,"Ms. Pac-Man (1983)(Atari)[!][red",16384,0x4ad748b2},
+ { a800,"Orc Attack (1983)(Thorn EMI)(GB)",16384,0x5e9849b1},
+ { a800,"Ozzy's Orchard (1983)(TG Softwar",16384,0x1554b983},
+ { a800,"Pastfinder (1984)(Activision)[!]",16384,0x14fddfb8},
+ { a800,"Popeye (1983)(Parker Brothers)(E",16384,0xa35d5e6a},
+ { a800,"Preppie (2001)(Video 61 - Advent",16384,0x52ae50e3},
+ { a800,"River Rescue (1983)(Thorn EMI)(G",16384,0xa7d2e0e8},
+ { a800,"Silicon Warrior (1983)(Epyx)[!][",16384,0xa7ecc8f7},
+ { a800,"Space Invaders (1980)(Atari)[!][",8192,0x3614d0aa},
+ { a800,"Space Journey (1983)(Roklan)[09-",16384,0x161657f0},
+ { a800,"Speedway Blast (1982)(IDSI)[!][O",8192,0x8e67192b},
+ { a800,"Spider City (1983)(Sirius)[!].bi",8192,0xd519f2fb},
+ { a800,"Squish 'Em! (1983)(Sirius)[!].bi",8192,0xf0553d6c},
+ { a800,"Star Maze (1984)(Roklan)[!][11-0",16384,0x6fd9daff},
+ { a800,"Star Trux (1982)(Atari)(proto).b",8192,0x8212c4b7},
+ { a800,"Star Wars - Return of the Jedi -",8192,0xa40e15e5},
+ { a800,"Submarine Commander (1982)(Thorn",16384,0xce9562eb},
+ { a800,"Super Breakout (1979)(Atari)(US)",8192,0xc9066f06},
+ { a800,"Super Breakout (1979)(Atari)(US)",8192,0x4da14cf9},
+ { a800,"Super Pac-Man (1984)(Atari)(prot",16384,0x4b9b00f5},
+ { a800,"Superman III (1983)(Atari)(proto",16384,0x639846d6},
+ { a800,"Thera-Med Zahnschutz-Spiel, Das ",8192,0x10df011f},
+ { a800,"Timebound (1984)(CBS Software)(U",16384,0xd3e98044},
+ { a800,"Trion (1983)(Romox - London Soft",16384,0x2c42362f},
+ { a800,"Up Up and Away (1983)(Ringblack ",16384,0xa8261044},
+ { a800,"Video Easel (1979)(Atari)(US).bi",8192,0xfb45dae5},
+ { a800,"Video Easel (1979)(Atari)(US)[!]",8192,0x276d7acc},
+ { a800,"Video Poker Card Game (1998)(Vid",16384,0xdc492963},
+ { a800,"Webster - The Word Game (1983)(C",8192,0x6fffb4a9},
+ { a800,"Weltraumkolonie (1984)(Spinnaker",8192,0x06fd2cdb},
+ { a800,"Worm War 1 (1982)(Sirius)[!].bin",8192,0xd9b120f4},
+ { a800_unsupported,"Yie Another Kung-Fu (2011)(GR8 S",1056768,0x8ed7da2d}, // Corina 1M + 8K EEPROM cartridge not supported yet
+ { a800,"Zone Ranger (1984)(Activision)[!",16384,0x1b6c7b78},
+ { a800_WILL_64,"Zybex (1991)(Video 61 - Williams",65536,0xc1da182c},
+ /* End of TOSEC v2022-07-10*/
  { -1,"",0,0},
 } ;
