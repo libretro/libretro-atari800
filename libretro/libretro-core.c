@@ -21,6 +21,10 @@ static dc_storage* dc;
 #include "artifact.h"
 #include "statesav.h"
 
+#include "carts_hash.h"
+#include "crc32.h"
+#include "colours.h"
+
 cothread_t mainThread;
 cothread_t emuThread;
 
@@ -107,11 +111,31 @@ unsigned atari_devices[4];
 
 // libretro-Atari800 core options variables
 int keyboard_type = 0;
-int autorunCartridge = 0;
+int autorunCartridge = NO_CART;
 int atari_joyhack = 0;
 int paddle_mode = 0;
 int paddle_speed = 3;
 int atarixegs_keyboard_detached = 0;
+int atari800_f10 = 0;
+
+int color_first_time = TRUE;
+double color_hue = 0.0;
+double color_saturation = 0.0;
+double color_contrast = 0.0;
+double color_brightness = 0.0;
+double color_gamma = 2.35;
+double color_delay = 0.0;
+#define COLOR_VARIABLE(name) \
+    var.key = "color_" #name; \
+    var.value = NULL; \
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value) { \
+        float var_value; \
+        var_value = atof(var.value); \
+        if (var_value != color_##name) { \
+            colors_changed = TRUE; \
+            color_##name = var_value; \
+        } \
+    } /* END OF COLOR_VARIABLE */
 
 extern int INPUT_joy_5200_center;
 extern int INPUT_joy_5200_min;
@@ -524,25 +548,44 @@ static void update_variables(void)
 {
     struct retro_variable var;
 
-    /* Atari Cartridge Autodetect leave at TOP!!!!!*/
-    var.key = "atari800_opt1";
-    var.value = NULL;
-
     /* Moved here for better consistency and when system options that require EMU reset to occur */
     if (strcmp(RPATH, "") == 0)  // Start core with no content
-        autorunCartridge = 0;
-    else if (HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52"))
-        autorunCartridge = 1;
-    else if (HandleExtension((char*)RPATH, "bin") || HandleExtension((char*)RPATH, "BIN")
-            || HandleExtension((char*)RPATH, "rom") || HandleExtension((char*)RPATH, "ROM"))
-        autorunCartridge = 2;
-    else if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (strcmp(var.value, "enabled") == 0)
-            autorunCartridge = 1;
-        else
-            autorunCartridge = 0;
-    }
+        autorunCartridge = NO_CART;
+    /* Most complex case - .bin (common) and .rom (rare) can be used for both Atari 5200 console and Atari 8bit computers */
+    else if  (HandleExtension((char*)RPATH, "bin") || HandleExtension((char*)RPATH, "BIN")
+           || HandleExtension((char*)RPATH, "rom") || HandleExtension((char*)RPATH, "ROM")) {
+        autorunCartridge = A800_CART; // default Atari 8bit, as most/all Atari 5200 games should be in atari5200_hash.h
+        ULONG crc;
+        FILE *fp;
+        fp = fopen((char*)RPATH, "rb");
+        if (fp != NULL) {
+            CRC32_FromFile(fp, &crc);
+            fclose(fp);
+            if (is_5200_cart(crc)) {
+                autorunCartridge = A5200_CART;
+                log_cb(RETRO_LOG_INFO,"[update_variables] Found Atari 5200 bin file in DB for: %s\n", (char*)RPATH);
+            } else
+                log_cb(RETRO_LOG_INFO,"[update_variables] Assumming Atari 8bit bin file: %s\n", (char*)RPATH);
+        } else {
+            log_cb(RETRO_LOG_INFO,"[update_variables] Error opening bin file: %s\n", (char*)RPATH );
+        }
+    }   /* bin, rom files */
+    else if   (HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52"))
+        autorunCartridge = A5200_CART;
+    else if   (HandleExtension((char*)RPATH, "car") || HandleExtension((char*)RPATH, "CAR"))
+        autorunCartridge = A800_CART;
+    /* Non cartridges extensions*/
+    else if   (HandleExtension((char*)RPATH, "xex") || HandleExtension((char*)RPATH, "XEX")
+            || HandleExtension((char*)RPATH, "com") || HandleExtension((char*)RPATH, "COM")
+            || HandleExtension((char*)RPATH, "m3u") || HandleExtension((char*)RPATH, "M3U")
+            || HandleExtension((char*)RPATH, "atx") || HandleExtension((char*)RPATH, "ATX")
+            || HandleExtension((char*)RPATH, "cas") || HandleExtension((char*)RPATH, "CAS")
+            || HandleExtension((char*)RPATH, "dcm") || HandleExtension((char*)RPATH, "DCM")
+            || HandleExtension((char*)RPATH, "atr") || HandleExtension((char*)RPATH, "ATR"))
+        autorunCartridge = NO_CART;
+    /* Other unknown extensions - priority is Atari 8bit computer*/
+    else
+        autorunCartridge = A800_CART;
 
     /* Controller Hack for Dual Stick, Swap Ports or Joy 2B+*/
     var.key = "atari800_opt2";
@@ -594,7 +637,7 @@ static void update_variables(void)
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
         /* I moved "5200" comparison up to top because I'm lazy.  :P  Leave it here! */
-        if (autorunCartridge ==1 || (strcmp(var.value, "5200") == 0))
+        if (autorunCartridge == A5200_CART || (strcmp(var.value, "5200") == 0))
         {
             Atari800_machine_type = Atari800_MACHINE_5200;
             MEMORY_ram_size = 16;
@@ -604,6 +647,9 @@ static void update_variables(void)
             Atari800_jumper = FALSE;
             Atari800_builtin_game = FALSE;
             Atari800_keyboard_detached = FALSE;
+            /* Force Atari 5200 joystick layout for Atari 5200 machine emulation */
+            retro_set_controller_port_device(0, RETRO_DEVICE_ATARI_5200_JOYSTICK);
+            retro_set_controller_port_device(1, RETRO_DEVICE_ATARI_5200_JOYSTICK);
         }
         else if (strcmp(var.value, "400/800 (OS B)") == 0)
         {
@@ -705,6 +751,31 @@ static void update_variables(void)
             Atari800_tv_mode = Atari800_TV_PAL;
         }
     }
+
+    /* Set colors */
+
+    int colors_changed = FALSE;
+
+    /* COLOR_VARIABLE macro is defined on L128 */
+    COLOR_VARIABLE(hue)
+    COLOR_VARIABLE(saturation)
+    COLOR_VARIABLE(contrast)
+    COLOR_VARIABLE(brightness)
+    COLOR_VARIABLE(gamma)
+
+    if ((color_first_time || colors_changed) && Colours_setup != NULL) {
+        Colours_setup->hue = color_hue;
+        Colours_setup->saturation = color_saturation;
+        Colours_setup->contrast = color_contrast;
+        Colours_setup->brightness = color_brightness;
+        Colours_setup->gamma = color_gamma;
+        Colours_Update();
+        log_cb(RETRO_LOG_INFO, "[Atari800 CORE] Colours_setup changed\n");
+        color_first_time = FALSE;
+    }
+    
+    
+    
 
     /* Activate or deactivate built in internal BASIC*/
     var.key = "atari800_internalbasic";
@@ -874,6 +945,21 @@ static void update_variables(void)
         else if (strcmp(var.value, "detached") == 0)
         {
             atarixegs_keyboard_detached = 1;
+        }
+    }
+
+    var.key = "atari800_f10";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "F1") == 0)
+        {
+            atari800_f10 = 0;
+        }
+        else if (strcmp(var.value, "F10") == 0)
+        {
+            atari800_f10 = 1;
         }
     }
 

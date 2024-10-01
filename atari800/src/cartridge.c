@@ -120,11 +120,15 @@ int const CARTRIDGE_kb[CARTRIDGE_LAST_SUPPORTED + 1] = {
 	32*1024,  /* CARTRIDGE_THECART_32M */
 	64*1024,  /* CARTRIDGE_THECART_64M */
 	64,       /* CARTRIDGE_XEGS_64_8F */
+	128,	  /* CARTRIDGE_ATRAX_128_RAW */
+	32,		  /* CARTRIDGE_ADAWLIAH_32 */
+	64,		  /* CARTRIDGE_ADAWLIAH_64 */
 	64,		  /* CARTRIDGE_5200_SUPER_64 */
 	128,	  /* CARTRIDGE_5200_SUPER_128 */
 	256,	  /* CARTRIDGE_5200_SUPER_256 */
 	512,	  /* CARTRIDGE_5200_SUPER_512 */
 	1024,	  /* CARTRIDGE_ATMAX_NEW_1024 */
+	40,       /* CARTRIDGE_5200_40_ALT */
 };
 
 int CARTRIDGE_autoreboot = TRUE;
@@ -135,6 +139,7 @@ static int CartIsFor5200(int type)
 	case CARTRIDGE_5200_32:
 	case CARTRIDGE_5200_EE_16:
 	case CARTRIDGE_5200_40:
+	case CARTRIDGE_5200_40_ALT:
 	case CARTRIDGE_5200_NS_16:
 	case CARTRIDGE_5200_8:
 	case CARTRIDGE_5200_4:
@@ -443,6 +448,21 @@ static void MapActiveCart(void)
 			MEMORY_CopyROM(0x5000, 0x5fff, active_cart->image + 0x4000 + ((active_cart->state & 0x0c) >> 2) * 0x1000);
 			MEMORY_CopyROM(0x8000, 0x9fff, active_cart->image + 0x8000);
 			MEMORY_CopyROM(0xa000, 0xbfff, active_cart->image + 0x8000);
+#ifndef PAGED_ATTRIB
+			MEMORY_SetHARDWARE(0x4ff6, 0x4ff9);
+			MEMORY_SetHARDWARE(0x5ff6, 0x5ff9);
+#else
+			MEMORY_readmap[0x4f] = CARTRIDGE_BountyBob1GetByte;
+			MEMORY_readmap[0x5f] = CARTRIDGE_BountyBob2GetByte;
+			MEMORY_writemap[0x4f] = CARTRIDGE_BountyBob1PutByte;
+			MEMORY_writemap[0x5f] = CARTRIDGE_BountyBob2PutByte;
+#endif
+			break;
+		case CARTRIDGE_5200_40_ALT:
+			MEMORY_CopyROM(0x4000, 0x4fff, active_cart->image + 0x2000 + (active_cart->state & 0x03) * 0x1000);
+			MEMORY_CopyROM(0x5000, 0x5fff, active_cart->image + 0x6000 + ((active_cart->state & 0x0c) >> 2) * 0x1000);
+			MEMORY_CopyROM(0x8000, 0x9fff, active_cart->image);
+			MEMORY_CopyROM(0xa000, 0xbfff, active_cart->image);
 #ifndef PAGED_ATTRIB
 			MEMORY_SetHARDWARE(0x4ff6, 0x4ff9);
 			MEMORY_SetHARDWARE(0x5ff6, 0x5ff9);
@@ -1123,7 +1143,10 @@ void CARTRIDGE_BountyBob1(UWORD addr)
 	if (Atari800_machine_type == Atari800_MACHINE_5200) {
 		if (addr >= 0x4ff6 && addr <= 0x4ff9) {
 			addr -= 0x4ff6;
-			MEMORY_CopyROM(0x4000, 0x4fff, active_cart->image + addr * 0x1000);
+			if (active_cart->type == CARTRIDGE_5200_40_ALT)
+				MEMORY_CopyROM(0x4000, 0x4fff, active_cart->image + 0x2000 + addr * 0x1000);
+			else
+				MEMORY_CopyROM(0x4000, 0x4fff, active_cart->image + addr * 0x1000);
 			active_cart->state = (active_cart->state & 0x0c) | addr;
 		}
 	} else {
@@ -1140,7 +1163,10 @@ void CARTRIDGE_BountyBob2(UWORD addr)
 	if (Atari800_machine_type == Atari800_MACHINE_5200) {
 		if (addr >= 0x5ff6 && addr <= 0x5ff9) {
 			addr -= 0x5ff6;
-			MEMORY_CopyROM(0x5000, 0x5fff, active_cart->image + 0x4000 + addr * 0x1000);
+			if (active_cart->type == CARTRIDGE_5200_40_ALT)
+				MEMORY_CopyROM(0x5000, 0x5fff, active_cart->image + 0x6000 + addr * 0x1000);
+			else
+				MEMORY_CopyROM(0x5000, 0x5fff, active_cart->image + 0x4000 + addr * 0x1000);
 			active_cart->state = (active_cart->state & 0x03) | (addr << 2);
 		}
 	}
@@ -1437,8 +1463,7 @@ void CARTRIDGE_ColdStart(void) {
 }
 
 #ifdef __LIBRETRO__
-#include "atari5200_hash.h"
-#include "atari800_hash.h"
+#include "carts_hash.h"
 #include "esc.h"
 #include "pokeysnd.h"
 extern int autorunCartridge;
@@ -1489,7 +1514,7 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 		len >>= 10;	/* number of kilobytes */
 		cart->size = len;
 #ifdef __LIBRETRO__
-		if (autorunCartridge == 1) {
+		if (autorunCartridge == A5200_CART) {
 			int match = 0, i = 0;
 			printf("Hack Libretro:crc A5200 ON sz:%d crc:%x\n", cart->size, crc);
 			while (a5200_game[i].type != -1) {
@@ -1515,6 +1540,11 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 						cart->type = CARTRIDGE_5200_40;
 						POKEYSND_stereo_enabled = FALSE;
 					}
+					else if (a5200_game[i].type == a5200_40_ALT) {
+						/* Bounty Bob don't like stereo pokey (game locks) */
+						cart->type = CARTRIDGE_5200_40_ALT;
+						POKEYSND_stereo_enabled = FALSE;
+					}
 					else if (a5200_game[i].type == a5200_ee_16)
 						cart->type = CARTRIDGE_5200_EE_16;
 					else if (a5200_game[i].type == a5200_64)
@@ -1525,8 +1555,20 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 						cart->type = CARTRIDGE_5200_SUPER_256;  // I've yet to see this type
 					else if (a5200_game[i].type == a5200_512)
 						cart->type = CARTRIDGE_5200_SUPER_512;
+					else if (a5200_game[i].type == a5200_unsupported) {
+						match = 3;
+						cart->type = CARTRIDGE_NONE;
+					}
+					else if (a5200_game[i].type == a5200_incomplete) {
+						match = 4;
+						cart->type = CARTRIDGE_NONE;
+					}
+					else if (a5200_game[i].type == a5200_bad_dump) {
+						match = 5;
+						cart->type = CARTRIDGE_NONE;
+					}
 
-					printf("Hack Libretro:A5200 cart->type:%d %x\n", cart->type, crc);
+					printf("Hack Libretro:A5200 cart name:%s type:%d crc32:%x\n", a5200_game[i].name,cart->type, crc);
 					break;
 				}
 				i++;
@@ -1534,12 +1576,26 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 
 			if (match == 1) {
 				if (!RetroMsgShown)
-					retro_message("5200 Cart found in DB.", 1000, 0);
-
+					retro_message("Atari 5200 cart detected.", 1000, 0);
+				goto label_fin;
+			}
+			else if (match == 3) {
+				if (!RetroMsgShown)
+					retro_message("Atari 5200 unsupported cart detected.", 1000, 0);
+				goto label_fin;
+			}
+			else if (match == 4) {
+				if (!RetroMsgShown)
+					retro_message("Atari 5200 incomplete cart detected.", 1000, 0);
+				goto label_fin;
+			}
+			else if (match == 5) {
+				if (!RetroMsgShown)
+					retro_message("Atari 5200 bad dump detected.", 1000, 0);
 				goto label_fin;
 			}
 		}
-		else if (autorunCartridge == 2) {
+		else if (autorunCartridge == A800_CART) {
 			int match = 0, i = 0;
 			printf("Hack Libretro:crc A800 ON sz:%d crc:%x\n", cart->size, crc);
 			while (a800_game[i].type != -1) {
@@ -1578,8 +1634,35 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 						match = 2;
 						cart->type = CARTRIDGE_ATMAX_1024;
 					}
+					else if (a800_game[i].type == a800_TURBOSOFT_64) {
+						match = 2;
+						cart->type = CARTRIDGE_TURBOSOFT_64;
+					}
+					else if (a800_game[i].type == a800_TURBOSOFT_128) {
+						match = 2;
+						cart->type = CARTRIDGE_TURBOSOFT_128;
+					}
+					else if (a800_game[i].type == a800_TURBOSOFT_64_WILL) {
+						match = 2;
+						cart->type = CARTRIDGE_WILL_64;
+					}					
+					else if (a800_game[i].type == a800_OSS_M091_16) {
+						cart->type = CARTRIDGE_OSS_M091_16;
+					}
+					else if (a800_game[i].type == a800_unsupported) {
+						match = 3;
+						cart->type = CARTRIDGE_NONE;
+					}
+					else if (a800_game[i].type == a800_incomplete) {
+						match = 4;
+						cart->type = CARTRIDGE_NONE;
+					}
+					else if (a800_game[i].type == a800_bad_dump) {
+						match = 5;
+						cart->type = CARTRIDGE_NONE;
+					}
 
-					printf("Hack Libretro:A800 cart->type:%d %x\n", cart->type, crc);
+					printf("Hack Libretro:A800 cart name:%s type:%d crc32:%x\n", a800_game[i].name, cart->type, crc);
 					break;
 				}
 				i++;
@@ -1587,18 +1670,31 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 
 			if (match == 1) {
 				if (!RetroMsgShown)
-					retro_message("800 Cart found in DB.", 1000, 0);
-
+					retro_message("Atari 800 cart detected.", 1000, 0);
 				goto label_fin;
 			}
 			else if (match == 2) {
 				if (!RetroMsgShown)
-					retro_message("800 Cart found in DB.  Some ATMAX carts need SIO Accleration disabled.", 1000, 0);
-
+					retro_message("Atari 800 cart detected.  This cart may need SIO Acceleration disabled.", 1000, 0);
+				goto label_fin;
+			}
+			else if (match == 3) {
+				if (!RetroMsgShown)
+					retro_message("Atari 800 unsupported cart detected.", 1000, 0);
+				goto label_fin;
+			}
+			else if (match == 4) {
+				if (!RetroMsgShown)
+					retro_message("Atari 800 incomplete cart detected.", 1000, 0);
+				goto label_fin;
+			}
+			else if (match == 5) {
+				if (!RetroMsgShown)
+					retro_message("Atari 800 bad dump detected.", 1000, 0);
 				goto label_fin;
 			}
 			else if (!RetroMsgShown)
-				retro_message("800 Cart NOT found in DB.", 6000, 0);
+				retro_message("Atari 800 unknown cart (not in DB).", 6000, 0);
 		}
 
 		RetroMsgShown = TRUE;
@@ -1615,8 +1711,8 @@ static int InsertCartridge(const char *filename, CARTRIDGE_image_t *cart)
 			}
 #ifdef __LIBRETRO__
 label_fin:
-#endif
 		RetroMsgShown = TRUE;
+#endif
 
 		if (cart->type != CARTRIDGE_NONE) {
 			InitCartridge(cart);
