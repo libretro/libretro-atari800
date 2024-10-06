@@ -105,7 +105,7 @@ else ifneq (,$(findstring ios,$(platform)))
 	fpic := -fPIC
 	SHARED := -dynamiclib
         MINVERSION :=
-	CFLAGS += -Wno-error=implicit-function-declaration -DHAVE_POSIX_MEMALIGN -DIOS -marm
+	CFLAGS += -Wno-error=implicit-function-declaration -DHAVE_POSIX_MEMALIGN -DIOS
 
 	ifeq ($(IOSSDK),)
 		IOSSDK := $(shell xcodebuild -version -sdk iphoneos Path)
@@ -116,9 +116,9 @@ ifeq ($(platform),$(filter $(platform),ios-arm64))
 	CC_AS = cc -arch arm64 -isysroot $(IOSSDK)
 	CXX = c++ -arch arm64 -isysroot $(IOSSDK)
 else
-	CC = cc -arch armv7 -isysroot $(IOSSDK)
-	CC_AS = cc -arch armv7 -isysroot $(IOSSDK)
-	CXX = c++ -arch armv7 -isysroot $(IOSSDK)
+	CC = cc -marm -arch armv7 -isysroot $(IOSSDK)
+	CC_AS = cc -marm -arch armv7 -isysroot $(IOSSDK)
+	CXX = c++ -marm -arch armv7 -isysroot $(IOSSDK)
 endif
 
 	CC_AS = perl ./tools/gas-preprocessor.pl $(CC)
