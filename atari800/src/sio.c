@@ -1259,6 +1259,7 @@ void SIO_Handler(void)
 			else
 				result = 'E';
 			break;
+		case 0x50:	/* put (used by AltirraOS) */
 		case 0x57:	/* write */
 			/* add pregap length */
 			CASSETTE_AddGap(gaps == 0 ? 3000 : 260);
