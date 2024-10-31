@@ -768,6 +768,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       },
       "disabled"
    },
+   {
+      "atari800_cfg",
+      "Uses the Atari800 legacy configuration file",
+      NULL,
+      "If the Atari800 legacy configuration file, .atari800.cfg, is found, it will be loaded, and if not found, a new will be created.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
    /* Detection should be enabled always because now all file extensions are covered in update_variables
    {
       "atari800_opt1",

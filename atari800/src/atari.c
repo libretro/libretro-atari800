@@ -147,6 +147,7 @@
 #endif
 #if defined(__LIBRETRO__)
 extern const char *retro_system_directory;
+extern int legacy_configuration_file;
 #endif /* __LIBRETRO__ */
 
 int Atari800_machine_type = Atari800_MACHINE_XLXE;
@@ -308,7 +309,7 @@ static int load_roms(void)
 		int basic_ver, xegame_ver;
 		SYSROM_ChooseROMs(Atari800_machine_type, MEMORY_ram_size, Atari800_tv_mode, &Atari800_os_version, &basic_ver, &xegame_ver);
 		if (Atari800_os_version == -1
-		    || !Atari800_LoadImage(SYSROM_roms[Atari800_os_version].filename, MEMORY_os, SYSROM_roms[Atari800_os_version].size)) {
+		    || !SYSROM_LoadImage(Atari800_os_version, MEMORY_os)) {
 			/* Missing OS ROM. */
 			Atari800_os_version = -1;
 			if (Atari800_machine_type != Atari800_MACHINE_5200 && emuos_mode == 1)
@@ -319,7 +320,7 @@ static int load_roms(void)
 		}
 		else if (Atari800_machine_type != Atari800_MACHINE_5200) {
 			/* OS ROM found, try loading BASIC. */
-			MEMORY_have_basic = basic_ver != -1 && Atari800_LoadImage(SYSROM_roms[basic_ver].filename, MEMORY_basic, SYSROM_roms[basic_ver].size);
+			MEMORY_have_basic = basic_ver != -1 && SYSROM_LoadImage(basic_ver, MEMORY_basic);
 			if (!MEMORY_have_basic)
 				/* Missing BASIC ROM. Don't fail when it happens. */
 				Atari800_builtin_basic = FALSE;
@@ -327,7 +328,7 @@ static int load_roms(void)
 			if (Atari800_builtin_game) {
 				/* Try loading built-in XEGS game. */
 				if (xegame_ver == -1
-				    || !Atari800_LoadImage(SYSROM_roms[xegame_ver].filename, MEMORY_xegame, SYSROM_roms[xegame_ver].size))
+				    || !SYSROM_LoadImage(xegame_ver, MEMORY_xegame))
 					/* Missing XEGS game ROM. */
 					Atari800_builtin_game = FALSE;
 			}
@@ -427,18 +428,25 @@ int Atari800_Initialise(int *argc, char *argv[])
 		}
 		*argc = j;
 	}
+
 //LIBRETRO HACK
-//#ifndef ANDROID
-#if !defined(ANDROID) || defined(__LIBRETRO__)
+#if !defined(ANDROID) || defined(__LIBRETRO__) 
+#if defined(__LIBRETRO__)
+	if (legacy_configuration_file)
+		got_config = CFG_LoadConfig(rtconfig_filename);
+	else
+		got_config = FALSE;
+#else
 	got_config = CFG_LoadConfig(rtconfig_filename);
+#endif // __LIBRETRO__
 #else
 	got_config = TRUE; /* pretend we got a config file -- not needed in Android */
 #endif
-
+//LIBRETRO HACK
 	/* try to find ROM images if the configuration file is not found
 	   or it does not specify some ROM paths (blank paths count as specified) */
-//LIBRETRO HACK
-//#ifndef ANDROID
+
+
 #if !defined(ANDROID) || defined(__LIBRETRO__)
 #if defined(__LIBRETRO__)
 	SYSROM_FindInDir(retro_system_directory, TRUE);
@@ -476,7 +484,11 @@ SYSROM_FindInDir("fs:/vol/external01/retroarch/cores/system/atari800", TRUE);
 	SYSROM_SetDefaults();
 
 	/* if no configuration file read, try to save one with the defaults */
+#if defined(__LIBRETRO__)
+	if (!got_config && legacy_configuration_file)
+#else
 	if (!got_config)
+#endif /* __LIBRETRO__*/
 		CFG_WriteConfig();
 
 #endif /* __PLUS */
@@ -974,7 +986,11 @@ int Atari800_Exit(int run_monitor)
 	if (!restart) {
 		/* We'd better save the configuration before calling the *_Exit() functions -
 		   there's a danger that they might change some emulator settings. */
+#if defined(__LIBRETRO__)
+		if (CFG_save_on_exit && legacy_configuration_file)
+#else
 		if (CFG_save_on_exit)
+#endif
 			CFG_WriteConfig();
 
 		/* Cleanup functions, in reverse order as the init functions in
