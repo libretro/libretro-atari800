@@ -2440,6 +2440,12 @@ int Devices_PatchOS(void)
 	case SYSROM_CC01R4:
 		addr = 0xc3eb;
 		break;
+	case SYSROM_ALTIRRA_800:
+		addr = 0xefd4; /* labeled InitHandlerTable in OS sources */
+		break;
+	case SYSROM_ALTIRRA_XL:
+		addr = 0xee90; /* labeled InitHandlerTable in OS sources */
+		break;
 	default:
 		return FALSE;
 	}

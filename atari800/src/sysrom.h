@@ -56,6 +56,12 @@ enum {
 	SYSROM_5200_CUSTOM, /* Custom 5200 BIOS */
 	SYSROM_BASIC_CUSTOM,/* Custom BASIC */
 	SYSROM_XEGAME_CUSTOM, /* Custom XEGS game */
+	SYSROM_LOADABLE_SIZE, /* Number of OS ROM loadable from file */
+	/* --- Built-in free replacement OSes from Altirra --- */
+	SYSROM_ALTIRRA_800 = SYSROM_LOADABLE_SIZE, /* AltirraOS 400/800 */
+	SYSROM_ALTIRRA_XL, /* AltirraOS XL/XE/XEGS */
+	SYSROM_ALTIRRA_5200, /* Altirra 5200 OS */
+	SYSROM_ALTIRRA_BASIC, /* ATBASIC */
 	SYSROM_SIZE, /* Number of available OS ROMs */
 	SYSROM_AUTO = SYSROM_SIZE /* Use to indicate that OS revision should be chosen automatically */
 };
@@ -63,6 +69,7 @@ typedef struct SYSROM_t {
 	char *filename; /* Path to the ROM image file */
 	size_t size; /* Expected size of the ROM image */
 	ULONG crc32; /* Expected CRC32 of the ROM image */
+	UBYTE const *data; /* Pointer to ROM data in case of built-in ROMs */
 	int unset; /* During initialisation indicates that no filename was given for this ROM image in config/command line */
 } SYSROM_t;
 
@@ -126,6 +133,10 @@ void SYSROM_SetDefaults(void);
    is configured for the chosen ROM.
  */
 void SYSROM_ChooseROMs(int machine_type, int ram_size, int tv_system, int *os_version, int *basic_version, int *xegame_version);
+
+/* Called from Atari800_InitialiseMachine(). Loads OS ROM identified by ID into
+   a memory buffer BUFFER. */
+int SYSROM_LoadImage(int id, UBYTE *buffer);
 
 /* Read/write from/to configuration file. */
 int SYSROM_ReadConfig(char *string, char *ptr);

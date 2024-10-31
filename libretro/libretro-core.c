@@ -178,7 +178,8 @@ extern void input_gui(void);
 const char* retro_save_directory;
 const char* retro_system_directory;
 const char* retro_content_directory;
-char retro_system_data_directory[512];;
+char retro_system_data_directory[512];
+int legacy_configuration_file; 
 
 static retro_video_refresh_t video_cb;
 static retro_audio_sample_t audio_cb;
@@ -834,6 +835,23 @@ static void update_variables(void)
 
         if (!libretro_runloop_active)
             Atari800_InitialiseMachine();
+    }
+
+    /* Set whether a new legacy configuration file will be loaded or created if not found. */
+    var.key = "atari800_cfg";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "enabled") == 0)
+        {
+            legacy_configuration_file = TRUE;
+        }
+        else if (strcmp(var.value, "disabled") == 0)
+        {
+            legacy_configuration_file = FALSE;
+        }
+
     }
 
     /* Set artifacting type.  */

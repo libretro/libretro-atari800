@@ -31,7 +31,7 @@
 #include "antic.h"
 #include "cpu.h"
 #include "cartridge.h"
-#include "emuos.h"
+#include "roms/altirra_5200_os.h"
 #include "esc.h"
 #include "gtia.h"
 #include "log.h"
@@ -1403,9 +1403,9 @@ void MEMORY_CartA0bfEnable(void)
 void MEMORY_GetCharset(UBYTE *cs)
 {
 	/* copy font, but change screencode order to ATASCII order */
-	memcpy(cs, emuos_h + 0x200, 0x100); /* control chars */
-	memcpy(cs + 0x100, emuos_h, 0x200); /* !"#$..., uppercase letters */
-	memcpy(cs + 0x300, emuos_h + 0x300, 0x100); /* lowercase letters */
+	memcpy(cs, ROM_altirra_5200_os + 0x200, 0x100); /* control chars */
+	memcpy(cs + 0x100, ROM_altirra_5200_os, 0x200); /* !"#$..., uppercase letters */
+	memcpy(cs + 0x300, ROM_altirra_5200_os + 0x300, 0x100); /* lowercase letters */
 }
 
 #ifndef PAGED_MEM

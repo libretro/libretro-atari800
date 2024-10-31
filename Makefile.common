@@ -90,6 +90,12 @@ SOURCES_C += \
 #	$(CORE_DIR)/atari800/src/videomode.c\
 #	$(CORE_DIR)/atari800/src/pal_blending.c \
 
+SOURCES_C += \
+	$(CORE_DIR)/atari800/src/roms/altirraos_xl.c \
+	$(CORE_DIR)/atari800/src/roms/altirraos_800.c \
+	$(CORE_DIR)/atari800/src/roms/altirra_basic.c \
+	$(CORE_DIR)/atari800/src/roms/altirra_5200_os.c
+
 ZLIB_INCFLAGS = -I$(DEPS_DIR)/zlib
 ZLIB_SOURCES_C = \
 	$(DEPS_DIR)/zlib/adler32.c \

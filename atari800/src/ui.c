@@ -99,6 +99,9 @@
 #endif /* HAVE_OPENGL */
 #endif /* GUI_SDL */
 
+#ifdef __LIBRETRO__
+extern int legacy_configuration_file;
+#endif /* __LIBRETRO__ */
 #ifdef DIRECTX
 /* Display Settings */
 extern RENDERMODE rendermode;
@@ -267,6 +270,7 @@ static void SystemSettings(void)
 		UI_MENU_ACTION(SYSROM_A_PAL, "Rev. A PAL"),
 		UI_MENU_ACTION(SYSROM_B_NTSC, "Rev. B NTSC"),
 		UI_MENU_ACTION(SYSROM_800_CUSTOM, "Custom"),
+		UI_MENU_ACTION(SYSROM_ALTIRRA_800, "AltirraOS"),
 		UI_MENU_END
 	};
 	static UI_tMenuItem osxl_menu_array[] = {
@@ -283,6 +287,7 @@ static void SystemSettings(void)
 		UI_MENU_ACTION(SYSROM_BB01R59, "BB01 Rev. 59"),
 		UI_MENU_ACTION(SYSROM_BB01R59A, "BB01 Rev. 59 alt."),
 		UI_MENU_ACTION(SYSROM_XL_CUSTOM, "Custom"),
+		UI_MENU_ACTION(SYSROM_ALTIRRA_XL, "AltirraOS"),
 		UI_MENU_END
 	};
 	static UI_tMenuItem os5200_menu_array[] = {
@@ -290,6 +295,7 @@ static void SystemSettings(void)
 		UI_MENU_ACTION(SYSROM_5200, "Original"),
 		UI_MENU_ACTION(SYSROM_5200A, "Rev. A"),
 		UI_MENU_ACTION(SYSROM_5200_CUSTOM, "Custom"),
+		UI_MENU_ACTION(SYSROM_ALTIRRA_5200, "AltirraOS"),
 		UI_MENU_END
 	};
 	static UI_tMenuItem * const os_menu_arrays[Atari800_MACHINE_SIZE] = {
@@ -303,6 +309,7 @@ static void SystemSettings(void)
 		UI_MENU_ACTION(SYSROM_BASIC_B, "Rev. B"),
 		UI_MENU_ACTION(SYSROM_BASIC_C, "Rev. C"),
 		UI_MENU_ACTION(SYSROM_BASIC_CUSTOM, "Custom"),
+		UI_MENU_ACTION(SYSROM_ALTIRRA_BASIC, "Altirra BASIC"),
 		UI_MENU_END
 	};
 	static UI_tMenuItem xegame_menu_array[] = {
@@ -366,7 +373,7 @@ static void SystemSettings(void)
 	/* Size must be long enough to store "<longest OS label> (auto)". */
 	char default_os_label[26];
 	/* Size must be long enough to store "<longest BASIC label> (auto)". */
-	char default_basic_label[14];
+	char default_basic_label[21];
 	/* Size must be long enough to store "<longest XEGAME label> (auto)". */
 	char default_xegame_label[23];
 	char mosaic_label[7]; /* Fits "256 KB" */
@@ -409,7 +416,8 @@ static void SystemSettings(void)
 				menu_array[1].suffix = default_os_label;
 			}
 		}
-		else if (SYSROM_roms[SYSROM_os_versions[Atari800_machine_type]].filename[0] == '\0')
+		else if (SYSROM_roms[SYSROM_os_versions[Atari800_machine_type]].data == NULL
+		         && SYSROM_roms[SYSROM_os_versions[Atari800_machine_type]].filename[0] == '\0')
 			menu_array[1].suffix = "ROM missing";
 		else
 			menu_array[1].suffix = FindMenuItem(os_menu_arrays[Atari800_machine_type], SYSROM_os_versions[Atari800_machine_type])->item;
@@ -432,7 +440,8 @@ static void SystemSettings(void)
 					menu_array[3].suffix = default_basic_label;
 				}
 			}
-			else if (SYSROM_roms[SYSROM_basic_version].filename[0] == '\0')
+			else if (SYSROM_roms[SYSROM_basic_version].data == NULL
+		             && SYSROM_roms[SYSROM_basic_version].filename[0] == '\0')
 				menu_array[3].suffix = "ROM missing";
 			else {
 				menu_array[3].suffix = FindMenuItem(basic_menu_array, SYSROM_basic_version)->item;
@@ -452,7 +461,8 @@ static void SystemSettings(void)
 					menu_array[4].suffix = default_xegame_label;
 				}
 			}
-			else if (SYSROM_roms[SYSROM_xegame_version].filename[0] == '\0')
+			else if (SYSROM_roms[SYSROM_xegame_version].data == NULL
+		             && SYSROM_roms[SYSROM_xegame_version].filename[0] == '\0')
 				menu_array[4].suffix = "ROM missing";
 			else
 				menu_array[4].suffix = FindMenuItem(xegame_menu_array, SYSROM_xegame_version)->item;
@@ -545,7 +555,8 @@ static void SystemSettings(void)
 				   as it can never be hidden. */
 				UI_tMenuItem *menu_ptr = os_menu_arrays[Atari800_machine_type] + 1;
 				do {
-					if (SYSROM_roms[menu_ptr->retval].filename[0] != '\0') {
+					if (SYSROM_roms[menu_ptr->retval].data != NULL
+					    || SYSROM_roms[menu_ptr->retval].filename[0] != '\0') {
 						menu_ptr->flags = UI_ITEM_ACTION;
 						rom_available = TRUE;
 					}
@@ -576,7 +587,8 @@ static void SystemSettings(void)
 				   as it can never be hidden. */
 				UI_tMenuItem *menu_ptr = basic_menu_array + 1;
 				do {
-					if (SYSROM_roms[menu_ptr->retval].filename[0] != '\0') {
+					if (SYSROM_roms[menu_ptr->retval].data != NULL
+					    || SYSROM_roms[menu_ptr->retval].filename[0] != '\0') {
 						menu_ptr->flags = UI_ITEM_ACTION;
 						rom_available = TRUE;
 					}
@@ -601,7 +613,8 @@ static void SystemSettings(void)
 				   as they can never be hidden. */
 				UI_tMenuItem *menu_ptr = xegame_menu_array + 2;
 				do {
-					if (SYSROM_roms[menu_ptr->retval].filename[0] != '\0') {
+					if (SYSROM_roms[menu_ptr->retval].data != NULL
+					    || SYSROM_roms[menu_ptr->retval].filename[0] != '\0') {
 						menu_ptr->flags = UI_ITEM_ACTION;
 					}
 					else
@@ -1730,7 +1743,7 @@ static void ROMLocations(char const *title, UI_tMenuItem *menu_array)
 			else {
 				/* Use first non-empty ROM path as a starting filename for the dialog. */
 				int i;
-				for (i = 0; i < SYSROM_SIZE; ++i) {
+				for (i = 0; i < SYSROM_LOADABLE_SIZE; ++i) {
 					if (SYSROM_roms[i].filename[0] != '\0') {
 						strcpy(filename, SYSROM_roms[i].filename);
 						break;
@@ -1823,6 +1836,48 @@ static void ROMLocationsXEGame(void)
 	ROMLocations("XEGS Builtin Game ROM Locations", menu_array);
 }
 
+static SYSROM_t GetCurrentOS(void)
+{
+	SYSROM_t sysrom = { 0 };
+
+	int rom = SYSROM_os_versions[Atari800_machine_type];
+	if (rom == SYSROM_AUTO)
+		rom = SYSROM_AutoChooseOS(Atari800_machine_type, MEMORY_ram_size, Atari800_tv_mode);
+
+	if (rom != -1)
+		sysrom = SYSROM_roms[rom];
+
+	return sysrom;
+}
+
+static SYSROM_t GetCurrentBASIC(void)
+{
+	SYSROM_t sysrom = { 0 };
+
+	int rom = SYSROM_basic_version;
+	if (rom == SYSROM_AUTO)
+		rom = SYSROM_AutoChooseBASIC();
+
+	if (rom != -1)
+		sysrom = SYSROM_roms[rom];
+
+	return sysrom;
+}
+
+static SYSROM_t GetCurrentXEGame(void)
+{
+	SYSROM_t sysrom = { 0 };
+
+	int rom = SYSROM_xegame_version;
+	if (rom == SYSROM_AUTO)
+		rom = SYSROM_AutoChooseXEGame();
+
+	if (rom != -1)
+		sysrom = SYSROM_roms[rom];
+
+	return sysrom;
+}
+
 static void SystemROMSettings(void)
 {
 	static UI_tMenuItem menu_array[] = {
@@ -1836,6 +1891,8 @@ static void SystemROMSettings(void)
 	};
 
 	int option = 0;
+	int need_initialise = FALSE;
+	SYSROM_t old_sysrom, new_sysrom;
 
 	for (;;) {
 		int seltype;
@@ -1848,32 +1905,107 @@ static void SystemROMSettings(void)
 				char rom_dir[FILENAME_MAX] = "";
 				int i;
 				/* Use first non-empty ROM path as a starting filename for the dialog. */
-				for (i = 0; i < SYSROM_SIZE; ++i) {
+				for (i = 0; i < SYSROM_LOADABLE_SIZE; ++i) {
 					if (SYSROM_roms[i].filename[0] != '\0') {
 						Util_splitpath(SYSROM_roms[i].filename, rom_dir, NULL);
 						break;
 					}
 				}
-				if (UI_driver->fGetDirectoryPath(rom_dir))
-					SYSROM_FindInDir(rom_dir, FALSE);
+				if (UI_driver->fGetDirectoryPath(rom_dir)) {
+					SYSROM_t old_basic, old_xegame;
+
+					old_sysrom = GetCurrentOS();
+					old_basic = GetCurrentBASIC();
+					old_xegame = GetCurrentXEGame();
+
+					if (SYSROM_FindInDir(rom_dir, FALSE)) {
+						new_sysrom = GetCurrentOS();
+
+						if (old_sysrom.data != new_sysrom.data) {
+							need_initialise = TRUE;
+							break;
+						}
+
+						if (Atari800_machine_type != Atari800_MACHINE_5200) {
+							new_sysrom = GetCurrentBASIC();
+
+							if (old_basic.data != new_sysrom.data) {
+								need_initialise = TRUE;
+								break;
+							}
+						}
+
+						if (Atari800_machine_type == Atari800_MACHINE_XLXE && Atari800_builtin_game) {
+							new_sysrom = GetCurrentXEGame();
+
+							if (old_xegame.data != new_sysrom.data) {
+								need_initialise = TRUE;
+								break;
+							}
+						}
+					}
+				}
 			}
 			break;
+
 		case 1:
-			ROMLocations800();
-			break;
 		case 2:
-			ROMLocationsXL();
-			break;
 		case 3:
-			ROMLocations5200();
+			old_sysrom = GetCurrentOS();
+
+			switch (option) {
+			case 1:
+				ROMLocations800();
+				break;
+			case 2:
+				ROMLocationsXL();
+				break;
+			case 3:
+				ROMLocations5200();
+				break;
+			}
+
+			new_sysrom = GetCurrentOS();
+
+			if (old_sysrom.data != new_sysrom.data)
+				need_initialise = TRUE;
 			break;
+
 		case 4:
-			ROMLocationsBASIC();
+			if (Atari800_machine_type != Atari800_MACHINE_5200) {
+				old_sysrom = GetCurrentBASIC();
+
+				ROMLocationsBASIC();
+
+				new_sysrom = GetCurrentBASIC();
+
+				if (old_sysrom.data != new_sysrom.data)
+					need_initialise = TRUE;
+			} else {
+				/* ignore BASIC changes on 5200 */
+				ROMLocationsBASIC();
+			}
 			break;
+
 		case 5:
-			ROMLocationsXEGame();
+			if (Atari800_machine_type == Atari800_MACHINE_XLXE && Atari800_builtin_game) {
+				old_sysrom = GetCurrentXEGame();
+
+				ROMLocationsXEGame();
+
+				new_sysrom = GetCurrentXEGame();
+
+				if (old_sysrom.data != new_sysrom.data)
+					need_initialise = TRUE;
+			} else {
+				/* ignore XEGame changes on non-XE */
+				ROMLocationsXEGame();
+			}
 			break;
+
 		default:
+			if (need_initialise)
+				Atari800_InitialiseMachine();
 			return;
 		}
 	}
@@ -2007,7 +2139,10 @@ static void AtariSettings(void)
 			break;
 #ifndef DREAMCAST
 		case 15:
-			UI_driver->fMessage(CFG_WriteConfig() ? "Configuration file updated" : "Error writing configuration file", 1);
+			if (legacy_configuration_file)
+				UI_driver->fMessage(CFG_WriteConfig() ? "Configuration file updated" : "Error writing configuration file", 1);
+			else
+				UI_driver->fMessage("Legacy configuration file is disabled", 1);
 			break;
 		case 16:
 			CFG_save_on_exit = !CFG_save_on_exit;
@@ -3965,7 +4100,7 @@ static void AboutEmulator(void)
 		Atari800_TITLE "\0"
 		"Copyright (c) 1995-1998 David Firth\0"
 		"and\0"
-		"(c)1998-2015 Atari800 Development Team\0"
+		"(c)1998-2023 Atari800 Development Team\0"
 		"See CREDITS file for details.\0"
 		"http://atari800.atari.org/\0"
 		"\0"
