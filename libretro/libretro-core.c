@@ -154,7 +154,7 @@ int libretro_runloop_active = 0;
 
 char old_Atari800_machine_type[100];
 
-float retro_fps = 49.8607597;
+float retro_fps = Atari800_FPS_PAL;
 long long retro_frame_counter;
 extern int ToggleTV;
 extern int CURRENT_TV;
@@ -745,12 +745,19 @@ static void update_variables(void)
     {
         if (strcmp(var.value, "NTSC") == 0)
         {
-            Atari800_tv_mode = Atari800_TV_NTSC;
+            CURRENT_TV = Atari800_TV_NTSC;   
         }
         else if (strcmp(var.value, "PAL") == 0)
         {
-            Atari800_tv_mode = Atari800_TV_PAL;
+            CURRENT_TV = Atari800_TV_PAL;
         }
+
+        if(CURRENT_TV != Atari800_tv_mode)
+			ToggleTV=1;
+    
+        retro_fps = CURRENT_TV == Atari800_TV_PAL ? Atari800_FPS_PAL : Atari800_FPS_NTSC;  // Just in case.
+
+
     }
 
     /* Set colors */
@@ -1042,6 +1049,12 @@ static void update_variables(void)
 static void retro_wrap_emulator()
 {
     log_cb(RETRO_LOG_INFO, "WRAP EMU THD\n");
+    log_cb(RETRO_LOG_INFO, "Atari800_machine_type =%d\n", Atari800_machine_type);
+    log_cb(RETRO_LOG_INFO, "Atari800_tv_mode =%d\n", Atari800_tv_mode);
+    log_cb(RETRO_LOG_INFO, "CURRENT_TV =%d\n", CURRENT_TV);
+    log_cb(RETRO_LOG_INFO, "retro_fps =%f\n", retro_fps);
+    log_cb(RETRO_LOG_INFO, "RPATH =%s\n", RPATH);
+
     pre_main(RPATH);
 
 
@@ -1328,17 +1341,18 @@ void retro_run(void)
         {
             struct retro_system_av_info ninfo;
 
-            retro_fps = CURRENT_TV == 312 ? 49.8607597 : 59.9227434;
+            retro_fps = CURRENT_TV == Atari800_TV_PAL ? Atari800_FPS_PAL : Atari800_FPS_NTSC;
 
             retro_get_system_av_info(&ninfo);
 
             environ_cb(RETRO_ENVIRONMENT_SET_SYSTEM_AV_INFO, &ninfo);
 
             if (log_cb)
-                log_cb(RETRO_LOG_INFO, "ChangeAV: w:%d h:%d ra:%f.\n",
-                    ninfo.geometry.base_width, ninfo.geometry.base_height, ninfo.geometry.aspect_ratio);
+                log_cb(RETRO_LOG_INFO, "ChangeAV: w:%d h:%d ar:%f fq:%f sr:%f.\n",
+                    ninfo.geometry.base_width, ninfo.geometry.base_height, ninfo.geometry.aspect_ratio, ninfo.timing.fps, ninfo.timing.sample_rate);
 
             ToggleTV = 0;
+            Atari800_SetTVMode(CURRENT_TV); // Should include POKEYSND_Init(POKEYSND_FREQ_17_EXACT, 44100, 2, 1);
         }
 
         if (retro_sound_finalized)
