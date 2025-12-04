@@ -5,6 +5,7 @@
 #include "vkbd.h"
 #include "input.h"
 #include "pokey.h"
+#include "atari.h"
 
 //CORE VAR
 #ifdef _WIN32
@@ -27,8 +28,8 @@ unsigned long  Ktime=0 , LastFPSTime=0;
 
 //SOUND
 UBYTE SNDBUF[1024*2*2];
-int snd_sampler_pal = 44100 / 50;
-int snd_sampler_ntsc = 44100 / 60;
+int snd_sampler_pal = 883;    // 44100 / 50 = 882 
+int snd_sampler_ntsc = 736;   // 44100 / 60  = 735  
 
 //EMU FLAGS
 int NPAGE = -1, KCOL = 1, BKGCOLOR = 0;
@@ -151,13 +152,15 @@ extern int CURRENT_TV;
 
 void retro_sound_update(void)
 {	
-   int x,stop=CURRENT_TV==312?885:742;//FIXME: 882/735?
-
+   // 882 is 44100/50
+   // 736 is 44100/60
+   // int x,stop=CURRENT_TV==312?885:742;//FIXME: 882/735?
+   int x,stop=CURRENT_TV==Atari800_TV_PAL ? snd_sampler_pal : snd_sampler_ntsc;
    if (! UI_is_active)
    {
       int16_t *p = (int16_t *)SNDBUF;
 
-      Sound_Callback(SNDBUF, sizeof SNDBUF);
+      Sound_Callback(SNDBUF, stop * 2 * 2);
       for (x = 0; x < stop; p += 2, x++)
          retro_audio_cb(*p, *p + 1);
 
