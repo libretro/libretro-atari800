@@ -3,3 +3,21 @@
 *.dll
 *.bc
 *.a
+# Build artifacts and intermediate files
+*.exe
+*.obj
+build/
+dist/
+*.swp
+*.swo
+
+# Auto-generated documentation and build logs
+AUDIT.md
+NEXT_STEPS.md
+BUILD_REPORT.md
+CROSS_PLATFORM_BUILD_RESULTS.md
+BUILD_VERIFICATION_REPORT.md
+build_*.txt
+
+# AI/Copilot instructions (local development)
+.github/copilot-instructions.md
