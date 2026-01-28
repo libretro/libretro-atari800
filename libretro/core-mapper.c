@@ -152,9 +152,7 @@ extern int CURRENT_TV;
 
 void retro_sound_update(void)
 {	
-   // 882 is 44100/50
-   // 736 is 44100/60
-   // int x,stop=CURRENT_TV==312?885:742;//FIXME: 882/735?
+
    int x,stop=CURRENT_TV==Atari800_TV_PAL ? snd_sampler_pal : snd_sampler_ntsc;
    if (! UI_is_active)
    {
