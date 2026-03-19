@@ -26,7 +26,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 #include "pokey.h"
 
@@ -194,7 +196,7 @@ static UBYTE *image_data = NULL;
 static int modified;
 
 static int keypad_mode = -1;	/* Joystick */
-static int keypad_trig = 1;		/* Keypad Trigger Position */
+static int keypad_trig = 1;	/* Keypad Trigger Position */
 static int keypad_stick = 0x0f;	/* Keypad Joystick Position */
 
 static int xmouse_mode = -1;		/* Joystick, Paddle and Light Pen */
@@ -440,15 +442,12 @@ static int GetKeyCode(XEvent *event)
 			break;
 		case XK_F2:
 			keyboard_consol &= (~INPUT_CONSOL_OPTION);
-			keycode = AKEY_NONE;
 			break;
 		case XK_F3:
 			keyboard_consol &= (~INPUT_CONSOL_SELECT);
-			keycode = AKEY_NONE;
 			break;
 		case XK_F4:
 			keyboard_consol &= (~INPUT_CONSOL_START);
-			keycode = AKEY_NONE;
 			break;
 		case XK_F6:
 			keycode = SHIFT | CONTROL | AKEY_HELP;
@@ -804,7 +803,7 @@ static int insert_rom(const char *filename)
 		return TRUE;
 	}
 	/* TODO: select cartridge type */
-	for (i = 1; i < CARTRIDGE_LAST_SUPPORTED; i++) {
+	for (i = 1; i < CARTRIDGE_TYPE_COUNT; i++) {
 		if (CARTRIDGE_kb[i] == r) {
 			CARTRIDGE_main.type = i;
 			Atari800_Coldstart();
@@ -2618,6 +2617,9 @@ void PLATFORM_DisplayScreen(void)
 int PLATFORM_Keyboard(void)
 {
 	static int keycode = AKEY_NONE;
+
+	if (keycode == AKEY_SCREENSHOT_INTERLACE || keycode == AKEY_SCREENSHOT)
+		keycode = AKEY_NONE;   /* don't auto-repeat the 'screenshot' key */
 
 #ifdef XVIEW
 	notify_dispatch();

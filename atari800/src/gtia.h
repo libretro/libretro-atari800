@@ -132,12 +132,12 @@ void GTIA_PutByte(UWORD addr, UBYTE byte);
 void GTIA_StateSave(void);
 void GTIA_StateRead(UBYTE version);
 
+#ifdef NEW_CYCLE_EXACT
+void GTIA_UpdatePmplColls(void);
+#endif
+
 #if defined(__LIBRETRO__)
 void Retro_GTIA_StateSave(void);
 void Retro_GTIA_StateRead(UBYTE version);
-#endif
-
-#ifdef NEW_CYCLE_EXACT
-void GTIA_UpdatePmplColls(void);
 #endif
 #endif /* GTIA_H_ */

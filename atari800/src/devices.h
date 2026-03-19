@@ -4,12 +4,6 @@
 #include <stdio.h> /* FILENAME_MAX */
 #include "atari.h" /* UWORD */
 
-#if defined(__PS3__) && !defined(__PSL1GHT__)
-#define S_IREAD S_IRUSR
-#define S_IWRITE S_IWUSR
-#define S_ISDIR(mode)  (((mode) & S_IFMT) == S_IFDIR)
-#endif
-
 int Devices_Initialise(int *argc, char *argv[]);
 void Devices_Exit(void);
 int Devices_PatchOS(void);
@@ -27,6 +21,8 @@ extern char Devices_atari_h_dir[4][FILENAME_MAX];
 extern int Devices_h_read_only;
 
 extern char Devices_h_exe_path[FILENAME_MAX];
+
+extern char Devices_h_device_name;
 
 extern char Devices_h_current_dir[4][FILENAME_MAX];
 

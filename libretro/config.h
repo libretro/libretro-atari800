@@ -382,7 +382,7 @@
 #define PACKAGE_NAME "Atari800"
 
 /* Define to the full name and version of this package. */
-#define PACKAGE_STRING "Atari800 3.1.0"
+#define PACKAGE_STRING "Atari800 5.2.0"
 
 /* Define to the one symbol short name of this package. */
 #define PACKAGE_TARNAME "atari800"
@@ -391,7 +391,7 @@
 #define PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define PACKAGE_VERSION "3.1.0"
+#define PACKAGE_VERSION "5.2.0"
 
 /* Define to use page-based attribute array. */
 /* #undef PAGED_ATTRIB */
@@ -536,6 +536,9 @@
 
 /* Target: Standard X11. */
 /* #undef X11 */
+
+/* Use Altirra replacement OS ROMs. */
+#define EMUOS_ALTIRRA 1
 
 /* Emulate the XEP80. */
 #define XEP80_EMULATION 1

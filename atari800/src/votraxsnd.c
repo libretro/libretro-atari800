@@ -33,6 +33,7 @@
 #include "voicebox.h"
 #endif
 #include "pokey.h"
+#include "pokeysnd.h"
 #include "log.h"
 
 /* Votrax */

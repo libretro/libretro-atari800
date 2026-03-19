@@ -16,27 +16,14 @@
 #define CPU_Z_FLAG 0x02
 #define CPU_C_FLAG 0x01
 
-void CPU_Initialise(void);		/* used in the assembler version of cpu.c only */
 void CPU_GetStatus(void);
 void CPU_PutStatus(void);
 void CPU_Reset(void);
 void CPU_StateSave(UBYTE SaveVerbose);
 void CPU_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
-
-#if defined(__LIBRETRO__)
-void Retro_CPU_StateSave(UBYTE SaveVerbose);
-void Retro_CPU_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
-#endif
-
 void CPU_NMI(void);
 void CPU_GO(int limit);
 #define CPU_GenerateIRQ() (CPU_IRQ = 1)
-
-#ifdef FALCON_CPUASM
-extern void CPU_INIT(void);
-extern void CPU_GET(void);		/* put from CCR, N & Z FLAG into regP */
-extern void CPU_PUT(void);		/* put from regP into CCR, N & Z FLAG */
-#endif
 
 extern UWORD CPU_regPC;
 extern UBYTE CPU_regA;
@@ -80,4 +67,9 @@ extern unsigned int CPU_remember_jmp_curpos;
 extern int CPU_instruction_count[256];
 #endif
 
+
+#if defined(__LIBRETRO__)
+void Retro_CPU_StateSave(UBYTE SaveVerbose);
+void Retro_CPU_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
+#endif
 #endif /* CPU_H_ */

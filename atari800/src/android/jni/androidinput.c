@@ -27,6 +27,7 @@
 
 #include "input.h"
 #include "akey.h"
+#include "log.h"
 #include "pokey.h"
 
 #include "graphics.h"
@@ -75,14 +76,14 @@ static int Android_Keyboard[KBD_MAXKEYS];
 static int key_head = 0, key_tail = 0;
 static int Android_key_control;
 static pthread_mutex_t key_mutex = PTHREAD_MUTEX_INITIALIZER;
-static key_last = AKEY_NONE;
+static int key_last = AKEY_NONE;
 
 static const int derot_lut[2][4] =
 {
 	{ KEY_RIGHT, KEY_LEFT, KEY_UP, KEY_DOWN },	/* derot left */
 	{ KEY_LEFT, KEY_RIGHT, KEY_DOWN, KEY_UP }	/* derot right */
 };
-UBYTE softjoymap[SOFTJOY_MAXKEYS + SOFTJOY_MAXACTIONS][2] =
+SWORD softjoymap[SOFTJOY_MAXKEYS + SOFTJOY_MAXACTIONS][2] =
 {
 	{ KEY_LEFT,  	INPUT_STICK_LEFT    },
 	{ KEY_RIGHT, 	INPUT_STICK_RIGHT   },
@@ -99,15 +100,12 @@ int Android_DerotateKeys = 0;
 int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 {
 	int joyptr;		/* will point to joystick touch of input set */
-	int tmpfire;	/* flag: both pointers on fire side */
 	int dx, dy, dx2, dy2;
 	struct touchstate newtc[MAXPOINTERS];
 	UBYTE newjoy, newtrig;
 	struct joy_overlay_state *jovl;
 	struct consolekey_overlay_state *covl;
 	int conptr;		/* will point to stolen ptr, PTRSTL otherwise */
-	int i;
-	float a, potx, poty;
 	int ret = 0;
 
 	jovl = &AndroidInput_JoyOvl;
@@ -117,17 +115,18 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 
 	/* establish joy ptr & fire ptr for new input */
 	/* note: looks complicated & uses boolean magick but gets rid of a labyrinth of ifs :-) */
-	if ((x1 >= Android_Split) ^ (x2 >= Android_Split)) {	  /* pointers on opposite sides */
+	if (s2 < 0 /* only one touch event */
+	    || (x1 >= Android_Split) ^ (x2 >= Android_Split)) {	  /* pointers on opposite sides */
 		joyptr = (x1 < Android_Split) ^ Android_Joyleft;
 	} else {							/* both pointers either on joystick or on fire side */
-		tmpfire = (x1 >= Android_Split) ^ (!Android_Joyleft); /* both pointers on fire side */
-		dx  = (x1 - prevtc[tmpfire].x);			  /* figure out which is closer to previous */
-		dx2 = (x2 - prevtc[tmpfire].x);
-		dy  = (y1 - prevtc[tmpfire].y);
-		dy2 = (y2 - prevtc[tmpfire].y);
-		joyptr = ((dx2*dx2 + dy2*dy2) > (dx*dx + dy*dy)) ^ !tmpfire;
-		s1 &= joyptr ^ (!tmpfire);								 /* unpress unrelated touch */
-		s2 &= !(joyptr ^ (!tmpfire));
+		int both_fire = (x1 >= Android_Split) ^ (!Android_Joyleft); /* both pointers on fire side */
+		dx  = (x1 - prevtc[both_fire].x);			  /* figure out which is closer to previous */
+		dx2 = (x2 - prevtc[both_fire].x);
+		dy  = (y1 - prevtc[both_fire].y);
+		dy2 = (y2 - prevtc[both_fire].y);
+		joyptr = ((dx2*dx2 + dy2*dy2) > (dx*dx + dy*dy)) ^ !both_fire;
+		s1 &= joyptr ^ (!both_fire);								/* unpress unrelated touch */
+		s2 &= !(joyptr ^ (!both_fire));
 	}
 	if (joyptr) {
 		newtc[PTRTRG].x = x1; newtc[PTRTRG].y = y1; newtc[PTRTRG].s = s1; 
@@ -137,29 +136,30 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 		newtc[PTRTRG].x = x2; newtc[PTRTRG].y = y2; newtc[PTRTRG].s = s2; 
 	}
 
-	if (newtc[PTRJOY].s || newtc[PTRTRG].s)
+	if (newtc[PTRJOY].s > 0 || newtc[PTRTRG].s > 0)
 		ret = 1;
 
 	/* console keys */
 	conptr = PTRSTL;
 	covl->hitkey = CONK_NOKEY;
 	if (covl->ovl_visible >= COVL_READY) {				/* first a quick bounding box check */
-		if (newtc[PTRJOY].s                 &&
+		if (newtc[PTRJOY].s > 0             &&
 			newtc[PTRJOY].x >= covl->bbox.l &&
 			newtc[PTRJOY].x <  covl->bbox.r &&
 			newtc[PTRJOY].y >= covl->bbox.t &&
 			newtc[PTRJOY].y <  covl->bbox.b)
 					conptr = PTRJOY;				  /* implicit: mask fire by joy pointer */
-		else if (newtc[PTRTRG].s                 &&
+		else if (newtc[PTRTRG].s > 0             &&
 				 newtc[PTRTRG].x >= covl->bbox.l &&
 				 newtc[PTRTRG].x <  covl->bbox.r &&
 				 newtc[PTRTRG].y >= covl->bbox.t &&
 				 newtc[PTRTRG].y <  covl->bbox.b)
 					conptr = PTRTRG;
 		if (conptr != PTRSTL) {	  /* if bb is exact on top & bottom => check only horiz/lly */
-			dy = covl->keycoo[i + 1] - newtc[conptr].y;
+			int i;
+			dy = covl->keycoo[1] - newtc[conptr].y;
 			for (i = 0; i < CONK_VERT_MAX; i += 8) {
-				a = ((float) covl->keycoo[i + 6] - covl->keycoo[i    ]) /
+				float a = ((float) covl->keycoo[i + 6] - covl->keycoo[i    ]) /
 					((float) covl->keycoo[i + 1] - covl->keycoo[i + 7]);
 				dx = covl->keycoo[i] + a * dy;
 				if (newtc[conptr].x < dx)	continue;					   /* off left edge */
@@ -172,7 +172,7 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 			}
 			if (covl->hitkey != CONK_NOKEY) {
 				covl->opacity = COVL_MAX_OPACITY;
-				covl->statecnt = COVL_HOLD_TIME;
+				covl->statecnt = COVL_HOLD_TIME << 1;
 				covl->ovl_visible = COVL_READY;
 				switch (covl->hitkey) {
 				case CONK_START:
@@ -187,6 +187,8 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 				case CONK_HELP:
 					Keyboard_Enqueue(AKEY_HELP);
 					break;
+				default: /* CONK_NOKEY, CONK_RESET */
+					;
 				/* RESET is handled at the overlay update */
 				}
 			} else {
@@ -199,26 +201,26 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 			INPUT_key_consol = INPUT_CONSOL_NONE;
 			covl->resetcnt = 0;
 		}
-	} else if (newtc[PTRJOY].s && newtc[PTRJOY].x > Android_ScreenW - covl->hotlen
+	} else if (newtc[PTRJOY].s > 0 && newtc[PTRJOY].x > Android_ScreenW - covl->hotlen
 								 && newtc[PTRJOY].y < covl->hotlen) {
 		covl->ovl_visible = COVL_FADEIN;						  /* touched overlay hotspot */
 		conptr = PTRJOY;
-	} else if (newtc[PTRTRG].s && newtc[PTRTRG].x > Android_ScreenW - covl->hotlen
+	} else if (newtc[PTRTRG].s > 0 && newtc[PTRTRG].x > Android_ScreenW - covl->hotlen
 								 && newtc[PTRTRG].y < covl->hotlen) {
 		covl->ovl_visible = COVL_FADEIN;
 		conptr = PTRTRG;
 	}
-	if (conptr == PTRSTL)
-		if (newtc[PTRJOY].s && 
-				( (!prevtc[PTRJOY].s && newtc[PTRJOY].y < covl->hotlen) ||	/* menu area */
+	if (conptr == PTRSTL) {
+		if (newtc[PTRJOY].s > 0 && 
+				( (prevtc[PTRJOY].s <= 0 && newtc[PTRJOY].y < covl->hotlen) ||	/* menu area */
 				  prevconptr != PTRSTL) &&								   /* still held */
 				!(covl->ovl_visible != COVL_HIDDEN &&
 				  newtc[PTRJOY].x >= covl->bbox.l - COVL_SHADOW_OFF &&	 /* outside bbox */
 				  newtc[PTRJOY].y <= covl->bbox.b + COVL_SHADOW_OFF) ) {
 			conptr = PTRJOY;										/* touched menu area */
 			ret = 2;
-		} else if (newtc[PTRTRG].s &&
-					( (!prevtc[PTRTRG].s && newtc[PTRTRG].y < covl->hotlen) ||
+		} else if (newtc[PTRTRG].s > 0 &&
+					( (prevtc[PTRTRG].s <= 0 && newtc[PTRTRG].y < covl->hotlen) ||
 					  prevconptr != PTRSTL) &&
 					!(covl->ovl_visible != COVL_HIDDEN &&
 					  newtc[PTRTRG].x >= covl->bbox.l - COVL_SHADOW_OFF &&
@@ -226,10 +228,11 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 			conptr = PTRTRG;
 			ret = 2;
 		}
+	}
 
 	/* joystick */
 	newjoy = INPUT_STICK_CENTRE;
-	if (newtc[PTRJOY].s && conptr != PTRJOY) {
+	if (newtc[PTRJOY].s > 0 && conptr != PTRJOY) {
 		if (!Android_Paddle) {
 			dx2 = (jovl->joyarea.r - jovl->joyarea.l) >> 1;
 			dy2 = (jovl->joyarea.b - jovl->joyarea.t) >> 1;
@@ -238,9 +241,9 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 			dx2 = (jovl->joyarea.r - jovl->joyarea.l) * jovl->gracearea;
 		}
 		if (Android_Paddle) {
-			potx = ((float) (newtc[PTRJOY].x - jovl->joyarea.l)) /
-				   ((float) (jovl->joyarea.r - jovl->joyarea.l));
-			poty = (float) newtc[PTRJOY].y / (float) Android_ScreenH;
+			float potx = ((float) (newtc[PTRJOY].x - jovl->joyarea.l)) /
+			             ((float) (jovl->joyarea.r - jovl->joyarea.l));
+			float poty = (float) newtc[PTRJOY].y / (float) Android_ScreenH;
 			Android_POTX = POTLIMIT - (UBYTE) (potx * ((float) POTLIMIT) + 0.5f);
 			Android_POTY = POTLIMIT - (UBYTE) (poty * ((float) POTLIMIT) + 0.5f);
 			if (Android_ReversePddle & 1)
@@ -309,7 +312,7 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 			jovl->areaopacitycur = jovl->areaopacityset;
 			jovl->areaopacityfrm = 0;
 		} else {
-			if (prevtc[PTRJOY].s) {			/* drag area along */
+			if (prevtc[PTRJOY].s > 0) {			/* drag area along */
 				if (newtc[PTRJOY].x > jovl->joyarea.r) {
 					dx = newtc[PTRJOY].x - jovl->joyarea.r;
 					jovl->joyarea.l += dx;
@@ -370,8 +373,8 @@ int Android_TouchEvent(int x1, int y1, int s1, int x2, int y2, int s2)
 
 	/* trigger */
 	newtrig = 1;
-	if ( (newtc[PTRTRG].s && conptr != PTRTRG) ||	/* normal trigger */
-		 (newtc[PTRJOY].s && conptr != PTRJOY && Android_PlanetaryDefense) ) {
+	if ( (newtc[PTRTRG].s > 0 && conptr != PTRTRG) ||	/* normal trigger */
+		 (newtc[PTRJOY].s > 0 && conptr != PTRJOY && Android_PlanetaryDefense) ) {
 		newtrig = 0;
 		jovl->fire.x = newtc[PTRTRG].x;
 		jovl->fire.y = newtc[PTRTRG].y;
@@ -408,7 +411,7 @@ void Android_KeyEvent(int k, int s)
 				return;
 			}
 		if (softjoymap[SOFTJOY_FIRE][0] == k) {
-			Android_TrigStatus = Android_TrigStatus & (~(s != 0)) | (s == 0);
+			Android_TrigStatus = (Android_TrigStatus & (~(s != 0))) | (s == 0);
 			return;
 		}
 		for (i = SOFTJOY_ACTIONBASE; i < SOFTJOY_MAXKEYS + SOFTJOY_MAXACTIONS; i++)
@@ -429,7 +432,7 @@ void Android_KeyEvent(int k, int s)
 		Android_key_control = (s) ? AKEY_CTRL : 0;
 		break;
 	case KEY_FIRE:
-		Android_TrigStatus = Android_TrigStatus & (~(s != 0)) | (s == 0);
+		Android_TrigStatus = (Android_TrigStatus & (~(s != 0))) | (s == 0);
 		break;
 	default:
 		if (k >= STATIC_MAXKEYS)
@@ -438,7 +441,7 @@ void Android_KeyEvent(int k, int s)
 			if (k == '+' || k == '<' || k == '>' || k == '*')
 				shft = 0;
 			else
-				shft == INPUT_key_shift;
+				shft = INPUT_key_shift;
 			Keyboard_Enqueue( (s) ? (skeyxlat[k] | Android_key_control | shft) : AKEY_NONE );
 		}
 	}
@@ -448,7 +451,7 @@ void Input_Initialize(void)
 {
 	int i;
 
-	memset(prevtc, 0, 2 * sizeof(struct touchstate));
+	memset(prevtc, 0, sizeof(prevtc));
 	prevconptr = PTRSTL;
 
 	memset(&AndroidInput_JoyOvl, 0, sizeof(struct joy_overlay_state));
@@ -464,7 +467,7 @@ void Input_Initialize(void)
 	AndroidInput_ConOvl.hitkey = CONK_NOKEY;
 	AndroidInput_ConOvl.opacity = COVL_MAX_OPACITY;
 	AndroidInput_ConOvl.ovl_visible = COVL_READY;
-	AndroidInput_ConOvl.statecnt = COVL_HOLD_TIME >> 1;
+	AndroidInput_ConOvl.statecnt = COVL_HOLD_TIME;
 
 	Android_PortStatus = 0xFFFF;
 	Android_TrigStatus = 0xF;
@@ -514,7 +517,7 @@ void Keyboard_Enqueue(int key)
 {
 	pthread_mutex_lock(&key_mutex);
 
-	if ((key_head + 1) & KBD_MASK == key_tail)
+	if (((key_head + 1) & KBD_MASK) == key_tail)
 		key_head = key_tail;		/* on overflow, discard previous keys */
 	Android_Keyboard[key_head++] = key;
 	key_head &= KBD_MASK;

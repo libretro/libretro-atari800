@@ -28,12 +28,23 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#include <math.h>
+#ifdef HAVE_TERMIOS_H
+# include <termios.h>
+#endif
+#ifdef GWINSZ_IN_SYS_IOCTL
+# include <sys/ioctl.h>
+#endif
 
 #include "antic.h"
 #include "atari.h"
 #include "cpu.h"
 #include "gtia.h"
 #include "memory.h"
+#include "cartridge.h"
 #include "monitor.h"
 #include "pia.h"
 #include "pokey.h"
@@ -41,6 +52,8 @@
 #ifdef STEREO_SOUND
 #include "pokeysnd.h"
 #endif
+#include "platform.h"
+#include "statesav.h"
 
 #ifdef MONITOR_READLINE
 #include <readline/readline.h>
@@ -390,6 +403,76 @@ static int symtable_builtin_enable = TRUE;
 static symtable_rec *symtable_user = NULL;
 static int symtable_user_size = 0;
 
+#endif /* MONITOR_HINTS */
+
+#ifdef MONITOR_ANSI
+/* for color bitmaps: black, green, red, white for 00 01 10 11
+	for mono, black & white for 0 and 1. */
+static char *gr_color_chars[] = {
+	"\x1b[30;40m ", "\x1b[30;42m ", "\x1b[30;41m ", "\x1b[30;47m " };
+static char *gr_color_done = "\x1b[0m";
+#else
+static char *gr_color_chars[] = { " ", "*", "O", "X" };
+static char *gr_color_done = "";
+#endif
+
+
+#ifdef MONITOR_UTF8
+/* These are hard-coded UTF-8 encoded Unicode characters. Doing it this way
+	has the advantage that the compiler (and the developer's text editor)
+	doesn't have to have Unicode support, and the C library doesn't have to
+	support wide characters. The disadvantage is that no other encodings
+	besides UTF-8 can be supported (which shouldn't be a real problem these
+	days). */
+static const char *utf8_chars[] = {
+/* 0 - 7 */ "\xe2\x99\xa5", "\xe2\x94\xa3", "\xe2\x94\x83", "\xe2\x94\x9b", "\xe2\x94\xab", "\xe2\x94\x93", "\xe2\x95\xb1", "\xe2\x95\xb2",
+/* 8 - 15 */ "\xe2\x97\xa2", "\xe2\x96\x97", "\xe2\x97\xa3", "\xe2\x96\x9d", "\xe2\x96\x98", "\xe2\x96\x94", "\xe2\x96\x81", "\xe2\x96\x96",
+/* 16 - 23 */ "\xe2\x99\xa3", "\xe2\x94\x8f", "\xe2\x94\x81", "\xe2\x95\x8b", "\xe2\x9a\xab", "\xe2\x96\x84", "\xe2\x96\x8e", "\xe2\x94\xb3",
+/* 24 - 31 */ "\xe2\x94\xbb", "\xe2\x96\x8c", "\xe2\x94\x97", "\xe2\x90\x9b", "\xe2\x86\x91", "\xe2\x86\x93", "\xe2\x86\x90", "\xe2\x86\x92",
+/* 32 - 39 */ " ", "!", "\"", "#", "$", "%", "&", "'",
+/* 40 - 47 */ "(", ")", "*", "+", ",", "-", ".", "/",
+/* 48 - 55 */ "0", "1", "2", "3", "4", "5", "6", "7",
+/* 56 - 63 */ "8", "9", ":", ";", "<", "=", ">", "?",
+/* 64 - 71 */ "@", "A", "B", "C", "D", "E", "F", "G",
+/* 72 - 79 */ "H", "I", "J", "K", "L", "M", "N", "O",
+/* 80 - 87 */ "P", "Q", "R", "S", "T", "U", "V", "W",
+/* 88 - 95 */ "X", "Y", "Z", "[", "\\", "]", "^", "_",
+/* 96 - 103 */ "\xe2\x97\x86", "a", "b", "c", "d", "e", "f", "g",
+/* 104 - 111 */ "h", "i", "j", "k", "l", "m", "n", "o",
+/* 112 - 119 */ "p", "q", "r", "s", "t", "u", "v", "w",
+/* 120 - 127 */ "x", "y", "z", "\xe2\x99\xa0", "|", "\xe2\x86\xb0", "\xe2\x97\x80", "\xe2\x96\xb6",
+};
+
+/* Print an ATASCII character, with support for graphics characters if
+	UTF-8 is available, and inverse video if ANSI is available. */
+static void print_atascii_char(UWORD c) {
+	int inv = c & 0x80;
+
+#ifdef MONITOR_ANSI
+	/* ESC[7m = reverse video attribute on */
+	if(inv) printf("\x1b[7m");
+#else
+	if(inv) {
+		putchar('.');
+		return;
+	}
+#endif /* MONITOR_ANSI */
+
+	printf("%s", utf8_chars[c & 0x7f]);
+
+#ifdef MONITOR_ANSI
+	/* ESC[0m = all attributes off */
+	if(inv) printf("\x1b[0m");
+#endif /* MONITOR_ANSI */
+}
+#else /* MONITOR_UTF8 */
+static void print_atascii_char(UWORD c) {
+	putchar((c >= ' ' && c <= 'z' && c != '\x60') ? c : '.');
+}
+#endif /* MONITOR_UTF8 */
+
+#ifdef MONITOR_HINTS
+
 static const char *find_label_name(UWORD addr, int is_write)
 {
 	int i;
@@ -629,6 +712,7 @@ static void safe_gets(char *buffer, size_t size, char const *prompt)
 		char *got = readline(prompt);
 		if (got) {
 			strncpy(buffer, got, size);
+			buffer[size-1]='\0';
 			if (*got)
 				add_history(got);
 			free(got); /* Need to free buffer allocated by readline() */
@@ -669,7 +753,6 @@ static char *get_token(void)
 	return p;
 }
 
-#if defined(MONITOR_BREAK) || !defined(NO_YPOS_BREAK_FLICKER)
 static int get_dec(int *decval)
 {
 	const char *t;
@@ -683,11 +766,10 @@ static int get_dec(int *decval)
 	}
 	return FALSE;
 }
-#endif
 
 /* Parses S in search for a hexadecimal number. On success stores the number
    in HEXVAL and returns TRUE; otherwise returns FALSE. */
-static int parse_hex(const char *s, UWORD *hexval)
+static int real_parse_hex(const char *s, UWORD *hexval)
 {
 	int x = Util_sscanhex(s);
 #ifdef MONITOR_HINTS
@@ -705,6 +787,46 @@ static int parse_hex(const char *s, UWORD *hexval)
 	if (x < 0 || x > 0xffff)
 		return FALSE;
 	*hexval = (UWORD) x;
+	return TRUE;
+}
+
+/* Parse s, support * (byte deference) and @ (word deref). Recursive calls
+	support stacking (e.g. **label, *@label) */
+static int parse_hex(const char *s, UWORD *hexval)
+{
+	UWORD addr;
+	char deref_type = '\0';
+
+	switch(s[0]) {
+		case '\0': return FALSE; /* don't operate on empty string */
+		case '*':
+		case '@':
+			deref_type = s[0];
+			s++;
+			if(!parse_hex(s, &addr))
+				return FALSE;
+			break;
+		default:
+			if(!real_parse_hex(s, &addr))
+				return FALSE;
+			break;
+	}
+
+
+	switch(deref_type) {
+		case '\0':
+			*hexval = addr;
+			break;
+		case '*':
+			*hexval = MEMORY_SafeGetByte(addr);
+			break;
+		case '@':
+			*hexval = MEMORY_SafeGetByte(addr) | (MEMORY_SafeGetByte(addr + 1) << 8);
+			break;
+		default:
+			return FALSE; /* should never happen */
+	}
+
 	return TRUE;
 }
 
@@ -821,6 +943,8 @@ static UWORD show_instruction(FILE *fp, UWORD pc)
 			return pc;
 		}
 	}
+#else
+	(void)nchars;
 #endif
 	fputc('\n', fp);
 	return pc;
@@ -997,6 +1121,12 @@ static UWORD assembler(UWORD addr)
 }
 #endif /* MONITOR_ASSEMBLER */
 
+#ifdef MONITOR_PROFILE
+MONITOR_coverage_rec MONITOR_coverage[0x10000];
+unsigned long MONITOR_coverage_insns;
+unsigned long MONITOR_coverage_cycles;
+#endif /* MONITOR_PROFILE */
+
 #ifdef MONITOR_BREAK
 UWORD MONITOR_break_addr = 0xd000;
 UBYTE MONITOR_break_step = FALSE;
@@ -1132,7 +1262,7 @@ static void monitor_breakpoints(void)
 						printf("X%s%02X", op, MONITOR_breakpoint_table[i].value);
 						break;
 					case MONITOR_BREAKPOINT_Y >> 3:
-						printf("A%s%02X", op, MONITOR_breakpoint_table[i].value);
+						printf("Y%s%02X", op, MONITOR_breakpoint_table[i].value);
 						break;
 					case MONITOR_BREAKPOINT_S >> 3:
 						printf("S%s%02X", op, MONITOR_breakpoint_table[i].value);
@@ -1145,6 +1275,9 @@ static void monitor_breakpoints(void)
 						break;
 					case MONITOR_BREAKPOINT_ACCESS >> 3:
 						printf("ACCESS%s%04X", op, MONITOR_breakpoint_table[i].value);
+						break;
+					case MONITOR_BREAKPOINT_MEMORY >> 3:
+						printf("MEM:%04x%s%04X", MONITOR_breakpoint_table[i].m_addr, op, MONITOR_breakpoint_table[i].value);
 						break;
 					default:
 						printf("???");
@@ -1170,9 +1303,11 @@ static void monitor_breakpoints(void)
 			"    cond is: TYPE OPERATOR VALUE (without spaces)\n"
 			"         or: SETFLAG, CLRFLAG where FLAG is: N, V, D, I, Z, C\n");
 		printf(
-			"    TYPE is: PC, A, X, Y, S, READ, WRITE, ACCESS (read or write)\n"
+			"    TYPE is: PC, A, X, Y, S, READ, WRITE, ACCESS (read or write),\n"
+			"             MEM:addr (contents of memory)\n"
 			"OPERATOR is: <, <=, =, ==, >, >=, !=, <>\n"
-			"   VALUE is a hex number\n"
+			"   VALUE is a hex number\n");
+		printf(
 			"Breakpoint conditions are connected by AND operator\n"
 			"unless you explicitly use OR.\n"
 			"Examples:\n"
@@ -1223,8 +1358,8 @@ static void monitor_breakpoints(void)
 		else
 			i = MONITOR_breakpoint_table_size;
 		while (MONITOR_breakpoint_table_size < MONITOR_BREAKPOINT_TABLE_MAX) {
-			UBYTE condition;
-			int value;
+			UWORD condition;
+			int value, m_addr = -1;
 			int j;
 			if (strcmp(t, "OR") == 0) {
 				condition = MONITOR_BREAKPOINT_OR;
@@ -1281,8 +1416,37 @@ static void monitor_breakpoints(void)
 						t += 5;
 					}
 					break;
+				case 'M':
+					if (strncmp(t, "MEM:", 4) == 0) {
+						UWORD tmp, i;
+						char *p;
+						char b[100];
+						condition = MONITOR_BREAKPOINT_MEMORY;
+						t += 4;
+						p = t;
+						for(i = 0; i < 100; i++) {
+							if(
+									t[i] == ' ' || t[i] == '!' ||
+									t[i] == '<' || t[i] == '>' ||
+									t[i] == '=' || t[i] == '\0')
+							{
+								b[i] = '\0';
+								break;
+							}
+							b[i] = t[i];
+							p++;
+						}
+						if (parse_hex(b, &tmp))
+							m_addr = tmp;
+						t = p;
+					}
+					break;
 				default:
 					break;
+				}
+				if(condition == MONITOR_BREAKPOINT_MEMORY && (m_addr < 0 || m_addr > 0xffff)) {
+					printf("Bad address for MEM:\n");
+					return;
 				}
 				if (t[0] == '!' && t[1] == '=') {
 					condition += MONITOR_BREAKPOINT_LESS | MONITOR_BREAKPOINT_GREATER;
@@ -1325,6 +1489,7 @@ static void monitor_breakpoints(void)
 			MONITOR_breakpoint_table[i].enabled = TRUE;
 			MONITOR_breakpoint_table[i].condition = condition;
 			MONITOR_breakpoint_table[i].value = (UWORD) value;
+			MONITOR_breakpoint_table[i].m_addr = (UWORD) m_addr;
 			i++;
 			MONITOR_breakpoint_table_size++;
 			t = get_token();
@@ -1635,6 +1800,30 @@ static void set_trace_file(char const *filename)
 }
 #endif /* MONITOR_TRACE */
 
+static void get_terminal_size(int *cols, int *rows) {
+	*cols = 80;
+	*rows = 24;
+
+#ifdef TIOCGSIZE
+	{
+		struct ttysize ts;
+		if(ioctl(STDIN_FILENO, TIOCGSIZE, &ts) == 0) {
+			*cols = ts.ts_cols;
+			*rows = ts.ts_lines;
+		}
+	}
+#elif defined(TIOCGWINSZ)
+	{
+		struct winsize ts;
+		if(ioctl(STDIN_FILENO, TIOCGWINSZ, &ts) == 0) {
+			*cols = ts.ws_col;
+			*rows = ts.ws_row;
+		}
+	}
+#endif /* TIOCGSIZE */
+}
+
+
 #ifdef MONITOR_PROFILE
 static void command_PROFILE(void)
 {
@@ -1656,6 +1845,262 @@ static void command_PROFILE(void)
 		printf("Opcode %02X: %-9s has been executed %d times\n",
 				instr, instr6502[instr], max);
 	}
+}
+
+static void print_coverage_detail(UWORD addr)
+{
+	int len = 4;
+#ifdef MONITOR_HINTS
+	const char *label = find_label_name(addr, 0);
+	if(label) {
+		printf("%s ", label);
+		len = strlen(label);
+		if(len > 11) len = 11;
+	} else {
+		printf("%04X ", addr);
+	}
+#else
+	printf("%04X ", addr);
+#endif
+	printf("%*lu(%5.2f%%) %8lu(%5.2f%%)",
+			12 - len,
+			MONITOR_coverage[addr].count,
+			100.0f * (float)MONITOR_coverage[addr].count / (float)MONITOR_coverage_insns,
+			MONITOR_coverage[addr].cycles,
+			100.0f * (float)MONITOR_coverage[addr].cycles / (float)MONITOR_coverage_cycles);
+	printf("  ");
+	show_instruction(stdout, addr);
+}
+
+typedef struct {
+	UWORD addr;
+	unsigned long cycles;
+} hog_rec;
+
+#define HOG_MAX 10
+
+/* Stupid simple insertion sort */
+static void insert_hog_rec(hog_rec *list, unsigned int *count, UWORD addr, unsigned long cycles)
+{
+	int i, pos = -1;
+
+	/* find where new entry should go (or -1 if it shouldn't) */
+	for(i = 0; i < *count; i++) {
+		if(cycles >= list[i].cycles) {
+			pos = i;
+			break;
+		}
+	}
+
+	/* either the list isn't full (add this entry to the end), or else
+		it's full and this entry sorts less than the stuff in the list. */
+	if(pos == -1) {
+		if(*count < HOG_MAX) {
+			list[*count].addr = addr;
+			list[*count].cycles = cycles;
+			(*count)++;
+		}
+		return;
+	}
+
+	/* move list entries to make room for the new one */
+	for(i = (*count) - 1; i >= pos; i--) {
+		list[i + 1] = list[i];
+	}
+	list[pos].addr = addr;
+	list[pos].cycles = cycles;
+	if(*count < HOG_MAX) (*count)++;
+}
+
+#ifdef MONITOR_HINTS
+/* If there's a label for addr, set 'label' to it.
+	If not, look for a nearby one, and set 'label' to a string like
+	"otherlabel+3" or "otherlabel-1". If there's nothing close by,
+	just set 'label' to an empty string.
+	Then append the hex address, so we get something like:
+	"label/0600" or "label-1/05ff" or just "0600". */
+static void get_nearby_label(UWORD addr, char *result) {
+	int i = 0;
+	const char *label = NULL;
+
+	/* a label at addr is ideal. if there's not one, a label before
+		addr is better than one after it, since it makes more sense to
+		specify an unlabelled address as "subroutine+offset" or
+		"loop+offset" than a negative offset from the next subroutine
+		or loop. */
+	for(i = 0; i > -129; i--) {
+		label = find_label_name(addr + i, 0);
+		if(label != NULL) break;
+	}
+
+	/* if nothing's in range, go ahead & look for a negative offset from
+		a label at a later address. */
+	if(label == NULL) {
+		for(i = 1; i < 128; i++) {
+			label = find_label_name(addr + i, 0);
+			if(label != NULL) break;
+		}
+	}
+
+	if(i == 0)
+		snprintf(result, 127, "%s/%04X", label, addr); /* exact match */
+	else if(label == NULL)
+		snprintf(result, 127, "%04X", addr); /* got nothing... */
+	else
+		snprintf(result, 127, "%s%c%x/%04X", /* + or - offset */
+				label,
+				i < 0 ? '+' : '-',
+				i < 0 ? -i : i,
+				addr);
+}
+#endif
+
+static void print_cov_range(UWORD start, UWORD end, int executed)
+{
+#ifdef MONITOR_HINTS
+	char startlabel[128], endlabel[128];
+
+	get_nearby_label(start, startlabel);
+	get_nearby_label(end, endlabel);
+	printf("%s => %s %sexecuted\n",
+			startlabel, endlabel, executed ? "" : "NOT ");
+#else
+	printf("%04X => %04X %sexecuted\n",
+			start, end, executed ? "" : "NOT ");
+#endif
+}
+
+/* Handle the COV R command. Coalesces adjacent executed
+	or non-executed instructions into ranges. "Instruction"
+	here means opcode plus any operand: obviously if location N
+	contains a 2- or 3-byte instruction, the operand bytes
+	don't normally get executed by themselves, but we want to
+	count them as "executed" if the opcode byte is. */
+static void coverage_ranges(UWORD start, UWORD end)
+{
+	int range_start = start, range_end = start;
+	int range_executed = MONITOR_coverage[start].count ? 1 : 0;
+
+	while(range_start <= end) {
+		int opsize = MONITOR_optype6502[MEMORY_SafeGetByte(range_end)] & 3;
+		int executed = MONITOR_coverage[range_end].count ? 1 : 0;
+
+		if((executed != range_executed) || (range_end > end)) {
+			print_cov_range(range_start, range_end - 1, range_executed);
+			range_start = range_end;
+			range_executed = executed;
+		}
+
+		range_end += opsize;
+	}
+}
+
+/* Show code coverage & profiling statistics.
+	XXX: this code knows nothing about bankswitching! */
+static void coverage(void)
+{
+	/* save these across calls, to save typing (and remembering) */
+	static UWORD start = 0, end = 0xffff;
+	static char cc = '?';
+
+	unsigned int i, cov = 0, full = FALSE, hogs = FALSE, hog_count = 0, ranges = FALSE;
+	unsigned long subttl_i = 0, subttl_c = 0;
+	int detail_count = 0;
+	hog_rec hog_list[HOG_MAX];
+	char *cmd = get_token();
+
+	if(cmd) cc = tolower(*cmd);
+
+	if(cc == '?') {
+		printf(
+			"Usage:\n"
+			"COV ?             - This help\n"
+			"COV S [start end] - Summary of coverage stats\n"
+			"COV H [start end] - Hogs: summary + top 10 CPU-using instructions\n"
+			"COV F [start end] - Summary + detail for every instruction (long!)\n"
+			"COV R [start end] - Show ranges of executed/non-executed code\n"
+			"COV C             - Clear coverage\n");
+		printf("With no argument, COV repeats the last S/H/F/R command.\n");
+		printf("Without [start end], the S/H/F/R commands use the previous\n"
+			"start/end addresses (or 0000 FFFF if not previously set)\n");
+		printf("Current range: %04X %04X\n", start, end);
+		return;
+	} else if(cc == 'c') {
+		MONITOR_coverage_insns = MONITOR_coverage_cycles = 0;
+		memset(MONITOR_coverage, 0, sizeof(MONITOR_coverage));
+		printf("Coverage stats reset\n");
+		return;
+	} else if(cc == 'f') {
+		full = TRUE;
+	} else if(cc == 's') {
+		full = FALSE;
+	} else if(cc == 'h') {
+		full = FALSE;
+		hogs = TRUE;
+	} else if(cc == 'r') {
+		ranges = TRUE;
+	} else {
+		printf("Invalid command, type \"COV ?\" for help\n");
+		return;
+	}
+
+	if(!MONITOR_coverage_insns) {
+		printf("No instructions executed since last reset\n");
+		return;
+	}
+
+	get_hex(&start);
+	get_hex(&end);
+
+	if(ranges) {
+		coverage_ranges(start, end);
+		return;
+	}
+
+	if(full || hogs)
+		printf("Addr  TimesExecuted    Cycles           Instruction\n");
+
+	for(i = start; i <= end; i++) {
+		subttl_i += MONITOR_coverage[i].count;
+		subttl_c += MONITOR_coverage[i].cycles;
+
+		if(MONITOR_coverage[i].count) {
+			cov += MONITOR_optype6502[MEMORY_SafeGetByte(i)] & 3;
+
+			if(full) {
+				int cols, rows;
+				get_terminal_size(&cols, &rows);
+				if(detail_count++ >= rows - 1) {
+					if(pager()) return;
+					detail_count = 0;
+				}
+				print_coverage_detail(i);
+			} else if(hogs) {
+				insert_hog_rec(hog_list, &hog_count, i, MONITOR_coverage[i].cycles);
+			}
+		}
+	}
+
+	if(hogs) {
+		for(i = 0; i < hog_count; i++) {
+			print_coverage_detail(hog_list[i].addr);
+		}
+	}
+
+	printf("Range %04x-%04x: %lu(%.2f%%) insns, %lu(%.2f%%) cycles executed\n",
+			start,
+			end,
+			subttl_i,
+			100.0f * (float)subttl_i / (float)MONITOR_coverage_insns,
+			subttl_c,
+			100.0f * (float)subttl_c / (float)MONITOR_coverage_cycles);
+	printf("Coverage: %d(%.2f%%) of %d\n",
+			cov,
+			100.0f * (float)cov / (float)(end - start + 1),
+			(end - start + 1));
+
+	printf("Total: %lu instructions, %lu cycles executed\n",
+			MONITOR_coverage_insns, MONITOR_coverage_cycles);
 }
 #endif /* MONITOR_PROFILE */
 
@@ -1722,42 +2167,187 @@ static void monitor_set_hardware(void)
 static void monitor_read_from_file(UWORD *addr)
 {
 	const char *filename;
+	int xex = FALSE;
+	/* Peek at the next token without retrieving it... */
+	if(Util_strnicmp(token_ptr, "XEX ", 4) == 0) {
+		xex = TRUE;
+		/* we got the magic keyword, toss the token */
+		(void)get_token();
+	}
+
 	filename = get_token();
+
 	if (filename != NULL) {
 		UWORD nbytes;
-		if (get_hex2(addr, &nbytes) && *addr + nbytes <= 0x10000) {
+		if (xex) /* load xex file; no init nor run performed */
+		{
 			FILE *f = fopen(filename, "rb");
 			if (f == NULL)
 				perror(filename);
 			else {
-				if (fread(&MEMORY_mem[*addr], 1, nbytes, f) == 0)
-					perror(filename);
+				while (42) {
+					UWORD fromaddr;
+					UWORD toaddr;
+					int byte;
+
+					do {
+						byte=fgetc(f);
+						if (byte==EOF) { break; }
+						fromaddr=byte&0xff;
+
+						byte=fgetc(f);
+						if (byte==EOF) { printf("Bad xex file\n"); break; }
+						fromaddr|=((byte&0xff)<<8);
+
+					} while (fromaddr==0xffff && byte !=EOF);
+
+					if (byte==EOF) break;
+
+					byte=fgetc(f);
+					if (byte==EOF) { printf("Bad xex file\n"); break; }
+					toaddr=byte&0xff;
+
+					byte=fgetc(f);
+					if (byte==EOF) { printf("Bad xex file\n"); break; }
+					toaddr|=((byte&0xff)<<8);
+
+					*addr=fromaddr; /* sets to last load addr */
+					if ((int)toaddr-(int)fromaddr<0) { printf("Bad xex file\n"); break; }
+					nbytes=toaddr-fromaddr+1;
+
+					/* if not full block, error */
+					if (fread(&MEMORY_mem[*addr], nbytes, 1, f) == 0) {
+						printf("Bad xex file\n");
+						break;
+					}
+				}
 				fclose(f);
+			}
+		}
+		else { /* !xex */
+			if (get_hex2(addr, &nbytes) && *addr + nbytes <= 0x10000) {
+				FILE *f = fopen(filename, "rb");
+				if (f == NULL)
+					perror(filename);
+				else {
+					/* read as many bytes as given or available */
+					if (fread(&MEMORY_mem[*addr], 1, nbytes, f) == 0)
+						printf("Could not read bytes\n");
+					fclose(f);
+				}
 			}
 		}
 	}
 }
 
-/* Writes memory to file, from address fetched from command line. */
+/* Writes memory to file, from address fetched from command line.
+	Optionally, it can be a xex file, with optional run address.
+ */
 static void monitor_write_to_file(void)
 {
 	UWORD addr1;
 	UWORD addr2;
+	UWORD runaddr;
+	int xex = FALSE, have_runaddr = FALSE;
+#ifdef HAVE_POPEN
+	int pipe = FALSE;
+#endif
+
+	/* Peek at the next token without retrieving it... */
+	if(Util_strnicmp(token_ptr, "XEX ", 4) == 0) {
+		xex = TRUE;
+		/* we got the magic keyword, toss the token */
+		(void)get_token();
+	}
+
 	if (get_hex2(&addr1, &addr2) && addr1 <= addr2) {
+		size_t wbytes = 0;
 		const char *filename;
 		FILE *f;
 		filename = get_token();
-		if (filename == NULL)
+
+		/* XXX this logic doesn't allow us to give a filename that
+			matches a symbol name or hex address. */
+		if(xex && filename != NULL && parse_hex(filename, &runaddr)) {
+			have_runaddr = TRUE;
+			filename = get_token();
+		}
+
+		if (filename == NULL) {
 			filename = "memdump.dat";
-		f = fopen(filename, "wb");
-		if (f == NULL)
+#ifdef HAVE_POPEN
+		} else if (filename[0] == '|') {
+			if(filename[1]) {
+				filename++;
+			} else {
+				filename = get_token();
+			}
+			if (filename == NULL) {
+				printf("Missing argument after |\n");
+				return;
+			}
+			pipe = TRUE;
+#endif
+		}
+
+#ifdef HAVE_POPEN
+		if(pipe)
+			f = popen(filename, "w");
+		else
+#endif
+			f = fopen(filename, "wb");
+
+		if (f == NULL) {
 			perror(filename);
-		else {
+			return;
+		} else {
 			size_t nbytes = addr2 - addr1 + 1;
+
+			if(xex) {
+				fputc(0xff, f); /* binary load FFFF header */
+				fputc(0xff, f);
+				fputc(addr1 & 0xff, f);
+				fputc(addr1 >> 8, f);
+				fputc(addr2 & 0xff, f);
+				fputc(addr2 >> 8, f);
+				wbytes += 6;
+			}
+
 			if (fwrite(&MEMORY_mem[addr1], 1, addr2 - addr1 + 1, f) < nbytes)
 				perror(filename);
-			fclose(f);
+
+			wbytes += nbytes;
+
+			if(xex && have_runaddr) {
+				fputc(0xe0, f); /* start addr $02e0 = RUNAD */
+				fputc(0x02, f);
+				fputc(0xe1, f); /* end addr $02e1 */
+				fputc(0x02, f);
+				fputc(runaddr & 0xff, f);
+				fputc(runaddr >> 8, f);
+				wbytes += 6;
+			}
 		}
+
+#ifdef HAVE_POPEN
+		if(pipe)
+			pclose(f);
+		else
+#endif
+			fclose(f);
+
+		/* TODO: when migrating to C99, instead of %lu and cast use %zu. */
+		printf("Wrote %lu bytes to %s file '%s'",
+				(unsigned long)wbytes, xex ? "XEX" : "RAW", filename);
+		if(xex) {
+			if(!have_runaddr)
+				printf(" (no run address)");
+			else
+				printf(", run address %04x", runaddr);
+		}
+		putchar('\n');
+	} else {
+		printf("Invalid address range\n");
 	}
 }
 
@@ -1824,7 +2414,8 @@ static void monitor_sum_mem(void)
 }
 
 /* Show memory contents, starting from address fetched from command line. */
-static void monitor_show_mem(UWORD *addr)
+static char screen_to_asc(char c);
+static void monitor_show_mem(UWORD *addr, int screencodes)
 {
 	int count = 16;
 	get_hex(addr);
@@ -1837,8 +2428,9 @@ static void monitor_show_mem(UWORD *addr)
 		for (i = 0; i < 16; i++) {
 			UBYTE c;
 			c = MEMORY_SafeGetByte(*addr);
+			if(screencodes) c = screen_to_asc(c);
 			(*addr)++;
-			putchar((c >= ' ' && c <= 'z' && c != '\x60') ? c : '.');
+			print_atascii_char(c);
 		}
 		putchar('\n');
 	} while (--count > 0);
@@ -2096,6 +2688,160 @@ static void configure_labels(UWORD *addr)
 }
 #endif /* MONITOR_HINTS */
 
+static void print_flags(char *buf, char* flags, UWORD value)
+{
+	int i;
+	int l = strlen(flags);
+	for (i = 0; i < l; i++)
+		buf[i] = (value & (1 << (l-1-i)))
+			? flags[i]
+			: '_';
+}
+
+static void show_cartridge_info(CARTRIDGE_image_t *cart, char *desc)
+{
+	if (cart->type != CARTRIDGE_NONE) {
+		printf("%s cartridge\n", desc);
+		printf("Type:  %03i (%s)\n", cart->type, CARTRIDGES[cart->type].description);
+		printf("Image: %s (%s)\n", cart->filename, cart->raw ? "RAW" : "CART");
+
+		switch (cart->type) {
+		case CARTRIDGE_RAMCART_64:
+		case CARTRIDGE_RAMCART_128:
+			printf("Memory:   $8000-$9FFF: %s  $A000-$BFFF: %s\n",
+				(cart->state & 0x0002) ? "On " : "Off",
+				((cart->state & 0x0001) ^ ((cart->state & 0x1000) >> 12)) ? "Off" : "On " );
+			printf("Access:   %s\n", (cart->state & 0x1000) ? "Read/Write" : "Read Only");
+			printf("Register: %s\n", (cart->state & 0x0004) ? "Locked" : "Enabled");
+			printf("Bank:     $%02X\n", (cart->state & 0x0038) >> 3);
+			break;
+		case CARTRIDGE_DOUBLE_RAMCART_256:
+			printf("Memory:   $8000-$9FFF: %s  $A000-$BFFF: %s\n",
+				(cart->state & 0x0002) ? "On " : "Off",
+				((cart->state & 0x0001) ^ ((cart->state & 0x1000) >> 12)) ? "Off" : "On " );
+			printf("Access:   %s\n", (cart->state & 0x1000) ? "Read/Write" : "Read Only");
+			if (cart->state & 0x2000) {
+				printf( "Bank:     $%02X    128K Module Order: %s    256K mode\n",
+					((cart->state & 0x0038) >> 3) | ((cart->state & 0x004) << 1),
+					(cart->state & 0x4000) ? "Swapped" : "Normal " );
+			}
+			else {
+				printf("Register: %s\n", (cart->state & 0x0004) ? "Locked" : "Enabled");
+				printf( "Bank:     $%02X    128K Module: %i    2x128K mode\n",
+					(cart->state & 0x0038) >> 3,
+					(cart->state & 0x4000) >> 14 );
+			}
+			break;
+		case CARTRIDGE_RAMCART_1M: {
+				char switches[] = "---";
+				printf("Memory:   $8000-$9FFF: %s  $A000-$BFFF: %s\n",
+					(cart->state & 0x0002) ? "On " : "Off",
+					((cart->state & 0x0001) ^ ((cart->state & 0x1000) >> 12)) ? "Off" : "On " );
+				printf("Access:   %s\n", (cart->state & 0x1000) ? "Read/Write" : "Read Only");
+				if (cart->state & 0x8000) {
+					print_flags(switches, "---", (cart->state | 0x00ff) >> 5);
+					printf( "Bank:     $%02X    1M Module: $%02X (%s)   ABC jumpers installed\n",
+						((cart->state & 0x0038) >> 3) | ((cart->state & 0x0004) << 1) | ((cart->state & 0x00c0) >> 2),
+						((cart->state & 0x0300) >> 8),
+						switches );
+				}
+				else {
+					print_flags(switches, "CBA", ((cart->state & 0x0004) >> 2) | ((cart->state & 0x03c0) >> 5) );
+					printf( "Bank:     $%02X    128K Module: $%02X (%s)\n",
+						((cart->state & 0x0038) >> 3),
+						((cart->state & 0x0004) >> 2) | ((cart->state & 0x03c0) >> 5),
+						switches );
+				}
+			}
+			break;
+		case CARTRIDGE_RAMCART_2M: {
+				char switches[] = "----";
+				printf("Memory:   $8000-$9FFF: %s  $A000-$BFFF: %s\n",
+					(cart->state & 0x0002) ? "On " : "Off",
+					((cart->state & 0x0001) ^ ((cart->state & 0x1000) >> 12)) ? "Off" : "On " );
+				printf("Access:   %s\n", (cart->state & 0x1000) ? "Read/Write" : "Read Only");
+				if (cart->state & 0x8000) {
+					print_flags(switches, "1---", (cart->state | 0x00ff) >> 5);
+					printf( "Bank:     $%02X    1M Module: $%02X (%s)   ABC jumpers installed\n",
+						((cart->state & 0x0038) >> 3) | ((cart->state & 0x0004) << 1) | ((cart->state & 0x00c0) >> 2),
+						((cart->state & 0x0300) >> 8),
+						switches );
+				}
+				else {
+					print_flags(switches, "1CBA", ((cart->state & 0x0004) >> 2) | ((cart->state & 0x03c0) >> 5) );
+					printf( "Bank:     $%02X    128K Module: $%02X (%s)\n",
+						((cart->state & 0x0038) >> 3),
+						((cart->state & 0x0004) >> 2) | ((cart->state & 0x03c0) >> 5),
+						switches );
+				}
+			}
+			break;
+		case CARTRIDGE_RAMCART_4M: {
+				char switches[] = "-----";
+				printf("Memory:   $8000-$9FFF: %s  $A000-$BFFF: %s\n",
+					(cart->state & 0x0002) ? "On " : "Off",
+					((cart->state & 0x0001) ^ ((cart->state & 0x1000) >> 12)) ? "Off" : "On " );
+				printf("Access:   %s\n", (cart->state & 0x1000) ? "Read/Write" : "Read Only");
+				if (cart->state & 0x8000) {
+					print_flags(switches, "2D---", (cart->state | 0x00ff) >> 5);
+					printf( "Bank:     $%02X    1M Module: $%02X (%s)   ABC jumpers installed\n",
+						((cart->state & 0x0038) >> 3) | ((cart->state & 0x0004) << 1) | ((cart->state & 0x00c0) >> 2),
+						((cart->state & 0x0300) >> 8),
+						switches );
+				}
+				else {
+					print_flags(switches, "2DCBA", ((cart->state & 0x0004) >> 2) | ((cart->state & 0x03c0) >> 5) );
+					printf( "Bank:     $%02X    128K Module: $%02X (%s)\n",
+						((cart->state & 0x0038) >> 3),
+						((cart->state & 0x0004) >> 2) | ((cart->state & 0x03c0) >> 5),
+						switches );
+				}
+			}
+			break;
+		case CARTRIDGE_RAMCART_8M:
+			printf("Memory:   $8000-$9FFF: %s  $A000-$BFFF: %s\n",
+				(cart->state & 0x0002) ? "On " : "Off",
+				((cart->state & 0x0001) ^ ((cart->state & 0x1000) >> 12)) ? "Off" : "On " );
+			printf("Access:   %s\n", (cart->state & 0x1000) ? "Read/Write" : "Read Only");
+			printf( "Bank:     $%02X    1M Module: $%02X\n",
+				((cart->state & 0x0038) >> 3) | ((cart->state & 0x0004) << 1) | ((cart->state & 0x00c0) >> 2),
+				((cart->state & 0x0700) >> 8) );
+			break;
+		case CARTRIDGE_RAMCART_16M:
+			printf("Memory:   $8000-$9FFF: %s  $A000-$BFFF: %s\n",
+				(cart->state & 0x0002) ? "On " : "Off",
+				((cart->state & 0x0001) ^ ((cart->state & 0x1000) >> 12)) ? "Off" : "On " );
+			printf("Access:   %s\n", (cart->state & 0x1000) ? "Read/Write" : "Read Only");
+			printf( "Bank:     $%02X    1M Module: $%02X\n",
+				((cart->state & 0x0038) >> 3) | ((cart->state & 0x0004) << 1) | ((cart->state & 0x00c0) >> 2),
+				((cart->state & 0x0f00) >> 8) );
+			break;
+		case CARTRIDGE_RAMCART_32M:
+			printf("Memory:   $8000-$9FFF: %s  $A000-$BFFF: %s\n",
+				(cart->state & 0x0002) ? "On " : "Off",
+				((cart->state & 0x0001) ^ ((cart->state & 0x1000) >> 12)) ? "Off" : "On " );
+			printf("Access:   %s\n", (cart->state & 0x1000) ? "Read/Write" : "Read Only");
+			printf( "Bank:     $%02X    1M Module: $%02X\n",
+				((cart->state & 0x00038) >> 3) | ((cart->state & 0x00004) << 1) | ((cart->state & 0x000c0) >> 2),
+				((cart->state & 0x00f00) >> 8) | ((cart->state & 0x40000) >> 14) );
+			break;
+		case CARTRIDGE_SIDICAR_32:
+			printf("Memory:   $8000-$9FFF: %s\n", (cart->state & 0x10) ? "On" : "Off");
+			printf("Bank:     $%02X\n", (cart->state & 0x03));
+			break;
+		default:
+			printf("State: $%08X\n", cart->state);
+		}
+	}
+}
+
+/* Displays cartridge info. */
+static void show_CARTRIDGE(void)
+{
+	show_cartridge_info(&CARTRIDGE_main, "Main");
+	show_cartridge_info(&CARTRIDGE_piggyback, "Piggyback");
+}
+
 /* Displays current ANTIC state. */
 static void show_ANTIC(void)
 {
@@ -2152,30 +2898,209 @@ static void show_POKEY(void)
 #endif
 }
 
+#ifndef BASIC
+static void save_load_state(int save) {
+	int result;
+	char *filename;
+
+	if( (filename = get_token()) == NULL ) filename = "monitor.a8s";
+	if(save) {
+		result = StateSav_SaveAtariState(filename, "wb", TRUE);
+	} else {
+		result = StateSav_ReadAtariState(filename, "rb");
+		PLATFORM_Exit(FALSE);
+	}
+
+	printf("%s: %s\n", filename, result ? "OK" : "Failed");
+}
+#endif /* BASIC */
+
+static char screen_to_asc(char c) {
+	char bit7 = c & 0x80;
+	c &= 0x7f;
+
+	if(c < 64)
+		c += 32;
+	else if(c < 96)
+		c -= 64;
+
+	return c | bit7;
+}
+
+static char asc_to_screen(char c) {
+	char bit7 = c & 0x80;
+	c &= 0x7f;
+
+	if(c < 32)
+		c += 64;
+	else if(c < 96)
+		c -= 32;
+
+	return c | bit7;
+}
+
+static void hex_to_asc(int screencodes) {
+	UWORD c;
+	while(get_hex(&c)) {
+		if(screencodes) c = screen_to_asc(c);
+		print_atascii_char(c);
+	}
+	putchar('\n');
+}
+
+static void asc_to_hex(int screencodes) {
+	char *p = token_ptr;
+	while(*p != '\0') {
+		printf("%02x ", screencodes ? asc_to_screen(*p) : *p);
+		p++;
+	}
+	putchar('\n');
+}
+
+static void hex_to_dec(UWORD val) {
+	printf("$%04x = %d\n", val, val);
+}
+
+static void dec_to_hex(UWORD val) {
+	printf("%d = $%04x\n", val, val);
+}
+
+static void bin_to_hex(void) {
+	char *binval = get_token(), *p;
+	UWORD result = 0;
+
+	if(binval == NULL) {
+		printf("Missing binary argument\n");
+		return;
+	}
+
+	for(p = binval; *p != '\0'; p++) {
+		if(*p != '1' && *p != '0') {
+			printf("Invalid binary argument\n");
+			return;
+		}
+		result <<= 1;
+		if(*p == '1') result |= 1;
+	}
+
+	printf("%%%s = $%04x\n", binval, result);
+}
+
+static void hex_to_bin(UWORD val) {
+	int mask;
+
+	printf("$%04x = %%", val);
+
+	mask = val < 0x100 ? 0x80 : 0x8000;
+	while(mask) {
+		putchar((val & mask) ? '1' : '0');
+		mask >>= 1;
+	}
+
+	putchar('\n');
+}
+
+/* Prompt for search string. Returns TRUE if a string is entered,
+	FALSE if the user just presses Return. */
+static void prompt_for_string(char *buf) {
+	char input[256];
+
+	if(*buf) {
+		printf("Search string [%s]: ", buf);
+		safe_gets(input, 255, "");
+	} else {
+		safe_gets(input, 255, "Search string: ");
+	}
+
+	Util_strlcpy(buf, input, strlen(input) + 1);
+}
+
+/* Searches memory for a string, which can be given in ATASCII or
+	screencodes. The arguments are optional, and saved between calls.
+	To avoid ambiguity, the search string is prompted for separately.
+	XXX because I use safe_gets(), the string can't have leading spaces.
+ */
+static void string_search(int screencodes)
+{
+	static char strbuf[256] = { 0 }; /* default = nothing (always prompt) */
+	static UWORD start = 0, end = 0xffff; /* default = search all 64K */
+	char bytes[256];
+	int i, j, len;
+
+	get_hex(&start);
+	get_hex(&end);
+
+	prompt_for_string(strbuf);
+	len = strlen(strbuf);
+
+	if(screencodes) {
+		char *p, *q;
+		for(p = strbuf, q = bytes; *p; p++, q++)
+			*q = asc_to_screen(*p);
+	} else {
+		Util_strlcpy(bytes, strbuf, len + 1);
+	}
+
+	if(!bytes[0]) {
+		printf("Missing search string\n");
+		return;
+	}
+
+	printf("search %04x - %04x for '%s'\n", start, end, strbuf);
+	for(i = start; i <= end; i++) {
+		j = 0;
+		while(MEMORY_SafeGetByte(i + j) == bytes[j]) {
+			j++;
+			if(j >= len) {
+				printf("Found at %04X\n", i);
+				break;
+			}
+		}
+	}
+}
+
+
 /* Displays monitor help. */
 static void show_help(void)
 {
 	printf(
-		"CONT                           - Continue emulation\n"
+		"CONT [addr]                    - Continue emulation (default addr=PC)\n"
 		"SHOW                           - Show registers\n"
 		"STACK                          - Show stack\n"
 		"SET{PC,A,X,Y,S} hexval         - Set register value\n"
 		"SET{N,V,D,I,Z,C} 0 or 1        - Set flag value\n"
 		"C startaddr hexval...          - Change memory\n"
 		"D [startaddr]                  - Disassemble memory\n"
-		"F startaddr endaddr hexval     - Fill memory\n"
-		"M [startaddr]                  - Memory list\n"
-		"S startaddr endaddr hexval...  - Search memory\n");
+		"F startaddr endaddr hexval     - Fill memory\n");
 	/* split into several printfs to avoid gcc -pedantic warning: "string length 'xxx'
 	   is greater than the length '509' ISO C89 compilers are required to support" */
+	printf(
+		"M [startaddr]                  - Memory list\n"
+		"MS [startaddr]                 - Memory list (show characters as screencodes)\n"
+		"S startaddr endaddr hexval...  - Search memory\n"
+		"SSTR startaddr endaddr string  - Search memory for ASCII string\n"
+		"SSCR startaddr endaddr string  - Search memory for ANTIC screen-code string\n");
 	printf(
 		"LOOP [inneraddr]               - Disassemble a loop that contains inneraddr\n"
 		"RAM startaddr endaddr          - Convert memory block into RAM\n"
 		"ROM startaddr endaddr          - Convert memory block into ROM\n"
 		"HARDWARE startaddr endaddr     - Convert memory block into HARDWARE\n"
-		"READ filename startaddr nbytes - Read file into memory\n"
-		"WRITE startaddr endaddr [file] - Write memory block to a file (memdump.dat)\n"
+		"CART                           - Show cartridge information\n");
+	printf(
+		"READ [XEX] filename or filename startaddr nbytes\n"
+		"                               - Read file into memory\n"
+		"                                 With XEX read Atari executable,\n"
+		"                                 does not init nor run (useful for patches)\n");
+	printf(
+		"WRITE [XEX] startaddr endaddr [runaddr] [file]\n"
+		"                               - Write memory block to a file (memdump.dat).\n"
+		"                                 With XEX, writes an Atari executable with\n"
+		"                                 optional run address (no init addr, sorry).\n"
+#ifdef HAVE_POPEN
+		"                                 [file] may begin with |, to pipe to a command\n"
+#endif
 		"SUM startaddr endaddr          - Print sum of specified memory range\n");
+	if(pager()) return;
 #ifdef MONITOR_TRACE
 	printf(
 		"TRACE [filename]               - Output 6502 trace on/off\n");
@@ -2188,14 +3113,10 @@ static void show_help(void)
 		"HISTORY or H                   - List last %d executed instructions\n", CPU_REMEMBER_PC_STEPS);
 	printf(
 		"JUMPS                          - List last %d executed JMP/JSR\n", CPU_REMEMBER_JMP_STEPS);
-	{
-		char buf[100];
-		safe_gets(buf, sizeof(buf), "Press return to continue: ");
-	}
 	printf(
-		"G                              - Execute one instruction\n"
-		"O                              - Step over the instruction\n"
-		"R                              - Execute until return\n");
+		"G [addr]                       - Execute one instruction (default addr=PC)\n"
+		"O [addr]                       - Step over the instruction (default addr=PC)\n"
+		"R [addr]                       - Execute until return (default addr=PC)\n");
 #elif !defined(NO_YPOS_BREAK_FLICKER)
 	printf(
 		"BLINE [1000+ypos]              - Blink scanline (8<=ypos<=247)\n");
@@ -2212,6 +3133,8 @@ static void show_help(void)
 	printf(
 #ifdef MONITOR_PROFILE
 		"PROFILE                        - Display profiling statistics\n"
+		"COV [argument...]              - Coverage statistics (\"COV ?\" for help)\n");
+	printf(
 #endif
 #ifdef MONITOR_HINTS
 		"LABELS [command] [filename]    - Configure labels\n"
@@ -2226,9 +3149,585 @@ static void show_help(void)
 #ifdef HAVE_SYSTEM
 		"!command                       - Execute shell command\n"
 #endif
+		"DEC value                      - Convert hex value to decimal\n");
+	if(pager()) return;
+	printf(
+		"HEX value                      - Convert decimal value to hex\n"
+		"BIN value                      - Convert hex value to binary\n");
+	printf(
+		"BHEX value                     - Convert binary value to hex\n"
+		"ASC value [value] ...          - Convert hex value(s) to ASCII string\n"
+		"AHEX string                    - Convert ASCII string to hex\n"
+		"SCR value [value] ...          - Convert hex value(s) to screencode string\n"
+		"SHEX string                    - Convert screencode string to hex\n");
+	printf(
+      "FP number                      - Convert number to BCD floating point, show in hex\n"
+      "FP exp m1 [m2 m3 m4 m5]        - Convert hex bytes to BCD float, show result\n"
+		"                                 Missing mantissa bytes are assumed to be 00\n"
+      "CFP addr number                - Convert to BCD float, store in memory\n"
+		"MFP [addr]                     - Show memory as Atari BCD floating point\n"
+		"                                 Default addr is d4 (FR0)\n");
+	printf(
+		"GRM addr [width] [height]      - Display memory as mono bitmap\n"
+		"GRC addr [width] [height]      - Display memory as 4-color bitmap\n"
+		"SAVESTATE [filename]           - Save machine state (default 'monitor.a8s')\n"
+		"LOADSTATE [filename]           - Load machine state (default 'monitor.a8s')\n"
 		"QUIT or EXIT                   - Quit emulator\n"
 		"HELP or ?                      - This text\n");
 }
+
+static void print_gr_color(UWORD addr) {
+	UBYTE b = MEMORY_SafeGetByte(addr);
+	printf("%s", gr_color_chars[b >> 6]);
+	printf("%s", gr_color_chars[(b >> 4) & 3]);
+	printf("%s", gr_color_chars[(b >> 2) & 3]);
+	printf("%s", gr_color_chars[b & 3]);
+	printf("%s", gr_color_done);
+}
+
+static void print_gr_mono(UWORD addr) {
+	UBYTE b = MEMORY_SafeGetByte(addr);
+	int i;
+
+	for(i = 0x80; i; i >>= 1)
+		printf("%s", gr_color_chars[(b & i) ? 3 : 0]);
+
+	printf("%s", gr_color_done);
+}
+
+
+static void print_graphics(int want_color) {
+	static UWORD width = 1, height = 8;
+	UWORD addr;
+	int rows, cols, x, y, row = 0, col = 0;
+	int trows, tcols;
+
+	if(!get_hex(&addr)) {
+		printf("Usage: GR%c addr [width-in-bytes] [height]\n", want_color ? 'C' : 'M' );
+		return;
+	}
+
+	get_hex(&width);
+	get_hex(&height);
+
+	get_terminal_size(&tcols, &trows);
+	cols = tcols / (width * (want_color ? 5 : 9));
+	rows = trows / (height + 1);
+	if(cols == 0) cols = 1;
+	if(rows == 0) rows = 1;
+
+	while(1) {
+		for(row = 0; row < rows; row++) {
+			for(col = 0; col < cols; col++) {
+				printf("%04x", addr + col * width * height);
+				for(x = 4; x < width * (want_color ? 4 : 8) + 1; x++)
+					putchar('-');
+			}
+			putchar('\n');
+			for(y = 0; y < height; y++) {
+				for(col = 0; col < cols; col++) {
+					putchar('|');
+					for(x = 0; x < width; x++) {
+					if(want_color)
+						print_gr_color(addr + x + (col * width) * height);
+					else
+						print_gr_mono(addr + x + (col * width) * height);
+					}
+				}
+				putchar('\n');
+				addr += width;
+			}
+			addr += (cols - 1) * height * width;
+		}
+		if(pager()) break;
+	}
+}
+
+/* See De Re Atari chapter 8 for a description of the FP storage format:
+	http://www.atariarchives.org/dere/chapt08.php#H8_8 */
+static double fp_to_double(unsigned char *fp, int *invalid) {
+	int exp = (int)*fp, sign, i;
+	unsigned char *mant = fp + 1;
+	double fval = 0.0l, mult = 1.0l;
+
+	*invalid = FALSE;
+
+	/* "The number zero is handled as a special case, and is
+		represented as a zero exponent and zero mantissa. Either the
+		exponent or the first mantissa byte may be tested for zero." */
+	if(exp == 0 || mant[0] == 0) return 0.0l;
+
+	/* De Re doesn't mention it, but an exponent of $80 is invalid. It
+		would mean "negative zero"... */
+	if(exp == 0x80) {
+		*invalid = TRUE;
+		return 0.0l;
+	}
+
+	/* bit 7 of exponent is the sign of the mantissa, save & strip off */
+	sign = (exp & 0x80 ? -1 : 1);
+	exp &= 0x7f;
+
+	/* The FP format looks like it should support exponents ranging $00-$7f,
+		but the FP ROM limits the range to $0f-$70. Anything outside this, we
+		flag as invalid (but the conversion result should be OK). */
+	if(exp < 0x0f || exp > 0x70) *invalid = TRUE;
+
+	/* "In excess 64 notation, the value 64 is added to the exponent
+		value before it is placed in the exponent byte." */
+	exp -= 64;
+
+	/* Mantissa bytes are base 100, packed BCD, $00 - $99.
+		"There is an implied decimal point to the right of the first mantissa
+		byte", but it's not a decimal point (base 10), it's a centimal point
+		(base 100).
+
+		The 5 mantissa bytes are interpreted as:
+		aa.bbccddee, so aa is taken as-is, bb is multiplied by 0.01, cc by 0.0001,
+		etc.
+	 */
+	for(i = 0; i < 5; mant++, i++) {
+		char hi, lo;
+
+		hi = *mant >> 4;
+		lo = *mant & 0x0f;
+
+		/* Flag if either nybble isn't valid BCD, but finish the conversion */
+		if(hi > 9 || lo > 9) *invalid = TRUE;
+
+		fval += (double)(hi * 10 + lo) * mult;
+		mult /= 100.0l;
+	}
+
+	/* Apply exponent and sign. */
+	fval *= pow(100.0l, exp);
+	fval *= (double)sign;
+
+	return fval;
+}
+
+/* Convert an Atari FP number and print it, with a warning
+	if the conversion found invalid input. */
+static void print_fp_dbl(unsigned char *fp)
+{
+	int invalid = FALSE;
+	printf("%-10g", fp_to_double(fp, &invalid));
+	if(invalid) printf(" (invalid FP!)");
+	putchar('\n');
+}
+
+/* Interpret memory as a 6-byte Atari floating point
+	constant, display in decimal/scientific notation. */
+static void mem_to_fp(void)
+{
+	UWORD addr;
+
+	if(!get_hex(&addr)) addr = 0xd4; /* FR0 */
+
+	print_fp_dbl(&MEMORY_mem[addr]);
+}
+
+/* Read 2 to 6 hex bytes from command line, interpret
+	as a 6-byte Atari floating point constant, display
+	in decimal/scientific notation. */
+static void hex_to_fp(void)
+{
+	UWORD input;
+	unsigned char buf[6];
+	int i;
+
+	for(i = 0; i < 6; i++) {
+		if(get_hex(&input))
+			buf[i] = (unsigned char)input;
+		else
+			buf[i] = 0;
+	}
+
+	print_fp_dbl(buf);
+}
+
+/* Base 100 logarithm, purely to make the code below more readable. */
+#define LOG100(x) (log10(x) / log10(100.0l))
+
+/* Convert a double to a 6-byte Atari BCD floating point value.
+	Return TRUE for success, FALSE if conversion failed, due to
+	the number being out of the Atari's range. */
+static int double_to_fp(double val, unsigned char *result)
+{
+	double exp, mant;
+	int i, sign = 1;
+	long mantl;
+
+	/* Set initial result value to zero. */
+	for(i = 0; i < 6; i++)
+		result[i] = 0;
+
+	/* Logarithms not valid for negative numbers, so separate the
+		sign and work on the absolute value. */
+	if(val < 0) {
+		val = fabs(val);
+		sign = -1;
+	}
+
+	/* Calculate exponent and mantissa. Mantissa will always be >= 0
+		and < 100. */
+	exp = floor(LOG100(val));
+	mant = val / pow(100.0l, exp);
+
+	/* Paranoia, to make sure the loop below isn't infinite. This
+		should never happen, but... */
+	if(mant <= 0.0l) return TRUE;
+
+	/* Normalize: shift left 1 base-100 place until 100 > mantissa >= 1.
+		Each left shift means multiplying the mantissa by 100, so we
+		have to decrement the (base-100) exponent. */
+	while(mant < 1.0l) {
+		mant *= 100.0l;
+		exp--;
+	}
+
+	/* It's easier to convert to BCD if we use a long instead of a
+		double, since C doesn't let us use modulus on a double. You
+		can think of mantl as a fixed-point decimal number. */
+	mantl = (long)floor(mant * 100000000.0l);
+
+	/* At this point, result[] is still all zeroes. If we got a zero
+		mantissa, we got a valid zero result. */
+	if(mantl == 0) return TRUE;
+
+	/* Convert to excess 64 notation and check range. The FP ROM limits
+		the exponent to the range $0f-$70, even though the format should
+		allow $00-$7f. Not sure why this was done (does it mask a bug?),
+		but we do likewise here. Exponent too small just means we return
+		a valid zero result, but too large is an error. */
+	exp += 64;
+	if(exp < 0x0f) return TRUE;
+	if(exp > 0x70) return FALSE;
+
+	/* Set sign bit. Can't use | on a double. */
+	if(sign == -1) exp += 0x80;
+
+	/* At this point we have a valid exponent and mantissa, so store
+		them in result[]. */
+	result[0] = (unsigned char)exp;
+
+	/* Extract each base-100 digit, convert to BCD, store in result[]. */
+	for(i = 5; i > 0; i--) {
+		unsigned char n = mantl % 100l;
+		mantl /= 100l;
+		result[i] = ((n / 10) << 4) | (n % 10);
+	}
+	return TRUE;
+}
+
+/* Read a double from the command line, convert to Atari FP, print.
+	If store is TRUE, read an address first, and store the FP bytes
+	at the address (changes 6 bytes). */
+static void fp_to_hex(int store) {
+	UWORD addr;
+	double val;
+	char *t;
+	unsigned char fp[6];
+	char *end;
+	int i;
+
+	if(store) {
+		if(!get_hex(&addr)) {
+			printf("Missing/invalid address\n");
+			return;
+		}
+	}
+
+	if( (t = get_token()) == NULL) {
+		printf("Missing floating point argument\n");
+		return;
+	}
+
+	val = strtod(t, &end);
+	if(end == t) {
+		printf("Invalid floating point argument\n");
+		return;
+	}
+
+	if(!double_to_fp(val, fp)) {
+		printf("Floating point argument out of range\n");
+		return;
+	}
+
+	if(store) printf("%04x: ", addr);
+	for(i = 0; i < 6; i++) {
+		printf("%02x ", fp[i]);
+	}
+	putchar('\n');
+
+	if(store) {
+		for(i = 0; i < 6; i++) {
+			MEMORY_PutByte(addr, fp[i]);
+			addr++;
+		}
+	}
+}
+
+#ifdef MONITOR_READLINE
+#ifdef MONITOR_HINTS
+/* 20170929 bkw: This code is based on the GNU Readline example code,
+	found here:
+	http://cnswww.cns.cwru.edu/php/chet/readline/readline.html#SEC49 */
+
+/* Callback for readline, generates the list of monitor commands, one
+	at a time. Not going to list all commands here, only ones >= 4 characters
+	long. */
+static char *command_generator(const char *text, int state)
+{
+	static int index, len;
+	const char *name;
+
+	static const char *commands[] = {
+		"CONT", "SHOW", "STACK", "LOOP", "HARDWARE", "READ", "WRITE",
+#ifdef MONITOR_TRACE
+		"TRACE",
+#endif
+#if defined(MONITOR_BREAK) || !defined(NO_YPOS_BREAK_FLICKER)
+		"BLINE",
+#endif
+#ifdef MONITOR_BREAK
+		"BBRK", "HISTORY", "JUMPS",
+#endif
+		"ANTIC", "GTIA", "PIA", "POKEY", "DLIST",
+#ifdef MONITOR_PROFILE
+		"PROFILE",
+#endif
+		"LABELS",
+		"SAVESTATE", "LOADSTATE",
+		"COLDSTART", "WARMSTART", "QUIT", "EXIT", "HELP",
+		NULL };
+
+	if(!state)
+	{
+		index = 0;
+		len = strlen(text);
+	}
+
+	while((name = commands[index]) != NULL)
+	{
+		index++;
+		if(Util_strnicmp(name, text, len) == 0)
+			return Util_strdup(name);
+	}
+
+	return (char *)NULL;
+}
+
+/* Callback for readline, generates the list of valid subcommands
+	for the LABELS command */
+static char *subcmd_labels_generator(const char *text, int state)
+{
+	static int index, len;
+	const char *name;
+
+	static const char *commands[] = {
+		"OFF", "BUILTIN", "LOAD", "ADD", "SET", "LIST",
+		NULL };
+
+	if(!state)
+	{
+		index = 0;
+		len = strlen(text);
+	}
+
+	while((name = commands[index]) != NULL)
+	{
+		index++;
+		if(Util_strnicmp(name, text, len) == 0)
+			return Util_strdup(name);
+	}
+
+	return (char *)NULL;
+}
+
+/* Callback for readline, generates the list of user labels (if any)
+	followed by the list of builtin labels (if enabled). If no user labels
+	are loaded, and builtin labels are disabled (LABELS OFF), this
+	just returns NULL for every call. */
+static char *label_generator(const char *text, int state)
+{
+	static int user_index, builtin_index, len;
+	static const symtable_rec *builtins;
+	char *name;
+
+	if(!state)
+	{
+		user_index = 0;
+		builtin_index = 0;
+		builtins = (Atari800_machine_type == Atari800_MACHINE_5200 ? symtable_builtin_5200 : symtable_builtin);
+		len = strlen(text);
+	}
+
+	while(user_index < symtable_user_size)
+	{
+		name = symtable_user[user_index].name;
+		user_index++;
+		if(Util_strnicmp(name, text, len) == 0)
+			return Util_strdup(name);
+	}
+
+	while(symtable_builtin_enable && (builtins[builtin_index].name != NULL))
+	{
+		name = builtins[builtin_index].name;
+		builtin_index++;
+		if(Util_strnicmp(name, text, len) == 0)
+			return Util_strdup(name);
+	}
+
+	return (char *)NULL;
+}
+
+/* Count instances of one or more consecutive spaces in rl_line_buffer.
+	Leading spaces are ignored. */
+static int count_spaces(void) {
+	char *p = rl_line_buffer;
+	int wasspace = 1, result = 0;
+
+	while(*p != '\0') {
+		if(*p == ' ') {
+			if(!wasspace) {
+				result++;
+			}
+			wasspace = 1;
+		} else {
+			wasspace = 0;
+		}
+		p++;
+	}
+	return result;
+}
+
+/* Return TRUE if we should complete filenames. Logic is rudimentary
+	and gets confused if the cursor isn't actually at the end of the
+	command line, or if someone says e.g. "labels LoAd".
+	No harm done though (completion will fail, but that's it). */
+static int cmd_wants_filename(void) {
+	int spaces = count_spaces();
+
+#ifdef HAVE_SYSTEM
+	/* XXX for now, just filename completion. Maybe worth revisiting,
+		do command completion using $PATH, for the first argument. */
+	if(spaces >= 1 && rl_line_buffer[0] == '!')
+		return TRUE;
+#endif
+
+	if(spaces == 1 && Util_strnicmp(rl_line_buffer, "read ", 5) == 0)
+		return TRUE;
+
+	if(spaces == 3 && Util_strnicmp(rl_line_buffer, "write ", 6) == 0)
+		return TRUE;
+
+#ifdef MONITOR_TRACE
+	if(spaces == 1 && Util_strnicmp(rl_line_buffer, "trace ", 6) == 0)
+		return TRUE;
+#endif
+
+#ifdef HAVE_STRSTR
+	/* XXX For now, platforms that lack strstr() just can't complete
+		filenames with 'labels add' or 'labels load'.
+		If it weren't a GNU extension, it'd be nice to use strcasestr() here */
+	if(spaces == 2 && Util_strnicmp(rl_line_buffer, "labels ", 7) == 0) {
+		if(strstr(rl_line_buffer, " add ")  ||
+		   strstr(rl_line_buffer, " ADD ")  ||
+		   strstr(rl_line_buffer, " load ") ||
+		   strstr(rl_line_buffer, " LOAD ") )
+		{
+			return TRUE;
+		}
+	}
+#endif
+
+	if(spaces == 1 && Util_strnicmp(rl_line_buffer, "savestate ", 10) == 0)
+		return TRUE;
+
+	if(spaces == 1 && Util_strnicmp(rl_line_buffer, "loadstate ", 10) == 0)
+		return TRUE;
+
+
+	return FALSE;
+}
+
+/* Callback for readline. Returns a list of matches, which can consist
+	of monitor commands, labels (built-in or user), and/or filenames. */
+static char **monitor_completion(const char *text, int start, int end)
+{
+	char **matches;
+
+	/* setting this prevents readline from falling back to its default
+		action, if this function returns NULL (no matches). The default
+		action is to complete filenames. */
+	rl_attempted_completion_over = TRUE;
+
+	if(start == 0) {
+		/* start of line is always a command... */
+		matches = rl_completion_matches(text, command_generator);
+	} else if(cmd_wants_filename()) {
+		/* if we're expecting a filename, complete filenames (default action) */
+		rl_attempted_completion_over = FALSE;
+		return NULL;
+	} else if(Util_strnicmp(rl_line_buffer, "labels ", 7) == 0) {
+		matches = rl_completion_matches(text, subcmd_labels_generator);
+	} else {
+		/* ...otherwise assume it's a label. */
+		matches = rl_completion_matches(text, label_generator);
+	}
+
+	return matches;
+}
+#endif /* MONITOR_HINTS */
+
+/* Characters that signal a break between words, for readline.
+	Someday this may be fancier, if we start supporting e.g. quoted
+	strings or C-style expressions like (2+2)*2. */
+static char *break_chars = " @*";
+
+/* Setting rl_readline_name allows us to have our own private section
+	in the user's ~/.inputrc. */
+static void init_readline(void)
+{
+	static int need_init = TRUE;
+
+	rl_completer_word_break_characters = break_chars;
+
+	if(need_init)
+	{
+		need_init = FALSE;
+		rl_readline_name = "Atari800";
+#ifdef MONITOR_HINTS
+		rl_attempted_completion_function = monitor_completion;
+#endif
+	}
+}
+#endif /* MONITOR_READLINE */
+
+#ifdef MONITOR_HINTS
+/* called from atari.c, for -label-file CLI arg. */
+void MONITOR_PreloadLabelFile(char *filename)
+{
+	load_user_labels(filename);
+}
+#endif
+
+#ifdef MONITOR_BREAK
+/* called from atari.c, for -bbrk CLI arg. */
+void MONITOR_BBRK_on(void)
+{
+	MONITOR_break_brk = TRUE;
+}
+
+/* called from atari.c, for -bpc CLI arg. */
+void MONITOR_BPC(char *arg)
+{
+	UWORD addr = 0xd000;
+	parse_hex(arg, &addr); /* XXX error message on bad arg? */
+	MONITOR_break_addr = addr;
+}
+#endif
 
 int MONITOR_Run(void)
 {
@@ -2237,6 +3736,10 @@ int MONITOR_Run(void)
 #ifdef __PLUS
 	if (!Misc_AllocMonitorConsole(&mon_output, &mon_input))
 		return TRUE;
+#endif
+
+#ifdef MONITOR_READLINE
+	init_readline();
 #endif
 
 	addr = CPU_regPC;
@@ -2302,6 +3805,7 @@ int MONITOR_Run(void)
 		Util_strupper(t);
 
 		if (strcmp(t, "CONT") == 0) {
+			if(get_hex(&addr)) CPU_regPC = addr;
 #ifdef MONITOR_PROFILE
 			memset(CPU_instruction_count, 0, sizeof(CPU_instruction_count));
 #endif /* MONITOR_PROFILE */
@@ -2318,17 +3822,21 @@ int MONITOR_Run(void)
 		else if (strcmp(t, "JUMPS") == 0)
 			show_last_jumps();
 		else if (strcmp(t, "G") == 0) {
+			if(get_hex(&addr)) CPU_regPC = addr;
 			MONITOR_break_step = TRUE;
 			PLUS_EXIT_MONITOR;
 			return TRUE;
 		}
 		else if (strcmp(t, "R") == 0 ) {
+			if(get_hex(&addr)) CPU_regPC = addr;
 			MONITOR_break_ret = TRUE;
 			MONITOR_ret_nesting = 1;
 			PLUS_EXIT_MONITOR;
 			return TRUE;
 		}
 		else if (strcmp(t, "O") == 0) {
+			if(get_hex(&addr)) CPU_regPC = addr;
+			get_hex(&addr);
 			step_over();
 			PLUS_EXIT_MONITOR;
 			return TRUE;
@@ -2371,6 +3879,8 @@ int MONITOR_Run(void)
 #ifdef MONITOR_PROFILE
 		else if (strcmp(t, "PROFILE") == 0)
 			command_PROFILE();
+		else if (strcmp(t, "COV") == 0)
+			coverage();
 #endif /* MONITOR_PROFILE */
 		else if (strcmp(t, "SHOW") == 0)
 			show_state();
@@ -2384,6 +3894,8 @@ int MONITOR_Run(void)
 		else if (strcmp(t, "HARDWARE") == 0)
 			monitor_set_hardware();
 #endif /* PAGED_ATTRIB */
+		else if (strcmp(t, "CART") == 0)
+			show_CARTRIDGE();
 		else if (strcmp(t, "COLDSTART") == 0) {
 			Atari800_Coldstart();
 			PLUS_EXIT_MONITOR;
@@ -2407,7 +3919,9 @@ int MONITOR_Run(void)
 		else if (strcmp(t, "SUM") == 0)
 			monitor_sum_mem();
 		else if (strcmp(t, "M") == 0)
-			monitor_show_mem(&addr);
+			monitor_show_mem(&addr, FALSE);
+		else if (strcmp(t, "MS") == 0)
+			monitor_show_mem(&addr, TRUE);
 		else if (strcmp(t, "TSS") == 0)
 			trainer_start_search();
 		else if (strcmp(t, "TSN") == 0)
@@ -2448,13 +3962,72 @@ int MONITOR_Run(void)
 			addr = assembler(addr);
 		}
 #endif
-		else if (strcmp(t, "HELP") == 0 || strcmp(t, "?") == 0)
+		else if (strcmp(t, "DEC") == 0) {
+			if(get_hex(&addr))
+				hex_to_dec(addr);
+			else
+				printf("Missing/invalid hex argument\n");
+		} else if (strcmp(t, "HEX") == 0) {
+			int d;
+			if(get_dec(&d))
+				dec_to_hex(d);
+			else
+				printf("Missing/invalid decimal argument\n");
+		} else if (strcmp(t, "BIN") == 0) {
+			if(get_hex(&addr))
+				hex_to_bin(addr);
+			else
+				printf("Missing/invalid hex argument\n");
+		} else if (strcmp(t, "BHEX") == 0) {
+			bin_to_hex();
+		} else if (strcmp(t, "AHEX") == 0) {
+			asc_to_hex(FALSE);
+		} else if (strcmp(t, "ASC") == 0) {
+			hex_to_asc(FALSE);
+		} else if (strcmp(t, "SHEX") == 0) {
+			asc_to_hex(TRUE);
+		} else if (strcmp(t, "SCR") == 0) {
+			hex_to_asc(TRUE);
+		} else if (strcmp(t, "GRC") == 0) {
+			print_graphics(TRUE);
+		} else if (strcmp(t, "GRM") == 0) {
+			print_graphics(FALSE);
+#ifndef BASIC
+		} else if (strcmp(t, "SAVESTATE") == 0) {
+			save_load_state(TRUE);
+		} else if (strcmp(t, "LOADSTATE") == 0) {
+			save_load_state(FALSE);
+#endif /* BASIC */
+		} else if (strcmp(t, "SSTR") == 0) {
+			string_search(FALSE);
+		} else if (strcmp(t, "SSCR") == 0) {
+			string_search(TRUE);
+		} else if (strcmp(t, "MFP") == 0) {
+			mem_to_fp();
+		} else if (strcmp(t, "CFP") == 0) {
+			fp_to_hex(TRUE);
+		} else if (strcmp(t, "FP") == 0) {
+			int spaces = 0;
+			char *p = token_ptr;
+			while(*p++) spaces += (*p == ' ');
+			/* if we got at least 2 args, assume the input is hex bytes.
+				for 1 arg, assume it's a floating point number. */
+			if(spaces)
+				hex_to_fp();
+			else
+				fp_to_hex(FALSE);
+		} else if (strcmp(t, "HELP") == 0 || strcmp(t, "?") == 0)
 			show_help();
 		else if (strcmp(t, "QUIT") == 0 || strcmp(t, "EXIT") == 0) {
 			PLUS_EXIT_MONITOR;
 			return FALSE;
-		}
-		else
+		} else if(t[0] == '*' || t[0] == '@') {
+			UWORD val;
+			if(parse_hex(t, &val))
+				printf("%s = $%04x\n", t, val);
+			else
+				printf("Invalid dereference\n");
+		} else
 			printf("Invalid command!\n");
 	}
 }

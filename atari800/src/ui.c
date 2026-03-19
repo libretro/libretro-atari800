@@ -80,9 +80,14 @@
 #endif /* BIT3 */
 #ifdef SOUND
 #include "pokeysnd.h"
-#include "sndsave.h"
 #include "sound.h"
 #endif /* SOUND */
+#if defined(AUDIO_RECORDING) || defined(VIDEO_RECORDING)
+#include "file_export.h"
+#endif /* defined(SOUND) || defined(VIDEO_RECORDING) */
+#ifdef __LIBRETRO__
+extern int legacy_configuration_file;
+#endif /* __LIBRETRO__ */
 #ifdef DIRECTX
 #include "win32\main.h"
 #include "win32\joystick.h"
@@ -94,14 +99,12 @@
 #if GUI_SDL
 #include "sdl/video.h"
 #include "sdl/video_sw.h"
+#include "sdl/input.h"
 #if HAVE_OPENGL
 #include "sdl/video_gl.h"
 #endif /* HAVE_OPENGL */
 #endif /* GUI_SDL */
 
-#ifdef __LIBRETRO__
-extern int legacy_configuration_file;
-#endif /* __LIBRETRO__ */
 #ifdef DIRECTX
 /* Display Settings */
 extern RENDERMODE rendermode;
@@ -270,7 +273,9 @@ static void SystemSettings(void)
 		UI_MENU_ACTION(SYSROM_A_PAL, "Rev. A PAL"),
 		UI_MENU_ACTION(SYSROM_B_NTSC, "Rev. B NTSC"),
 		UI_MENU_ACTION(SYSROM_800_CUSTOM, "Custom"),
+#if EMUOS_ALTIRRA
 		UI_MENU_ACTION(SYSROM_ALTIRRA_800, "AltirraOS"),
+#endif /* EMUOS_ALTIRRA */
 		UI_MENU_END
 	};
 	static UI_tMenuItem osxl_menu_array[] = {
@@ -287,7 +292,9 @@ static void SystemSettings(void)
 		UI_MENU_ACTION(SYSROM_BB01R59, "BB01 Rev. 59"),
 		UI_MENU_ACTION(SYSROM_BB01R59A, "BB01 Rev. 59 alt."),
 		UI_MENU_ACTION(SYSROM_XL_CUSTOM, "Custom"),
+#if EMUOS_ALTIRRA
 		UI_MENU_ACTION(SYSROM_ALTIRRA_XL, "AltirraOS"),
+#endif /* EMUOS_ALTIRRA */
 		UI_MENU_END
 	};
 	static UI_tMenuItem os5200_menu_array[] = {
@@ -295,7 +302,9 @@ static void SystemSettings(void)
 		UI_MENU_ACTION(SYSROM_5200, "Original"),
 		UI_MENU_ACTION(SYSROM_5200A, "Rev. A"),
 		UI_MENU_ACTION(SYSROM_5200_CUSTOM, "Custom"),
+#if EMUOS_ALTIRRA
 		UI_MENU_ACTION(SYSROM_ALTIRRA_5200, "AltirraOS"),
+#endif /* EMUOS_ALTIRRA */
 		UI_MENU_END
 	};
 	static UI_tMenuItem * const os_menu_arrays[Atari800_MACHINE_SIZE] = {
@@ -309,7 +318,9 @@ static void SystemSettings(void)
 		UI_MENU_ACTION(SYSROM_BASIC_B, "Rev. B"),
 		UI_MENU_ACTION(SYSROM_BASIC_C, "Rev. C"),
 		UI_MENU_ACTION(SYSROM_BASIC_CUSTOM, "Custom"),
+#if EMUOS_ALTIRRA
 		UI_MENU_ACTION(SYSROM_ALTIRRA_BASIC, "Altirra BASIC"),
+#endif /* EMUOS_ALTIRRA */
 		UI_MENU_END
 	};
 	static UI_tMenuItem xegame_menu_array[] = {
@@ -767,6 +778,8 @@ static void MakeBlankDisk(FILE *setFile)
 		fwrite(sector, 1, sizeof(sector), setFile);
 }
 
+int UI_show_hidden_files = FALSE;
+
 static void DiskManagement(void)
 {
 	static char drive_array[8][5] = { " D1:", " D2:", " D3:", " D4:", " D5:", " D6:", " D7:", " D8:" };
@@ -785,6 +798,7 @@ static void DiskManagement(void)
 		UI_MENU_ACTION(10, "Rotate Disks"),
 		UI_MENU_FILESEL(11, "Make Blank ATR Disk"),
 		UI_MENU_FILESEL_TIP(12, "Uncompress Disk Image", "Convert GZ or DCM to ATR"),
+		UI_MENU_CHECK(13, "Show hidden files/directories:"),
 		UI_MENU_END
 	};
 
@@ -813,6 +827,8 @@ static void DiskManagement(void)
 				break;
 			}
 		}
+
+		SetItemChecked(menu_array, 13, UI_show_hidden_files);
 
 		dsknum = UI_driver->fSelect("Disk Management", 0, dsknum, menu_array, &seltype);
 
@@ -948,6 +964,9 @@ static void DiskManagement(void)
 				}
 			}
 			break;
+		case 13:
+			UI_show_hidden_files = !UI_show_hidden_files;
+			break;
 		default:
 			if (dsknum < 0)
 				return;
@@ -993,102 +1012,58 @@ static void DiskManagement(void)
 
 int UI_SelectCartType(int k)
 {
-	static UI_tMenuItem menu_array[] = {
-		UI_MENU_ACTION(CARTRIDGE_STD_8, CARTRIDGE_STD_8_DESC),
-		UI_MENU_ACTION(CARTRIDGE_STD_16, CARTRIDGE_STD_16_DESC),
-		UI_MENU_ACTION(CARTRIDGE_OSS_034M_16, CARTRIDGE_OSS_034M_16_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_32, CARTRIDGE_5200_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_DB_32, CARTRIDGE_DB_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_EE_16, CARTRIDGE_5200_EE_16_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_40, CARTRIDGE_5200_40_DESC),
-		UI_MENU_ACTION(CARTRIDGE_WILL_64, CARTRIDGE_WILL_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_EXP_64, CARTRIDGE_EXP_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_DIAMOND_64, CARTRIDGE_DIAMOND_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SDX_64, CARTRIDGE_SDX_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_XEGS_32, CARTRIDGE_XEGS_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_XEGS_07_64, CARTRIDGE_XEGS_07_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_XEGS_128, CARTRIDGE_XEGS_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_OSS_M091_16, CARTRIDGE_OSS_M091_16_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_NS_16, CARTRIDGE_5200_NS_16_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ATRAX_128, CARTRIDGE_ATRAX_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_BBSB_40, CARTRIDGE_BBSB_40_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_8, CARTRIDGE_5200_8_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_4, CARTRIDGE_5200_4_DESC),
-		UI_MENU_ACTION(CARTRIDGE_RIGHT_8, CARTRIDGE_RIGHT_8_DESC),
-		UI_MENU_ACTION(CARTRIDGE_WILL_32, CARTRIDGE_WILL_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_XEGS_256, CARTRIDGE_XEGS_256_DESC),
-		UI_MENU_ACTION(CARTRIDGE_XEGS_512, CARTRIDGE_XEGS_512_DESC),
-		UI_MENU_ACTION(CARTRIDGE_XEGS_1024, CARTRIDGE_XEGS_1024_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_16, CARTRIDGE_MEGA_16_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_32, CARTRIDGE_MEGA_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_64, CARTRIDGE_MEGA_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_128, CARTRIDGE_MEGA_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_256, CARTRIDGE_MEGA_256_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_512, CARTRIDGE_MEGA_512_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_1024, CARTRIDGE_MEGA_1024_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SWXEGS_32, CARTRIDGE_SWXEGS_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SWXEGS_64, CARTRIDGE_SWXEGS_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SWXEGS_128, CARTRIDGE_SWXEGS_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SWXEGS_256, CARTRIDGE_SWXEGS_256_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SWXEGS_512, CARTRIDGE_SWXEGS_512_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SWXEGS_1024, CARTRIDGE_SWXEGS_1024_DESC),
-		UI_MENU_ACTION(CARTRIDGE_PHOENIX_8, CARTRIDGE_PHOENIX_8_DESC),
-		UI_MENU_ACTION(CARTRIDGE_BLIZZARD_16, CARTRIDGE_BLIZZARD_16_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ATMAX_128, CARTRIDGE_ATMAX_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ATMAX_1024, CARTRIDGE_ATMAX_1024_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SDX_128, CARTRIDGE_SDX_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_OSS_8, CARTRIDGE_OSS_8_DESC),
-		UI_MENU_ACTION(CARTRIDGE_OSS_043M_16, CARTRIDGE_OSS_043M_16_DESC),
-		UI_MENU_ACTION(CARTRIDGE_BLIZZARD_4, CARTRIDGE_BLIZZARD_4_DESC),
-		UI_MENU_ACTION(CARTRIDGE_AST_32, CARTRIDGE_AST_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ATRAX_SDX_64, CARTRIDGE_ATRAX_SDX_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ATRAX_SDX_128, CARTRIDGE_ATRAX_SDX_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_TURBOSOFT_64, CARTRIDGE_TURBOSOFT_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_TURBOSOFT_128, CARTRIDGE_TURBOSOFT_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ULTRACART_32, CARTRIDGE_ULTRACART_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_LOW_BANK_8, CARTRIDGE_LOW_BANK_8_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SIC_128, CARTRIDGE_SIC_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SIC_256, CARTRIDGE_SIC_256_DESC),
-		UI_MENU_ACTION(CARTRIDGE_SIC_512, CARTRIDGE_SIC_512_DESC),
-		UI_MENU_ACTION(CARTRIDGE_STD_2, CARTRIDGE_STD_2_DESC),
-		UI_MENU_ACTION(CARTRIDGE_STD_4, CARTRIDGE_STD_4_DESC),
-		UI_MENU_ACTION(CARTRIDGE_RIGHT_4, CARTRIDGE_RIGHT_4_DESC),
-		UI_MENU_ACTION(CARTRIDGE_BLIZZARD_32, CARTRIDGE_BLIZZARD_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGAMAX_2048, CARTRIDGE_MEGAMAX_2048_DESC),
-		UI_MENU_ACTION(CARTRIDGE_THECART_128M, CARTRIDGE_THECART_128M_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_4096, CARTRIDGE_MEGA_4096_DESC),
-		UI_MENU_ACTION(CARTRIDGE_MEGA_2048, CARTRIDGE_MEGA_2048_DESC),
-		UI_MENU_ACTION(CARTRIDGE_THECART_32M, CARTRIDGE_THECART_32M_DESC),
-		UI_MENU_ACTION(CARTRIDGE_THECART_64M, CARTRIDGE_THECART_64M_DESC),
-		UI_MENU_ACTION(CARTRIDGE_XEGS_8F_64, CARTRIDGE_XEGS_8F_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ATRAX_128_RAW, CARTRIDGE_ATRAX_128_RAW_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ADAWLIAH_32, CARTRIDGE_ADAWLIAH_32_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ADAWLIAH_64, CARTRIDGE_ADAWLIAH_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_SUPER_64, CARTRIDGE_5200_SUPER_64_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_SUPER_128, CARTRIDGE_5200_SUPER_128_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_SUPER_256, CARTRIDGE_5200_SUPER_256_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_SUPER_512, CARTRIDGE_5200_SUPER_512_DESC),
-		UI_MENU_ACTION(CARTRIDGE_ATMAX_NEW_1024, CARTRIDGE_ATMAX_NEW_1024_DESC),
-		UI_MENU_ACTION(CARTRIDGE_5200_40_ALT, CARTRIDGE_5200_40_ALT_DESC),
-		UI_MENU_END
-	};
-
-	int i;
+	UI_tMenuItem menu_array[CARTRIDGE_TYPE_COUNT] = { 0 };
+	int cart_entry;
+	int menu_entry = 0;
 	int option = 0;
 
 	UI_driver->fInit();
 
-	for (i = 1; i <= CARTRIDGE_LAST_SUPPORTED; i++)
-		if (CARTRIDGE_kb[i] == k) {
-			if (option == 0)
-				option = i;
-			menu_array[i - 1].flags = UI_ITEM_ACTION;
-		}
-		else
-			menu_array[i - 1].flags = UI_ITEM_HIDDEN;
-
-	if (option == 0)
+	for (cart_entry = 1; cart_entry < CARTRIDGE_TYPE_COUNT; cart_entry++) {
+		if (CARTRIDGES[cart_entry].kb == k) {
+			menu_array[menu_entry].flags = UI_ITEM_ACTION;
+			menu_array[menu_entry].retval = cart_entry;
+			menu_array[menu_entry].item = CARTRIDGES[cart_entry].description;
+			menu_entry++;
+	    	}
+	}
+		
+	if (menu_entry == 0)
 		return CARTRIDGE_NONE;
+
+	/* Terminate menu_array, but do it by hand */
+	menu_array[menu_entry].flags = UI_ITEM_END;
+
+	option = UI_driver->fSelect("Select Cartridge Type", 0, option, menu_array, NULL);
+	if (option > 0)
+		return option;
+
+	return CARTRIDGE_NONE;
+}
+
+int UI_SelectCartTypeBetween(int *types)
+{
+	UI_tMenuItem menu_array[CARTRIDGE_TYPE_COUNT] = { 0 };
+	int cart_entry;
+	int menu_entry = 0;
+	int option = 0;
+
+	UI_driver->fInit();
+
+	for (cart_entry = 1; cart_entry < CARTRIDGE_TYPE_COUNT; cart_entry++) {
+		if (cart_entry == types[menu_entry]) {
+			menu_array[menu_entry].flags = UI_ITEM_ACTION;
+			menu_array[menu_entry].retval = cart_entry;
+			menu_array[menu_entry].item = CARTRIDGES[cart_entry].description;
+			menu_entry++;
+	    	}
+	}
+	
+	if (menu_entry == 0)
+		return CARTRIDGE_NONE;
+
+	/* Terminate menu_array, but do it by hand */
+	menu_array[menu_entry].flags = UI_ITEM_END;
 
 	option = UI_driver->fSelect("Select Cartridge Type", 0, option, menu_array, NULL);
 	if (option > 0)
@@ -1104,19 +1079,43 @@ static void CartManagement(void)
 		UI_MENU_FILESEL(1, "Extract ROM image from Cartridge"),
 		UI_MENU_FILESEL_PREFIX_TIP(2, "Cartridge:", NULL, NULL),
 		UI_MENU_FILESEL_PREFIX_TIP(3, "Piggyback:", NULL, NULL),
-		UI_MENU_CHECK(4, "Reboot after cartridge change:"),
+		UI_MENU_CHECK(4, "Ram-Cart R/W switch:"),
+		UI_MENU_ACTION(5, "Ram-Cart P1 switch:"),
+		UI_MENU_ACTION(6, "Ram-Cart P2 switch:"),
+		UI_MENU_ACTION(7, "Ram-Cart ABC jumpers:"),
+		UI_MENU_CHECK(8, "Ram-Cart A switch:"),
+		UI_MENU_CHECK(9, "Ram-Cart B switch:"),
+		UI_MENU_CHECK(10, "Ram-Cart C switch:"),
+		UI_MENU_CHECK(11, "Ram-Cart 1/2M switch:"), /* or "Ram-Cart D switch" */
+		UI_MENU_CHECK(12, "Ram-Cart 2/4M switch:"),
+		UI_MENU_ACTION(13, "Ram-Cart address decoder:"),
+		UI_MENU_ACTION(14, "Ram-Cart control register:"),
+		UI_MENU_ACTION(15, "Ram-Cart Reset"),
+		UI_MENU_CHECK(16, "Reboot after cartridge change:"),
+		UI_MENU_FILESEL(17, "Make blank Cartridge"),
 		UI_MENU_END
 	};
-	
-	typedef struct {
-		UBYTE id[4];
-		UBYTE type[4];
-		UBYTE checksum[4];
-		UBYTE gash[4];
-	} Header;
-	
+
+	/* Cartridge types should be placed here in ascending order and ended by CARTRIDGE_NONE */
+	static int writable_carts_array[] = {
+		CARTRIDGE_RAMCART_64,
+		CARTRIDGE_RAMCART_128,
+		CARTRIDGE_DOUBLE_RAMCART_256,
+		CARTRIDGE_RAMCART_1M,
+		CARTRIDGE_RAMCART_2M,
+		CARTRIDGE_RAMCART_4M,
+		CARTRIDGE_RAMCART_8M,
+		CARTRIDGE_RAMCART_16M,
+		CARTRIDGE_RAMCART_32M,
+		CARTRIDGE_SIDICAR_32,
+
+		CARTRIDGE_NONE /* obligatory */
+	};
+
 	int option = 2;
 	int seltype;
+	CARTRIDGE_image_t *ramcart;
+	int old_state;
 
 	for (;;) {
 		static char cart_filename[FILENAME_MAX];
@@ -1140,132 +1139,210 @@ static void CartManagement(void)
 				menu_array[3].item = CARTRIDGE_piggyback.filename;
 				menu_array[3].suffix = "Return:insert Backspace:remove";
 			}
-		} else {
+		} else
 			menu_array[3].flags = UI_ITEM_HIDDEN;
+
+		ramcart = NULL;
+		switch (CARTRIDGE_main.type) {
+		case CARTRIDGE_RAMCART_64:
+		case CARTRIDGE_RAMCART_128:
+		case CARTRIDGE_DOUBLE_RAMCART_256:
+		case CARTRIDGE_RAMCART_1M:
+		case CARTRIDGE_RAMCART_2M:
+		case CARTRIDGE_RAMCART_4M:
+		case CARTRIDGE_RAMCART_8M:
+		case CARTRIDGE_RAMCART_16M:
+		case CARTRIDGE_RAMCART_32M:
+			ramcart = &CARTRIDGE_main;
+			break;
+		}
+		switch (CARTRIDGE_piggyback.type) {
+		case CARTRIDGE_RAMCART_64:
+		case CARTRIDGE_RAMCART_128:
+		case CARTRIDGE_DOUBLE_RAMCART_256:
+		case CARTRIDGE_RAMCART_1M:
+		case CARTRIDGE_RAMCART_2M:
+		case CARTRIDGE_RAMCART_4M:
+		case CARTRIDGE_RAMCART_8M:
+		case CARTRIDGE_RAMCART_16M:
+		case CARTRIDGE_RAMCART_32M:
+			ramcart = &CARTRIDGE_piggyback;
+		}
+		menu_array[4].flags = 
+		menu_array[5].flags = 
+		menu_array[6].flags = 
+		menu_array[7].flags = 
+		menu_array[8].flags = 
+		menu_array[9].flags = 
+		menu_array[10].flags = 
+		menu_array[11].flags = 
+		menu_array[12].flags = 
+		menu_array[13].flags = 
+		menu_array[14].flags = 
+		menu_array[15].flags = UI_ITEM_HIDDEN;
+		old_state = -1;
+		if (ramcart != NULL) {
+			old_state = ramcart->state;
+
+			if (ramcart->type == CARTRIDGE_RAMCART_2M)
+				menu_array[11].item = "Ram-Cart 1/2M switch";
+			else if (ramcart->type == CARTRIDGE_RAMCART_4M)
+				menu_array[11].item = "Ram-Cart D switch";
+
+			switch (ramcart->type) {
+			case CARTRIDGE_DOUBLE_RAMCART_256:
+				menu_array[14].flags = UI_ITEM_ACTION;
+				menu_array[14].suffix = ramcart->state & 0x20000 ? "Read/Write" : "Write Only";
+
+				menu_array[5].flags = 
+				menu_array[6].flags = UI_ITEM_ACTION;
+				if (ramcart->state & 0x2000) {
+					menu_array[5].suffix = "256K";
+					menu_array[6].suffix = ramcart->state & 0x4000 ? "Swapped Order" : "Normal Order";
+				}
+				else {
+					menu_array[5].suffix = "2x128K";
+					menu_array[6].suffix = ramcart->state & 0x4000 ? "Second Module" : "First Module";
+				}
+				SetItemChecked(menu_array, 4, ramcart->state & 0x1000); /* R/W */
+				break;
+			case CARTRIDGE_RAMCART_4M:
+				SetItemChecked(menu_array, 12, ramcart->state & 0x0200); /* 2/4M */
+			case CARTRIDGE_RAMCART_2M:
+				SetItemChecked(menu_array, 11, ramcart->state & 0x0100); /* 1/2M or D */
+			case CARTRIDGE_RAMCART_1M:
+				if (ramcart->type == CARTRIDGE_RAMCART_1M) {
+					menu_array[6].flags = 
+					menu_array[13].flags = 
+					menu_array[14].flags = UI_ITEM_ACTION;
+					menu_array[6].suffix = ramcart->state & 0x4000 ? "Swapped Order" : "Normal Order";
+					menu_array[13].suffix = ramcart->state & 0x10000 ? "Full" : "Simplified";
+					menu_array[14].suffix = ramcart->state & 0x20000 ? "Read/Write" : "Write Only";
+				}
+				else
+					menu_array[13].suffix = "N/A";
+
+				menu_array[7].flags = UI_ITEM_ACTION;
+				if (ramcart->state & 0x8000) {
+					menu_array[10].flags = 
+					menu_array[9].flags = 
+					menu_array[8].flags = UI_ITEM_ACTION;
+					menu_array[10].suffix = 
+					menu_array[9].suffix = 
+					menu_array[8].suffix = "N/A";
+					menu_array[7].suffix = "Installed";
+				}
+				else {
+					SetItemChecked(menu_array, 10, ramcart->state & 0x0080); /* C */
+					SetItemChecked(menu_array, 9, ramcart->state & 0x0040); /* B */
+					SetItemChecked(menu_array, 8, ramcart->state & 0x0004); /* A */
+					menu_array[7].suffix = "None";
+				}
+			case CARTRIDGE_RAMCART_32M:
+			case CARTRIDGE_RAMCART_16M:
+			case CARTRIDGE_RAMCART_8M:
+			case CARTRIDGE_RAMCART_128:
+			case CARTRIDGE_RAMCART_64:
+				SetItemChecked(menu_array, 4, ramcart->state & 0x1000); /* R/W */
+			}
+			menu_array[15].flags = UI_ITEM_ACTION;
 		}
 
-		SetItemChecked(menu_array, 4, CARTRIDGE_autoreboot);
+		SetItemChecked(menu_array, 16, CARTRIDGE_autoreboot);
 
 		option = UI_driver->fSelect("Cartridge Management", 0, option, menu_array, &seltype);
 
 		switch (option) {
 		case 0:
 			if (UI_driver->fGetLoadFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
-				FILE *f;
-				int nbytes;
-				int type;
-				UBYTE *image;
-				int checksum;
-				Header header;
+				int error;
+				CARTRIDGE_image_t cart;
 
-				f = fopen(cart_filename, "rb");
-				if (f == NULL) {
+				int kb = CARTRIDGE_ReadImage(cart_filename, &cart);
+				if (kb == CARTRIDGE_CANT_OPEN) {
 					CantLoad(cart_filename);
 					break;
 				}
-				nbytes = Util_flen(f);
-				if ((nbytes & 0x3ff) != 0) {
-					fclose(f);
+				else if (kb == CARTRIDGE_TOO_FEW_DATA) {
+					UI_driver->fMessage("Error reading CART file", 1);
+					break;
+				}
+				else if (kb == CARTRIDGE_BAD_FORMAT) {
 					UI_driver->fMessage("ROM image must be full kilobytes long", 1);
 					break;
 				}
-				type = UI_SelectCartType(nbytes >> 10);
-				if (type == CARTRIDGE_NONE) {
-					fclose(f);
+
+				if (!cart.raw) {
+					free(cart.image);
+					UI_driver->fMessage("Not an image file", 1);
 					break;
 				}
 
-				image = (UBYTE *) Util_malloc(nbytes);
-				Util_rewind(f);
-				if ((int) fread(image, 1, nbytes, f) != nbytes) {
-					fclose(f);
-					CantLoad(cart_filename);
+				cart.type = UI_SelectCartType(kb);
+				if (cart.type == CARTRIDGE_NONE) {
+					free(cart.image);
 					break;
 				}
-				fclose(f);
 
-				if (!UI_driver->fGetSaveFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir))
+				if (!UI_driver->fGetSaveFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
+					free(cart.image);
 					break;
+				}
 
-				checksum = CARTRIDGE_Checksum(image, nbytes);
-				header.id[0] = 'C';
-				header.id[1] = 'A';
-				header.id[2] = 'R';
-				header.id[3] = 'T';
-				header.type[0] = '\0';
-				header.type[1] = '\0';
-				header.type[2] = '\0';
-				header.type[3] = (UBYTE) type;
-				header.checksum[0] = (UBYTE) (checksum >> 24);
-				header.checksum[1] = (UBYTE) (checksum >> 16);
-				header.checksum[2] = (UBYTE) (checksum >> 8);
-				header.checksum[3] = (UBYTE) checksum;
-				header.gash[0] = '\0';
-				header.gash[1] = '\0';
-				header.gash[2] = '\0';
-				header.gash[3] = '\0';
-
-				f = fopen(cart_filename, "wb");
-				if (f == NULL) {
+				error = CARTRIDGE_WriteImage(cart_filename, cart.type, cart.image, kb << 10, FALSE, -1);
+				free(cart.image);
+				if (error)
 					CantSave(cart_filename);
-					break;
-				}
-				fwrite(&header, 1, sizeof(header), f);
-				fwrite(image, 1, nbytes, f);
-				fclose(f);
-				free(image);
-				Created(cart_filename);
+				else
+					Created(cart_filename);
 			}
 			break;
 		case 1:
 			if (UI_driver->fGetLoadFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
-				FILE *f;
-				int nbytes;
-				Header header;
-				UBYTE *image;
+				int error;
+				CARTRIDGE_image_t cart;
 
-				f = fopen(cart_filename, "rb");
-				if (f == NULL) {
+				int kb = CARTRIDGE_ReadImage(cart_filename, &cart);
+				if (kb == CARTRIDGE_CANT_OPEN) {
 					CantLoad(cart_filename);
 					break;
 				}
-				nbytes = Util_flen(f) - sizeof(header);
-				Util_rewind(f);
-				if (nbytes <= 0 || fread(&header, 1, sizeof(header), f) != sizeof(header)
-				 || header.id[0] != 'C' || header.id[1] != 'A' || header.id[2] != 'R' || header.id[3] != 'T') {
-					fclose(f);
-					UI_driver->fMessage("Not a CART file", 1);
-					break;
-				}
-				image = (UBYTE *) Util_malloc(nbytes);
-				if (fread(image, 1, nbytes, f) < nbytes) {
+				else if (kb == CARTRIDGE_TOO_FEW_DATA) {
 					UI_driver->fMessage("Error reading CART file", 1);
 					break;
 				}
-				fclose(f);
-
-				if (!UI_driver->fGetSaveFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir))
-					break;
-
-				f = fopen(cart_filename, "wb");
-				if (f == NULL) {
-					CantSave(cart_filename);
+				else if (kb == CARTRIDGE_BAD_FORMAT) {
+					UI_driver->fMessage("Not a CART file", 1);
 					break;
 				}
-				fwrite(image, 1, nbytes, f);
-				fclose(f);
-				free(image);
-				Created(cart_filename);
+
+				if (cart.raw) {
+					free(cart.image);
+					UI_driver->fMessage("Not a CART file", 1);
+					break;
+				}
+
+				if (!UI_driver->fGetSaveFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
+					free(cart.image);
+					break;
+				}
+
+				error = CARTRIDGE_WriteImage(cart_filename, CARTRIDGE_UNKNOWN, cart.image, cart.size << 10, TRUE, -1);
+				free(cart.image);
+				if (error)
+					CantSave(cart_filename);
+				else
+					Created(cart_filename);
 			}
 			break;
 		case 2:
 			switch (seltype) {
 			case UI_USER_SELECT: /* Enter */
-				if (UI_driver->fGetLoadFilename(CARTRIDGE_main.filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
-					int r = CARTRIDGE_InsertAutoReboot(CARTRIDGE_main.filename);
+				if (UI_driver->fGetLoadFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
+					int r = CARTRIDGE_InsertAutoReboot(cart_filename);
 					switch (r) {
 					case CARTRIDGE_CANT_OPEN:
-						CantLoad(CARTRIDGE_main.filename);
+						CantLoad(cart_filename);
 						break;
 					case CARTRIDGE_BAD_FORMAT:
 						UI_driver->fMessage("Unknown cartridge format", 1);
@@ -1291,11 +1368,11 @@ static void CartManagement(void)
 		case 3:
 			switch (seltype) {
 			case UI_USER_SELECT: /* Enter */
-				if (UI_driver->fGetLoadFilename(CARTRIDGE_piggyback.filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
-					int r = CARTRIDGE_Insert_Second(CARTRIDGE_piggyback.filename);
+				if (UI_driver->fGetLoadFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
+					int r = CARTRIDGE_Insert_Second(cart_filename);
 					switch (r) {
 					case CARTRIDGE_CANT_OPEN:
-						CantLoad(CARTRIDGE_piggyback.filename);
+						CantLoad(cart_filename);
 						break;
 					case CARTRIDGE_BAD_FORMAT:
 						UI_driver->fMessage("Unknown cartridge format", 1);
@@ -1318,8 +1395,76 @@ static void CartManagement(void)
 				break;
 			}
 			break;
-		case 4:
+		case 4: /* Ram-Cart R/W */
+			ramcart->state ^= 0x1000;
+			CARTRIDGE_UpdateState(ramcart, old_state);
+			break;
+		case 5: /* Ram-Cart P1 (2x128/256K) */
+			ramcart->state ^= 0x2000;
+			CARTRIDGE_UpdateState(ramcart, old_state);
+			break;
+		case 6: /* Ram-Cart P2 (Exchange 128K modules) */
+			ramcart->state ^= 0x4000;
+			CARTRIDGE_UpdateState(ramcart, old_state);
+			break;
+		case 7: /* Ram-Cart jumpers ABC installation flag */
+			ramcart->state ^= 0x8000;
+			CARTRIDGE_UpdateState(ramcart, old_state);
+			break;
+		case 8: /* Ram-Cart A */
+			if (!(ramcart->state & 0x8000)) {
+				ramcart->state ^= 0x0004;
+				CARTRIDGE_UpdateState(ramcart, old_state);
+			}
+			break;
+		case 9: /* Ram-Cart B */
+			if (!(ramcart->state & 0x8000)) {
+				ramcart->state ^= 0x0040;
+				CARTRIDGE_UpdateState(ramcart, old_state);
+			}
+			break;
+		case 10: /* Ram-Cart C */
+			if (!(ramcart->state & 0x8000)) {
+				ramcart->state ^= 0x0080;
+				CARTRIDGE_UpdateState(ramcart, old_state);
+			}
+			break;
+		case 11: /* Ram-Cart 1/2M or D */
+			ramcart->state ^= 0x0100;
+			CARTRIDGE_UpdateState(ramcart, old_state);
+			break;
+		case 12: /* Ram-Cart 2/4M */
+			ramcart->state ^= 0x0200;
+			CARTRIDGE_UpdateState(ramcart, old_state);
+			break;
+		case 13: /* Ram-Cart address decoder */
+			if (ramcart->type == CARTRIDGE_RAMCART_1M)
+				ramcart->state ^= 0x10000;
+			break;
+		case 14: /* Ram-Cart control register */
+			if (ramcart->type == CARTRIDGE_DOUBLE_RAMCART_256 || ramcart->type == CARTRIDGE_RAMCART_1M)
+				ramcart->state ^= 0x20000;
+			break;
+		case 15: /* Ram-Cart Reset */
+			ramcart->state &= 0xfff00;
+			CARTRIDGE_UpdateState(ramcart, old_state);
+			UI_driver->fMessage("Ram-Cart reinitialized", 1);
+			break;
+		case 16:
 			CARTRIDGE_autoreboot = !CARTRIDGE_autoreboot;
+			break;
+		case 17:
+			if (UI_driver->fGetSaveFilename(cart_filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
+				int cart_type = UI_SelectCartTypeBetween(writable_carts_array);
+				if (cart_type != CARTRIDGE_NONE) {
+					if ( CARTRIDGE_WriteImage(
+							cart_filename, 
+							cart_type, NULL, CARTRIDGES[cart_type].kb << 10, FALSE, 0x00 ) )
+						CantSave(cart_filename);
+					else
+						Created(cart_filename);
+				}
+			}
 			break;
 		default:
 			return;
@@ -1327,37 +1472,75 @@ static void CartManagement(void)
 	}
 }
 
-#if defined(SOUND) && !defined(DREAMCAST)
+#ifdef AUDIO_RECORDING
 static void SoundRecording(void)
 {
-	if (!SndSave_IsSoundFileOpen()) {
-		int no = 0;
-		do {
-			char buffer[32];
-			snprintf(buffer, sizeof(buffer), "atari%03d.wav", no);
-			if (!Util_fileexists(buffer)) {
-				/* file does not exist - we can create it */
-				FilenameMessage(SndSave_OpenSoundFile(buffer)
-					? "Recording sound to file \"%s\""
-					: "Can't write to file \"%s\"", buffer);
-				return;
+	if (!Sound_enabled) {
+		UI_driver->fMessage("Can't record. Sound not enabled.", 1);
+		return;
+	}
+	if (!File_Export_IsRecording()) {
+		char buffer[FILENAME_MAX];
+		if (File_Export_GetNextSoundFile(buffer, sizeof(buffer))) {
+			/* file does not exist - we can create it */
+			if (File_Export_StartRecording(buffer)) {
+				FilenameMessage("Recording sound to file \"%s\"", buffer);
 			}
-		} while (++no < 1000);
-		UI_driver->fMessage("All atariXXX.wav files exist!", 1);
+			else {
+				UI_driver->fMessage(FILE_EXPORT_error_message, 1);
+			}
+			return;
+		}
+		UI_driver->fMessage("All sound files exist!", 1);
 	}
 	else {
-		SndSave_CloseSoundFile();
+		File_Export_StopRecording();
 		UI_driver->fMessage("Recording stopped", 1);
 	}
 }
-#endif /* defined(SOUND) && !defined(DREAMCAST) */
+#endif /* AUDIO_RECORDING */
+
+#ifdef VIDEO_RECORDING
+static void VideoRecording(void)
+{
+	if (!File_Export_IsRecording()) {
+		char buffer[FILENAME_MAX];
+		if (File_Export_GetNextVideoFile(buffer, sizeof(buffer))) {
+			/* file does not exist - we can create it */
+			if (File_Export_StartRecording(buffer)) {
+				FilenameMessage("Recording video to file \"%s\"", buffer);
+			}
+			else {
+				UI_driver->fMessage(FILE_EXPORT_error_message, 1);
+			}
+			return;
+		}
+		UI_driver->fMessage("All video files exist!", 1);
+	}
+	else {
+		File_Export_StopRecording();
+		UI_driver->fMessage("Recording stopped", 1);
+	}
+}
+#endif /* VIDEO_RECORDING */
 
 static int AutostartFile(void)
 {
 	static char filename[FILENAME_MAX];
 	if (UI_driver->fGetLoadFilename(filename, UI_atari_files_dir, UI_n_atari_files_dir)) {
-		if (AFILE_OpenFile(filename, TRUE, 1, FALSE))
+		int file_type = AFILE_OpenFile(filename, TRUE, 1, FALSE);
+		if (file_type != 0) {
+			int rom_kb;
+			if ((file_type & 0xff) == AFILE_ROM
+			    && (rom_kb = (file_type & ~0xff) >> 8) != 0) {
+				int cart_type = UI_SelectCartType(rom_kb);
+				if (cart_type == CARTRIDGE_NONE)
+					/* User chose nothing - go back to parent menu. */
+					return FALSE;
+				CARTRIDGE_SetTypeAutoReboot(&CARTRIDGE_main, cart_type);
+			}
 			return TRUE;
+		}
 		CantLoad(filename);
 	}
 	return FALSE;
@@ -1384,7 +1567,7 @@ static void TapeSliderLabel(char *label, int value, void *user_data)
 	if (value >= CASSETTE_GetSize())
 		sprintf(label, "End");
 	else
-		snprintf(label, 10, "%i", value + 1);
+		snprintf(label, 10, "%u", (unsigned int)value + 1);
 }
 
 static void TapeManagement(void)
@@ -1503,32 +1686,80 @@ static void TapeManagement(void)
 
 }
 
-static void AdvancedHOptions(void)
+static void HDeviceStatus(void)
 {
-	static char open_info[] = "0 currently open files";
+	static char open_info[] = " 0 currently open files";
 	static UI_tMenuItem menu_array[] = {
-		UI_MENU_ACTION(0, "Atari executables path"),
-		UI_MENU_ACTION_TIP(1, open_info, NULL),
+		UI_MENU_ACTION(0, "Devices enabled:"),
+		UI_MENU_ACTION(1, "SIO letter:"),
+		UI_MENU_FILESEL_PREFIX_TIP(2, "Device 1 path: ", Devices_atari_h_dir[0], "Also device 6 with ASCII conversion"),
+		UI_MENU_FILESEL_PREFIX_TIP(3, "Device 2 path: ", Devices_atari_h_dir[1], "Also device 7 with ASCII conversion"),
+		UI_MENU_FILESEL_PREFIX_TIP(4, "Device 3 path: ", Devices_atari_h_dir[2], "Also device 8 with ASCII conversion"),
+		UI_MENU_FILESEL_PREFIX_TIP(5, "Device 4 path: ", Devices_atari_h_dir[3], "Also device 9 with ASCII conversion"),
+		UI_MENU_LABEL("Atari executable path:"),
+		UI_MENU_ACTION_PREFIX(6, " ", Devices_h_exe_path),
+		UI_MENU_LABEL("File status:"),
+		UI_MENU_ACTION_TIP(7, open_info, NULL),
 		UI_MENU_LABEL("Current directories:"),
-		UI_MENU_ACTION_PREFIX_TIP(2, "H1:", Devices_h_current_dir[0], NULL),
-		UI_MENU_ACTION_PREFIX_TIP(3, "H2:", Devices_h_current_dir[1], NULL),
-		UI_MENU_ACTION_PREFIX_TIP(4, "H3:", Devices_h_current_dir[2], NULL),
-		UI_MENU_ACTION_PREFIX_TIP(5, "H4:", Devices_h_current_dir[3], NULL),
+		UI_MENU_ACTION_PREFIX_TIP(8, " Dev 1:", Devices_h_current_dir[0], NULL),
+		UI_MENU_ACTION_PREFIX_TIP(9, " Dev 2:", Devices_h_current_dir[1], NULL),
+		UI_MENU_ACTION_PREFIX_TIP(10, " Dev 3:", Devices_h_current_dir[2], NULL),
+		UI_MENU_ACTION_PREFIX_TIP(11, " Dev 4:", Devices_h_current_dir[3], NULL),
 		UI_MENU_END
 	};
 	int option = 0;
+	char hdev_option[4];
 	for (;;) {
 		int i;
 		int seltype;
 		i = Devices_H_CountOpen();
-		open_info[0] = (char) ('0' + i);
-		open_info[21] = (i != 1) ? 's' : '\0';
-		menu_array[1].suffix = (i > 0) ? ((i == 1) ? "Backspace: close" : "Backspace: close all") : NULL;
+		open_info[1] = (char) ('0' + i);
+		open_info[22] = (i != 1) ? 's' : '\0';
+		FindMenuItem(menu_array, 7)->suffix = (i > 0) ? ((i == 1) ? "Backspace: close" : "Backspace: close all") : NULL;
 		for (i = 0; i < 4; i++)
-			menu_array[3 + i].suffix = Devices_h_current_dir[i][0] != '\0' ? "Backspace: reset to root" : NULL;
-		option = UI_driver->fSelect("Advanced H: options", 0, option, menu_array, &seltype);
+			menu_array[11 + i].suffix = Devices_h_current_dir[i][0] != '\0' ? "Backspace: reset to root" : NULL;
+		FindMenuItem(menu_array, 0)->suffix = Devices_enable_h_patch ? (Devices_h_read_only ? "Read-only" : "Read/write") : "No ";
+		strcpy(hdev_option + 1, ":");
+		hdev_option[0] = Devices_h_device_name;
+		FindMenuItem(menu_array, 1)->suffix = hdev_option;
+		option = UI_driver->fSelect("Host device settings", 0, option, menu_array, &seltype);
 		switch (option) {
 		case 0:
+			if (!Devices_enable_h_patch) {
+				Devices_enable_h_patch = TRUE;
+				Devices_h_read_only = TRUE;
+			}
+			else if (Devices_h_read_only)
+				Devices_h_read_only = FALSE;
+			else {
+				Devices_enable_h_patch = FALSE;
+				Devices_h_read_only = TRUE;
+			}
+			break;
+		case 1:
+			if (seltype == UI_USER_DELETE)
+				Devices_h_device_name = 'H';
+			else {
+				hdev_option[1] = 0;
+				UI_driver->fEditString("Host Device SIO Letter:", hdev_option, 2);
+				if( hdev_option[0] >= 'a' && hdev_option[0] <= 'z' )
+					hdev_option[0] -= 'a' - 'A';
+				if( !strchr("CEKS", hdev_option[0]) )
+					Devices_h_device_name = hdev_option[0];
+				else
+					UI_driver->fMessage("Invalid device letter", 1);
+			}
+			break;
+		case 2:
+		case 3:
+		case 4:
+		case 5:
+			if (seltype == UI_USER_DELETE)
+				FindMenuItem(menu_array, option)->item[0] = '\0';
+			else
+				UI_driver->fGetDirectoryPath(FindMenuItem(menu_array, option)->item);
+			break;
+		case 6:
 			{
 				char tmp_path[FILENAME_MAX];
 				strcpy(tmp_path, Devices_h_exe_path);
@@ -1536,16 +1767,16 @@ static void AdvancedHOptions(void)
 					strcpy(Devices_h_exe_path, tmp_path);
 			}
 			break;
-		case 1:
+		case 7:
 			if (seltype == UI_USER_DELETE)
 				Devices_H_CloseAll();
 			break;
-		case 2:
-		case 3:
-		case 4:
-		case 5:
+		case 8:
+		case 9:
+		case 10:
+		case 11:
 			if (seltype == UI_USER_DELETE)
-				Devices_h_current_dir[option - 2][0] = '\0';
+				Devices_h_current_dir[option - 8][0] = '\0';
 			break;
 		default:
 			return;
@@ -2032,8 +2263,8 @@ static void AtariSettings(void)
 		UI_MENU_CHECK(3, "SIO patch (fast disk access):"),
 		UI_MENU_CHECK(17, "Turbo (F12):"),
 		UI_MENU_CHECK(19, "Slow booting of DOS binary files:"),
-		UI_MENU_ACTION(4, "H: device (hard disk):"),
 		UI_MENU_CHECK(5, "P: device (printer):"),
+		UI_MENU_ACTION_PREFIX(12, " Print command: ", Devices_print_command),
 #ifdef R_IO_DEVICE
 #ifdef DREAMCAST
 		UI_MENU_CHECK(6, "R: device (using Coder's Cable):"),
@@ -2041,12 +2272,7 @@ static void AtariSettings(void)
 		UI_MENU_CHECK(6, "R: device (Atari850 via net):"),
 #endif
 #endif
-		UI_MENU_FILESEL_PREFIX(7, "H1: ", Devices_atari_h_dir[0]),
-		UI_MENU_FILESEL_PREFIX(8, "H2: ", Devices_atari_h_dir[1]),
-		UI_MENU_FILESEL_PREFIX(9, "H3: ", Devices_atari_h_dir[2]),
-		UI_MENU_FILESEL_PREFIX(10, "H4: ", Devices_atari_h_dir[3]),
-		UI_MENU_SUBMENU(11, "Advanced H: options"),
-		UI_MENU_ACTION_PREFIX(12, "Print command: ", Devices_print_command),
+		UI_MENU_SUBMENU(11, "Host device settings"),
 		UI_MENU_SUBMENU(13, "System ROM settings"),
 		UI_MENU_SUBMENU(14, "Configure directories"),
 #ifndef DREAMCAST
@@ -2070,7 +2296,6 @@ static void AtariSettings(void)
 #endif /* XEP80_EMULATION */
 		SetItemChecked(menu_array, 17, Atari800_turbo);
 		SetItemChecked(menu_array, 19, BINLOAD_slow_xex_loading);
-		FindMenuItem(menu_array, 4)->suffix = Devices_enable_h_patch ? (Devices_h_read_only ? "Read-only" : "Read/write") : "No ";
 		SetItemChecked(menu_array, 5, Devices_enable_p_patch);
 #ifdef R_IO_DEVICE
 		SetItemChecked(menu_array, 6, Devices_enable_r_patch);
@@ -2093,18 +2318,6 @@ static void AtariSettings(void)
 		case 3:
 			ESC_enable_sio_patch = !ESC_enable_sio_patch;
 			break;
-		case 4:
-			if (!Devices_enable_h_patch) {
-				Devices_enable_h_patch = TRUE;
-				Devices_h_read_only = TRUE;
-			}
-			else if (Devices_h_read_only)
-				Devices_h_read_only = FALSE;
-			else {
-				Devices_enable_h_patch = FALSE;
-				Devices_h_read_only = TRUE;
-			}
-			break;
 		case 5:
 			Devices_enable_p_patch = !Devices_enable_p_patch;
 			break;
@@ -2113,17 +2326,8 @@ static void AtariSettings(void)
 			Devices_enable_r_patch = !Devices_enable_r_patch;
 			break;
 #endif
-		case 7:
-		case 8:
-		case 9:
-		case 10:
-			if (seltype == UI_USER_DELETE)
-				FindMenuItem(menu_array, option)->item[0] = '\0';
-			else
-				UI_driver->fGetDirectoryPath(FindMenuItem(menu_array, option)->item);
-			break;
 		case 11:
-			AdvancedHOptions();
+			HDeviceStatus();
 			break;
 		case 12:
 			strcpy(tmp_command, Devices_print_command);
@@ -2139,10 +2343,7 @@ static void AtariSettings(void)
 			break;
 #ifndef DREAMCAST
 		case 15:
-			if (legacy_configuration_file)
-				UI_driver->fMessage(CFG_WriteConfig() ? "Configuration file updated" : "Error writing configuration file", 1);
-			else
-				UI_driver->fMessage("Legacy configuration file is disabled", 1);
+			UI_driver->fMessage(CFG_WriteConfig() ? "Configuration file updated" : "Error writing configuration file", 1);
 			break;
 		case 16:
 			CFG_save_on_exit = !CFG_save_on_exit;
@@ -3596,6 +3797,58 @@ static void KeyboardJoystickConfiguration(int joystick)
 		if (++option2 > 4) option2 = 0;
 	}
 }
+
+static void RealJoystickConfiguration(void)
+{
+	char title[40];
+	int option = 0;
+	int i;
+	SDL_INPUT_RealJSConfig_t *js_config;
+
+	static UI_tMenuItem real_js_menu_array[] = {
+		UI_MENU_LABEL("Joystick 1"),
+		UI_MENU_CHECK(0, "Use hat/D-PAD:"),
+		UI_MENU_LABEL("Joystick 2"),
+		UI_MENU_CHECK(1, "Use hat/D-PAD:"),
+		UI_MENU_LABEL("Joystick 3"),
+		UI_MENU_CHECK(2, "Use hat/D-PAD:"),
+		UI_MENU_LABEL("Joystick 4"),
+		UI_MENU_CHECK(3, "Use hat/D-PAD:"),
+		UI_MENU_END
+	};
+
+	snprintf(title, sizeof (title), "Configuration of Real Joysticks");
+
+	for (;;) {
+		/*Set the CHECK items*/
+		for (i = 0; i < 4; i++) {
+			SetItemChecked(real_js_menu_array, i, SDL_INPUT_GetRealJSConfig(i)->use_hat);
+		}
+
+		option = UI_driver->fSelect(title, 0, option, real_js_menu_array, NULL);
+
+		if (option < 0) break;
+
+		switch (option) {
+			case 0:
+				js_config = SDL_INPUT_GetRealJSConfig(0);
+				js_config->use_hat = !js_config->use_hat;
+				break;
+			case 1:
+				js_config = SDL_INPUT_GetRealJSConfig(1);
+				js_config->use_hat = !js_config->use_hat;
+				break;
+			case 2:
+				js_config = SDL_INPUT_GetRealJSConfig(2);
+				js_config->use_hat = !js_config->use_hat;
+				break;
+			case 3:
+				js_config = SDL_INPUT_GetRealJSConfig(3);
+				js_config->use_hat = !js_config->use_hat;
+				break;
+		}
+	}
+}
 #endif
 
 #ifdef DIRECTX
@@ -3702,6 +3955,7 @@ static void ControllerConfiguration(void)
 		UI_MENU_SUBMENU(6, "Define layout of keyboard joystick 1"),
 		UI_MENU_CHECK(7, "Enable keyboard joystick 2:"),
 		UI_MENU_SUBMENU(8, "Define layout of keyboard joystick 2"),
+		UI_MENU_SUBMENU(9, "Configure real joysticks"),
 #endif
 #ifdef DIRECTX
 		UI_MENU_SUBMENU_SUFFIX(5, "Keyboard joystick mode: ", NULL),
@@ -3737,8 +3991,8 @@ static void ControllerConfiguration(void)
 		mouse_speed_status[0] = (char) ('0' + INPUT_mouse_speed);
 #endif
 #ifdef GUI_SDL
-		SetItemChecked(menu_array, 5, PLATFORM_kbd_joy_0_enabled);
-		SetItemChecked(menu_array, 7, PLATFORM_kbd_joy_1_enabled);
+		SetItemChecked(menu_array, 5, PLATFORM_IsKbdJoystickEnabled(0));
+		SetItemChecked(menu_array, 7, PLATFORM_IsKbdJoystickEnabled(1));
 #endif
 #ifdef DIRECTX
 		menu_array[5].suffix = keyboard_joystick_mode_array[keyboardJoystickMode].item;
@@ -3793,16 +4047,18 @@ static void ControllerConfiguration(void)
 #endif
 #ifdef GUI_SDL
 		case 5:
-			PLATFORM_kbd_joy_0_enabled = !PLATFORM_kbd_joy_0_enabled;
+			PLATFORM_ToggleKbdJoystickEnabled(0);
 			break;
 		case 6:
 			KeyboardJoystickConfiguration(0);
 			break;
 		case 7:
-			PLATFORM_kbd_joy_1_enabled = !PLATFORM_kbd_joy_1_enabled;
+			PLATFORM_ToggleKbdJoystickEnabled(1);
 			break;
 		case 8:
 			KeyboardJoystickConfiguration(1);
+			break;
+		case 9: RealJoystickConfiguration();
 			break;
 #endif
 #ifdef DIRECTX
@@ -4075,7 +4331,7 @@ static int SoundSettings(void)
 
 #endif /* SOUND */
 
-#if !defined(CURSES_BASIC) && !defined(DREAMCAST)
+#ifdef SCREENSHOTS
 
 static void Screenshot(int interlaced)
 {
@@ -4134,7 +4390,9 @@ static void FunctionKeyHelp(void)
 		"F8  - Enter monitor        \0"
 		"      (-console required)  \0"
 		"F9  - Exit emulator        \0"
+#ifdef SCREENSHOTS
 		"F10 - Save screenshot      \0"
+#endif
 		"\n");
 }
 
@@ -4159,6 +4417,55 @@ static void HotKeyHelp(void)
 }
 #endif
 
+int UI_Initialise(int *argc, char *argv[])
+{
+	int i;
+	int j;
+
+	for (i = j = 1; i < *argc; i++) {
+		int i_a = (i + 1 < *argc); /* is argument available? */
+		int a_m = FALSE; /* error, argument missing! */
+		int a_i = FALSE; /* error, argument invalid! */
+
+		if (strcmp(argv[i], "-atari_files") == 0) {
+			if (i_a) {
+				if (UI_n_atari_files_dir >= UI_MAX_DIRECTORIES)
+					Log_print("All ATARI_FILES_DIR slots used!");
+				else
+					Util_strlcpy(UI_atari_files_dir[UI_n_atari_files_dir++], argv[++i], FILENAME_MAX);
+			}
+			else a_m = TRUE;
+		}
+		else if (strcmp(argv[i], "-saved_files") == 0) {
+			if (i_a) {
+				if (UI_n_saved_files_dir >= UI_MAX_DIRECTORIES)
+					Log_print("All SAVED_FILES_DIR slots used!");
+				else
+					Util_strlcpy(UI_saved_files_dir[UI_n_saved_files_dir++], argv[++i], FILENAME_MAX);
+			}
+			else a_m = TRUE;
+		}
+		else {
+			if (strcmp(argv[i], "-help") == 0) {
+				Log_print("\t-atari_files <path>  Set default path for Atari executables");
+				Log_print("\t-saved_files <path>  Set default path for saved files");
+			}
+			argv[j++] = argv[i];
+		}
+
+		if (a_m) {
+			Log_print("Missing argument for '%s'", argv[i]);
+			return FALSE;
+		} else if (a_i) {
+			Log_print("Invalid argument for '%s'", argv[--i]);
+			return FALSE;
+		}
+	}
+	*argc = j;
+
+	return TRUE;
+}
+
 void UI_Run(void)
 {
 	static UI_tMenuItem menu_array[] = {
@@ -4173,6 +4480,9 @@ void UI_Run(void)
 		UI_MENU_ACTION_ACCEL(UI_MENU_SOUND_RECORDING, "Sound Recording Start/Stop", "Alt+W"),
 #endif
 #endif
+#ifdef VIDEO_RECORDING
+		UI_MENU_ACTION_ACCEL(UI_MENU_VIDEO_RECORDING, "Video Recording Start/Stop", "Alt+V"),
+#endif
 #ifndef CURSES_BASIC
 		UI_MENU_SUBMENU(UI_MENU_DISPLAY, "Display Settings"),
 #endif
@@ -4185,18 +4495,17 @@ void UI_Run(void)
 		UI_MENU_SUBMENU(UI_MENU_SETTINGS, "Emulator Configuration"),
 		UI_MENU_FILESEL_ACCEL(UI_MENU_SAVESTATE, "Save State", "Alt+S"),
 		UI_MENU_FILESEL_ACCEL(UI_MENU_LOADSTATE, "Load State", "Alt+L"),
-#if !defined(CURSES_BASIC) && !defined(DREAMCAST)
+#if SCREENSHOTS
 #ifdef HAVE_LIBPNG
 #ifndef __LIBRETRO__
 		UI_MENU_FILESEL_ACCEL(UI_MENU_PCX, "Save Screenshot", "F10"),
-		/* there isn't enough space for "PNG/PCX Interlaced Screenshot Shift+F10" */
 		UI_MENU_FILESEL_ACCEL(UI_MENU_PCXI, "Save Interlaced Screenshot", "Shift+F10"),
-#endif // __LIBRETRO__
+#endif /* __LIBRETRO__ */
 #else
 #ifndef __LIBRETRO__
 		UI_MENU_FILESEL_ACCEL(UI_MENU_PCX, "PCX Screenshot", "F10"),
 		UI_MENU_FILESEL_ACCEL(UI_MENU_PCXI, "PCX Interlaced Screenshot", "Shift+F10"),
-#endif // __LIBRETRO__
+#endif /* __LIBRETRO__ */
 #endif
 #endif
 		UI_MENU_ACTION_ACCEL(UI_MENU_BACK, "Back to Emulated Atari", "Esc"),
@@ -4211,12 +4520,12 @@ void UI_Run(void)
 #else
 #ifndef __LIBRETRO__
 		UI_MENU_ACTION_ACCEL(UI_MENU_MONITOR, "Enter Monitor", "F8"),
-#endif // __LIBRETRO__
+#endif /* __LIBRETRO__ */
 #endif
 		UI_MENU_ACTION_ACCEL(UI_MENU_ABOUT, "About the Emulator", "Alt+A"),
 #ifndef __LIBRETRO__
 		UI_MENU_ACTION_ACCEL(UI_MENU_EXIT, "Exit Emulator", "F9"),
-#endif // __LIBRETRO__
+#endif /* __LIBRETRO__ */
 		UI_MENU_END
 	};
 
@@ -4298,11 +4607,16 @@ void UI_Run(void)
 				done = TRUE;	/* reboot immediately */
 			}
 			break;
-#ifndef DREAMCAST
+#ifdef AUDIO_RECORDING
 		case UI_MENU_SOUND_RECORDING:
 			SoundRecording();
 			break;
 #endif
+#endif
+#ifdef VIDEO_RECORDING
+		case UI_MENU_VIDEO_RECORDING:
+			VideoRecording();
+			break;
 #endif
 		case UI_MENU_SAVESTATE:
 			SaveState();
@@ -4316,7 +4630,7 @@ void UI_Run(void)
 		case UI_MENU_DISPLAY:
 			DisplaySettings();
 			break;
-#ifndef DREAMCAST
+#ifdef SCREENSHOTS
 		case UI_MENU_PCX:
 			Screenshot(FALSE);
 			break;

@@ -109,12 +109,6 @@ int MEMORY_SizeValid(int size);
 void MEMORY_InitialiseMachine(void);
 void MEMORY_StateSave(UBYTE SaveVerbose);
 void MEMORY_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
-
-#if defined(__LIBRETRO__)
-void Retro_MEMORY_StateSave(UBYTE SaveVerbose);
-void Retro_MEMORY_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
-#endif
-
 void MEMORY_CopyFromMem(UWORD from, UBYTE *to, int size);
 void MEMORY_CopyToMem(const UBYTE *from, UWORD to, int size);
 void MEMORY_HandlePORTB(UBYTE byte, UBYTE oldval);
@@ -122,7 +116,8 @@ void MEMORY_Cart809fDisable(void);
 void MEMORY_Cart809fEnable(void);
 void MEMORY_CartA0bfDisable(void);
 void MEMORY_CartA0bfEnable(void);
-#define MEMORY_CopyROM(addr1, addr2, src) memcpy(MEMORY_mem + (addr1), src, (addr2) - (addr1) + 1)
+#define MEMORY_CopyFromCart(addr1, addr2, src) memcpy(MEMORY_mem + (addr1), src, (addr2) - (addr1) + 1)
+#define MEMORY_CopyToCart(addr1, addr2, dst) memcpy(dst, MEMORY_mem + (addr1), (addr2) - (addr1) + 1)
 void MEMORY_GetCharset(UBYTE *cs);
 
 /* Mosaic and Axlon 400/800 RAM extensions */
@@ -141,4 +136,9 @@ UBYTE MEMORY_HwGetByte(UWORD addr, int safe);
 void MEMORY_HwPutByte(UWORD addr, UBYTE byte);
 #endif /* PAGED_MEM */
 
+
+#if defined(__LIBRETRO__)
+void Retro_MEMORY_StateSave(UBYTE SaveVerbose);
+void Retro_MEMORY_StateRead(UBYTE SaveVerbose, UBYTE StateVersion);
+#endif
 #endif /* MEMORY_H_ */

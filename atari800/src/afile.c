@@ -44,6 +44,7 @@
 #include "carts_hash.h"
 #endif
 
+
 int AFILE_DetectFileType(const char *filename)
 {
 	UBYTE header[4];
@@ -51,17 +52,19 @@ int AFILE_DetectFileType(const char *filename)
 	FILE *fp = fopen(filename, "rb");
 	if (fp == NULL)
 		return AFILE_ERROR;
-	
-	#ifdef __LIBRETRO__
-	// False positives - hack for raw images
-	ULONG crc;
-	CRC32_FromFile(fp, &crc);
-	Util_rewind(fp);
-	if (is_cart(crc)) {
-		fclose(fp);
-		return AFILE_ROM;
+
+#ifdef __LIBRETRO__
+	/* False positives - hack for raw images */
+	{
+		ULONG crc;
+		CRC32_FromFile(fp, &crc);
+		Util_rewind(fp);
+		if (is_cart(crc)) {
+			fclose(fp);
+			return AFILE_ROM;
+		}
 	}
-	#endif // __LIBRETRO__
+#endif /* __LIBRETRO__ */
 
 	if (fread(header, 1, 4, fp) != 4) {
 		fclose(fp);
@@ -217,22 +220,8 @@ int AFILE_OpenFile(const char *filename, int reboot, int diskno, int readonly)
 				/* ok */
 				break;
 			default:
-#ifdef BASIC
-				Log_print("Raw cartridge images are not supported in BASIC version.");
-				return AFILE_ERROR;
-#else /* BASIC */
 				/* r > 0 */
-//LIBRETRO HACK
-//#ifndef ANDROID
-#if !defined(ANDROID) || defined(__LIBRETRO__)
-		UI_is_active = TRUE;
-				CARTRIDGE_SetTypeAutoReboot(&CARTRIDGE_main, UI_SelectCartType(r));
-		UI_is_active = FALSE;
-#else
 				return (r << 8) | AFILE_ROM;
-#endif /* ANDROID */
-				break;
-#endif /* BASIC */
 			}
 		}
 		break;

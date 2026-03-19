@@ -1260,7 +1260,7 @@ void SIO_Handler(void)
 				result = 'E';
 			break;
 		case 0x50:	/* put (used by AltirraOS) */
-		case 0x57:	/* write */
+		case 0x57:	/* write (used by Atari OS) */
 			/* add pregap length */
 			CASSETTE_AddGap(gaps == 0 ? 3000 : 260);
 			/* write full record to storage medium */
@@ -1679,48 +1679,6 @@ int SIO_RotateDisks(void)
 
 #ifndef BASIC
 
-#if defined(__LIBRETRO__)
-void Retro_SIO_StateSave(void)
-{
-	int i;
-
-	for (i = 0; i < 8; i++) {
-		Retro_SaveINT((int*)&SIO_drive_status[i], 1);
-		Retro_SaveFNAME(SIO_filename[i]);
-	}
-}
-
-void Retro_SIO_StateRead(void)
-{
-	int i;
-
-	for (i = 0; i < 8; i++) {
-		int saved_drive_status;
-		char filename[FILENAME_MAX];
-
-		Retro_ReadINT(&saved_drive_status, 1);
-		SIO_drive_status[i] = (SIO_UnitStatus)saved_drive_status;
-
-		Retro_ReadFNAME(filename);
-		if (filename[0] == 0)
-			continue;
-
-		/* If the disk drive wasn't empty or off when saved,
-		   mount the disk */
-		switch (saved_drive_status) {
-		case SIO_READ_ONLY:
-			SIO_Mount(i + 1, filename, TRUE);
-			break;
-		case SIO_READ_WRITE:
-			SIO_Mount(i + 1, filename, FALSE);
-			break;
-		default:
-			break;
-		}
-	}
-}
-#endif /* __LIBRETRO__ */
-
 void SIO_StateSave(void)
 {
 	int i;
@@ -1766,3 +1724,45 @@ void SIO_StateRead(void)
 /*
 vim:ts=4:sw=4:
 */
+
+#if defined(__LIBRETRO__)
+void Retro_SIO_StateSave(void)
+{
+	int i;
+
+	for (i = 0; i < 8; i++) {
+		Retro_SaveINT((int*)&SIO_drive_status[i], 1);
+		Retro_SaveFNAME(SIO_filename[i]);
+	}
+}
+
+void Retro_SIO_StateRead(void)
+{
+	int i;
+
+	for (i = 0; i < 8; i++) {
+		int saved_drive_status;
+		char filename[FILENAME_MAX];
+
+		Retro_ReadINT(&saved_drive_status, 1);
+		SIO_drive_status[i] = (SIO_UnitStatus)saved_drive_status;
+
+		Retro_ReadFNAME(filename);
+		if (filename[0] == 0)
+			continue;
+
+		/* If the disk drive wasn't empty or off when saved,
+		   mount the disk */
+		switch (saved_drive_status) {
+		case SIO_READ_ONLY:
+			SIO_Mount(i + 1, filename, TRUE);
+			break;
+		case SIO_READ_WRITE:
+			SIO_Mount(i + 1, filename, FALSE);
+			break;
+		default:
+			break;
+		}
+	}
+}
+#endif /* __LIBRETRO__ */

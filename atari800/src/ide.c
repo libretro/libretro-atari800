@@ -81,7 +81,7 @@
 #  define fseeko _fseek
 #  define ftello _ftell
 #  define PRId64 "lld"
-#elif defined (__DJGPP__) || defined(__PS3__) && !defined(__PSL1GHT__)
+#elif defined (__DJGPP__)
 #  define fseeko fseek
 #  define ftello ftell
 #  define PRId64 "lld"
@@ -99,7 +99,7 @@ static inline void padstr(uint8_t *str, const char *src, int len) {
         str[i^1] = *src ? *src++ : ' ';
 }
 
-#define LE16(x,y,z) (x)[(y)<<1] = (z)&0xff; (x)[((y)<<1)+1] = ((uint16_t)z)>>8;
+#define LE16(x,y,z) { (x)[(y)<<1] = (z)&0xff; (x)[((y)<<1)+1] = ((uint16_t)z)>>8; }
 
 static void ide_identify(struct ide_device *s) {
     unsigned int oldsize;

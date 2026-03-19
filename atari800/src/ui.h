@@ -30,6 +30,8 @@
 
 /* Three legitimate entries to UI module. */
 int UI_SelectCartType(int k);
+int UI_SelectCartTypeBetween(int *types);
+int UI_Initialise(int *argc, char *argv[]);
 void UI_Run(void);
 
 extern int UI_is_active;
@@ -48,6 +50,8 @@ extern char UI_atari_files_dir[UI_MAX_DIRECTORIES][FILENAME_MAX];
 extern char UI_saved_files_dir[UI_MAX_DIRECTORIES][FILENAME_MAX];
 extern int UI_n_atari_files_dir;
 extern int UI_n_saved_files_dir;
+
+extern int UI_show_hidden_files;
 
 #ifdef GUI_SDL
 void PLATFORM_SetJoystickKey(int joystick, int direction, int value);
@@ -90,6 +94,8 @@ int GetKeyName(void);
 	#define UI_MENU_FUNCT_KEY_HELP   22
 	#define UI_MENU_HOT_KEY_HELP     23
 #endif
+
+#define UI_MENU_VIDEO_RECORDING  24
 
 /* Structure of menu item. Each menu is just an array of items of this structure
    terminated by UI_MENU_END */
