@@ -282,7 +282,9 @@
 #define HAVE_SYS_TYPES_H 1
 
 /* Define to 1 if you have the <termios.h> header file. */
+#if !defined(_WIN32) && !defined(PSP) && !defined(VITA) && !defined(_3DS) && !defined(GEKKO) && !defined(WIIU) && !defined(__SWITCH__)
 #define HAVE_TERMIOS_H 1
+#endif
 
 /* Define to 1 if you have the `time' function. */
 #define HAVE_TIME 1
