@@ -589,6 +589,10 @@
 
 #endif
 
+#if defined(WIIU) || defined(__wiiu__)
+#undef HAVE_NANOSLEEP
+#endif
+
 #if defined(__PS3__) && !defined(__PSL1GHT__)
 #undef HAVE_FSEEKO
 #undef HAVE_GETCWD
