@@ -910,7 +910,7 @@ int get_5200_cart_atari800_type(ULONG crc, int size) {
                 }
                 break;
             case a5200_40:     return CARTRIDGE_5200_40;
-            case a5200_40_ALT: return CARTRIDGE_5200_40;
+            case a5200_40_ALT: return CARTRIDGE_5200_40_ALT;
             case a5200_ee_16:  return CARTRIDGE_5200_EE_16;
             case a5200_64:     return CARTRIDGE_5200_SUPER_64;
             case a5200_128:    return CARTRIDGE_5200_SUPER_128;

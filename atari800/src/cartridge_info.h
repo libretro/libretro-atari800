@@ -147,6 +147,8 @@ enum {
 	CARTRIDGE_RAMCART_32M    = 102,
 	CARTRIDGE_SIDICAR_32     = 103,
 
+	CARTRIDGE_5200_40_ALT    = 104, /* libretro: Bounty Bob Strikes Back alt layout (fixed 8K at image offset 0) */
+
 	CARTRIDGE_JRC64_INT      = 160,
 	CARTRIDGE_TYPE_COUNT     = 161
 };

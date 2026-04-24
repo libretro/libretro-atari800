@@ -133,7 +133,7 @@ cart_t const CARTRIDGES[CARTRIDGE_TYPE_COUNT] = {
 	{ "Ram-Cart 32 MB cartridge",            32*1024 },
 	{ "SiDiCar 32 KB cartridge",                  32 },
 
-	{ "",                                          0 },
+	{ "Bounty Bob 40 KB 5200 cartridge (alt layout)", 40 }, /* 104 - libretro */
 	{ "",                                          0 },
 	{ "",                                          0 },
 	{ "",                                          0 },
