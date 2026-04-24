@@ -112,6 +112,7 @@ unsigned atari_devices[4];
 // libretro-Atari800 core options variables
 int keyboard_type = 0;
 int autorunCartridge = NO_CART;
+int autorun5200CartType = 0;    /* atari800 CARTRIDGE_* type when autorunCartridge == A5200_CART */
 int atari_joyhack = 0;
 int paddle_mode = 0;
 int paddle_speed = 3;
@@ -550,29 +551,39 @@ static void update_variables(void)
     struct retro_variable var;
 
     /* Moved here for better consistency and when system options that require EMU reset to occur */
+    autorun5200CartType = 0;
     if (strcmp(RPATH, "") == 0)  // Start core with no content
         autorunCartridge = NO_CART;
     /* Most complex case - .bin (common) and .rom (rare) can be used for both Atari 5200 console and Atari 8bit computers */
     else if  (HandleExtension((char*)RPATH, "bin") || HandleExtension((char*)RPATH, "BIN")
-           || HandleExtension((char*)RPATH, "rom") || HandleExtension((char*)RPATH, "ROM")) {
-        autorunCartridge = A800_CART; // default Atari 8bit, as most/all Atari 5200 games should be in atari5200_hash.h
-        ULONG crc;
+           || HandleExtension((char*)RPATH, "rom") || HandleExtension((char*)RPATH, "ROM")
+           || HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52")) {
+        int is_a52 = HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52");
+        autorunCartridge = is_a52 ? A5200_CART : A800_CART;
+        ULONG crc = 0;
+        long fsize = 0;
         FILE *fp;
         fp = fopen((char*)RPATH, "rb");
         if (fp != NULL) {
             CRC32_FromFile(fp, &crc);
+            fseek(fp, 0, SEEK_END);
+            fsize = ftell(fp);
             fclose(fp);
             if (is_5200_cart(crc)) {
                 autorunCartridge = A5200_CART;
-                log_cb(RETRO_LOG_INFO,"[update_variables] Found Atari 5200 bin file in DB for: %s\n", (char*)RPATH);
-            } else
+                log_cb(RETRO_LOG_INFO,"[update_variables] Found Atari 5200 cart in DB for: %s\n", (char*)RPATH);
+            } else if (!is_a52) {
                 log_cb(RETRO_LOG_INFO,"[update_variables] Assumming Atari 8bit bin file: %s\n", (char*)RPATH);
+            }
+            if (autorunCartridge == A5200_CART) {
+                autorun5200CartType = get_5200_cart_atari800_type(crc, (int)fsize);
+                log_cb(RETRO_LOG_INFO,"[update_variables] 5200 cart type: %d (size %ld, crc %08lx)\n",
+                    autorun5200CartType, fsize, (unsigned long)crc);
+            }
         } else {
-            log_cb(RETRO_LOG_INFO,"[update_variables] Error opening bin file: %s\n", (char*)RPATH );
+            log_cb(RETRO_LOG_INFO,"[update_variables] Error opening cart file: %s\n", (char*)RPATH );
         }
-    }   /* bin, rom files */
-    else if   (HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52"))
-        autorunCartridge = A5200_CART;
+    }   /* bin, rom, a52 files */
     else if   (HandleExtension((char*)RPATH, "car") || HandleExtension((char*)RPATH, "CAR"))
         autorunCartridge = A800_CART;
     /* Non cartridges extensions*/

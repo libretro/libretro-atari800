@@ -25,12 +25,15 @@ void Add_Option(const char* option)
    sprintf(XARGV[PARAMCOUNT++],"%s", option);
 }
 
+extern int autorunCartridge;
+extern int autorun5200CartType;
+
 int pre_main(const char *argv)
 {
    int i;
    bool Only1Arg;
 
-   parse_cmdline(argv); 
+   parse_cmdline(argv);
 
    Only1Arg = (strcmp(ARGUV[0],"prg") == 0) ? 0 : 1;
 
@@ -39,10 +42,32 @@ int pre_main(const char *argv)
 
 
    if(Only1Arg)
-   {  
+   {
 		Add_Option("prg");
 
-      Add_Option(RPATH/*ARGUV[0]*/);
+      /* For Atari 5200 carts, force the machine and the cart type explicitly.
+         Raw .a52/.bin images without a CART header otherwise match multiple
+         entries in atari800's CARTRIDGES[] (e.g. 16K => STD_16, 5200_NS_16,
+         5200_EE_16, Megacart_16, Williams_16, ...) and auto-detect falls
+         into CARTRIDGE_UNKNOWN, which triggers UI_SelectCartType() and a
+         black screen on boot. */
+      if (autorunCartridge == A5200_CART)
+      {
+         Add_Option("-5200");
+         if (autorun5200CartType > 0)
+         {
+            char type_buf[16];
+            snprintf(type_buf, sizeof(type_buf), "%d", autorun5200CartType);
+            Add_Option("-cart-type");
+            Add_Option(type_buf);
+         }
+         Add_Option("-cart");
+         Add_Option(RPATH);
+      }
+      else
+      {
+         Add_Option(RPATH/*ARGUV[0]*/);
+      }
    }
    else
    { // Pass all cmdline args
