@@ -769,6 +769,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "disabled"
    },
    {
+      "atari800_pokey_stereo",
+      "Stereo POKEY (Restart)",
+      NULL,
+      "Emulates the Atari Stereo Sound Mod (second POKEY chip at $D210-$D21F on 800/XL/XE). Stock 800/XL/XE has only one POKEY -- leave this disabled for authentic behavior. Some games (Bounty Bob Strikes Back, Road Race) use POKEY register mirroring tricks that lock up or lose audio when stereo is enabled. The Atari 5200 always uses mono regardless of this setting.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
       "atari800_cfg",
       "Uses the Atari800 legacy configuration file",
       NULL,

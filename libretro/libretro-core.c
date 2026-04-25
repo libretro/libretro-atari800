@@ -553,6 +553,23 @@ static void update_variables(void)
 {
     struct retro_variable var;
 
+    /* Stereo POKEY user option. Stock Atari 800/XL/XE has a single POKEY chip,
+       so default is mono -- most authentic and most compatible (Bounty Bob,
+       Road Race and other titles that hit mirrored POKEY registers lock up
+       or lose audio with stereo enabled). User can enable to emulate the
+       Atari Stereo Sound Mod (second POKEY at $D210-$D21F). 5200 always
+       forces mono below regardless of this option. */
+    var.key = "atari800_pokey_stereo";
+    var.value = NULL;
+    {
+        int want_stereo = FALSE;
+        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value
+            && strcmp(var.value, "enabled") == 0)
+            want_stereo = TRUE;
+        POKEYSND_stereo_enabled = want_stereo;
+        Sound_desired.channels = want_stereo ? 2 : 1;
+    }
+
     /* Moved here for better consistency and when system options that require EMU reset to occur */
     autorun5200CartType = 0;
     if (strcmp(RPATH, "") == 0)  // Start core with no content
