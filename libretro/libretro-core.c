@@ -20,6 +20,9 @@ static dc_storage* dc;
 #include "cassette.h"
 #include "artifact.h"
 #include "statesav.h"
+#include "pokeysnd.h"
+#include "sound.h"
+#include "cartridge_info.h"
 
 #include "carts_hash.h"
 #include "crc32.h"
@@ -584,8 +587,29 @@ static void update_variables(void)
             log_cb(RETRO_LOG_INFO,"[update_variables] Error opening cart file: %s\n", (char*)RPATH );
         }
     }   /* bin, rom, a52 files */
-    else if   (HandleExtension((char*)RPATH, "car") || HandleExtension((char*)RPATH, "CAR"))
+    else if   (HandleExtension((char*)RPATH, "car") || HandleExtension((char*)RPATH, "CAR")) {
         autorunCartridge = A800_CART;
+        /* Bounty Bob Strikes Back (CARTRIDGE_BBSB_40 = 18) writes to mirrored
+           POKEY registers (e.g. $D210 aliasing to $D200 on a single-POKEY 800).
+           Stereo POKEY decodes bit 4 as chip-select, which routes those writes
+           to a nonexistent second chip and locks the game in the menu. Peek at
+           the .car header (16 bytes: "CART" + 4-byte big-endian type) so we
+           can force mono before Sound_Initialise(). */
+        FILE *fp = fopen((char*)RPATH, "rb");
+        if (fp != NULL) {
+            unsigned char hdr[8];
+            if (fread(hdr, 1, 8, fp) == 8
+             && hdr[0] == 'C' && hdr[1] == 'A' && hdr[2] == 'R' && hdr[3] == 'T') {
+                int car_type = (hdr[4] << 24) | (hdr[5] << 16) | (hdr[6] << 8) | hdr[7];
+                if (car_type == CARTRIDGE_BBSB_40) {
+                    POKEYSND_stereo_enabled = FALSE;
+                    Sound_desired.channels = 1;
+                    log_cb(RETRO_LOG_INFO, "[update_variables] BBSB_40 .car detected, forcing mono POKEY\n");
+                }
+            }
+            fclose(fp);
+        }
+    }
     /* Non cartridges extensions*/
     else if   (HandleExtension((char*)RPATH, "xex") || HandleExtension((char*)RPATH, "XEX")
             || HandleExtension((char*)RPATH, "com") || HandleExtension((char*)RPATH, "COM")
@@ -659,6 +683,13 @@ static void update_variables(void)
             Atari800_jumper = FALSE;
             Atari800_builtin_game = FALSE;
             Atari800_keyboard_detached = FALSE;
+            /* Real Atari 5200 has a single POKEY. Stereo POKEY makes the chip
+               decode bit 4 of the address as a chip-select, so writes to mirrored
+               POKEY registers (e.g. $E810 aliasing to $E800 on real hardware)
+               hit a nonexistent second chip. Bounty Bob Strikes Back relies on
+               this aliasing and locks up otherwise. */
+            POKEYSND_stereo_enabled = FALSE;
+            Sound_desired.channels = 1;
             /* Force Atari 5200 joystick layout for Atari 5200 machine emulation */
             retro_set_controller_port_device(0, RETRO_DEVICE_ATARI_5200_JOYSTICK);
             retro_set_controller_port_device(1, RETRO_DEVICE_ATARI_5200_JOYSTICK);
