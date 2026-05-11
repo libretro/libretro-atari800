@@ -1,4 +1,4 @@
-.TH ATARI800 1 "2014-04-12" "Atari800 3.1.0"
+.TH ATARI800 1 "2023-12-29" "Atari800 5.2.0"
 
 .SH NAME
 atari800 \- emulator of Atari 8-bit computers and the 5200 console
@@ -52,7 +52,7 @@ Path to file containing Atari BASIC ROM.
 Used to override paths defined at compile time.
 
 .TP
-\fB\-800\-rev auto\fR|\fBa\-ntsc\fR|\fBa\-pal\fR|\fBb\-ntsc\fR|\fBcustom\fR
+\fB\-800\-rev auto\fR|\fBa\-ntsc\fR|\fBa\-pal\fR|\fBb\-ntsc\fR|\fBcustom\fR|\fBaltirra\fR
 Select operating system revision for Atari 800:
 .PP
 .RS
@@ -68,15 +68,18 @@ Use OS rev. A NTSC from early NTSC 400/800 units.
 .B a\-pal
 Use OS rev. A PAL from PAL 400/800 units.
 .TP
-.B a\-pal
+.B b\-ntsc
 Use OS rev. B NTSC from late NTSC 400/800 units.
 .TP
 .B custom
 Use a custom OS.
+.TP
+.B altirra
+Use AltirraOS that is included in the emulator.
 .PD
 .RE
 .TP
-\fB\-xl\-rev auto\fR|\fB10\fR|\fB11\fR|\fB1\fR|\fB2\fR|\fB3a\fR|\fB3b\fR|\fB5\fR|\fB3\fR|\fB4\fR|\fB59\fR|\fB59a\fR|\fBcustom\fR
+\fB\-xl\-rev auto\fR|\fB10\fR|\fB11\fR|\fB1\fR|\fB2\fR|\fB3a\fR|\fB3b\fR|\fB5\fR|\fB3\fR|\fB4\fR|\fB59\fR|\fB59a\fR|\fBcustom\fR|\fBaltirra\fR
 Select operating system revision for Atari XL/XE:
 .PP
 .RS
@@ -122,10 +125,13 @@ Use OS BB000001 rev. 59 from Kevin Savetz' Arabic 65XE: <http://www.savetz.com/v
 .TP
 .B custom
 Use a custom OS.
+.TP
+.B altirra
+Use AltirraOS that is included in the emulator.
 .PD
 .RE
 .TP
-\fB\-5200\-rev auto\fR|\fBorig\fR|\fBa\fR|\fBcustom\fR
+\fB\-5200\-rev auto\fR|\fBorig\fR|\fBa\fR|\fBcustom\fR|\fBaltirra\fR
 Select BIOS revision for Atari 5200:
 .PP
 .RS
@@ -143,10 +149,13 @@ Use BIOS rev. A from late 2\-port 5200 units.
 .TP
 .B custom
 Use a custom BIOS.
+.TP
+.B altirra
+Use Altirra BIOS that is included in the emulator.
 .PD
 .RE
 .TP
-\fB\-basic\-rev auto\fR|\fBa\fR|\fBb\fR|\fBc\fR|\fBcustom\fR
+\fB\-basic\-rev auto\fR|\fBa\fR|\fBb\fR|\fBc\fR|\fBcustom\fR|\fBaltirra\fR
 Select BASIC revision:
 .PP
 .RS
@@ -167,6 +176,9 @@ Use BASIC rev. C from late 600XL/800XL and all XE units.
 .TP
 .B custom
 Use a custom BASIC.
+.TP
+.B altirra
+Use Altirra BASIC that is included in the emulator.
 .PD
 .RE
 .TP
@@ -207,15 +219,17 @@ Emulate Atari 320XE (Compy-Shop)
 .B \-rambo
 Emulate Atari 320XE (Rambo)
 .TP
+.B \-576xe
+Emulate Atari 576XE
+.TP
+.B \-1088xe
+Emulate Atari 1088XE
+.TP
 .B \-xegs
 Emulate Atari XEGS
 .TP
 .B \-5200
 Emulate Atari 5200
-.TP
-.B \-emuos
-Use EmuOS
-
 .TP
 .B \-c
 Enable RAM between 0xc000 and 0xcfff in Atari 800
@@ -255,13 +269,14 @@ Turn on Atari BASIC ROM
 .BI \-cart\  filename
 Insert cartridge (CART or raw format)
 .TP
-.BR "\-cart\-type 0" .. 67
+.BR "\-cart\-type 0 .. 160"
 Select type of the cartridge inserted with the \fB\-cart\fR option.
 When inserting a raw ROM image its type cannot be detected automaticcaly,
 and must be provided with this option.
 Setting to \fB0\fR means disabling the cartridge, and any other number
 indicates a specific cartridge type:
 .RS
+.PP
 .PD 0
 .TP
 .B 1
@@ -313,7 +328,7 @@ OSS one chip 16 KB cartridge
 One chip 16 KB 5200 cartridge
 .TP
 .B 17
-Atrax 128 KB cartridge
+Decoded Atrax 128 KB cartridge
 .TP
 .B 18
 Bounty Bob Strikes Back 40 KB cartridge
@@ -388,7 +403,7 @@ Blizzard 16 KB cartridge
 Atarimax 128 KB Flash cartridge
 .TP
 .B 42
-Atarimax 1 MB Flash cartridge
+Atarimax 1 MB Flash cartridge (old)
 .TP
 .B 43
 SpartaDos X 128 KB cartridge
@@ -464,17 +479,78 @@ The!Cart 64 MB cartridge
 .TP
 .B 67
 XEGS 64 KB cartridge (banks 8-15)
+.TP
+.B 68
+Atrax 128 KB cartridge
+.TP
+.B 69
+aDawliah 32 KB cartridge
+.TP
+.B 70
+aDawliah 64 KB cartridge
+.TP
+.B 71
+Super Cart 64 KB 5200 cartridge (32K banks)
+.TP
+.B 72
+Super Cart 128 KB 5200 cartridge (32K banks)
+.TP
+.B 73
+Super Cart 256 KB 5200 cartridge (32K banks)
+.TP
+.B 74
+Super Cart 512 KB 5200 cartridge (32K banks)
+.TP
+.B 75
+Atarimax 1 MB Flash cartridge (new)
+.TP
+.B 76-93
+Reserved
+.TP
+.B 94
+Ram-Cart 64 KB cartridge
+.TP
+.B 95
+Ram-Cart 128 KB cartridge
+.TP
+.B 96
+Double Ram-Cart 2x128/256 KB cartridge
+.TP
+.B 97
+Ram-Cart 1 MB cartridge
+.TP
+.B 98
+Ram-Cart 2 MB cartridge
+.TP
+.B 99
+Ram-Cart 4 MB cartridge
+.TP
+.B 100
+Ram-Cart 8 MB cartridge
+.TP
+.B 101
+Ram-Cart 16 MB cartridge
+.TP
+.B 102
+Ram-Cart 32 MB cartridge
+.TP
+.B 103
+SiDiCar 32 KB cartridge
+.TP
+.B 104-160
+Reserved
 .PD
-.RE
+.PP
 If this option is not given, the user will be asked to choose the cartridge
 type when the emulator starts.
+.RE
 .TP
 .BI \-cart2\  filename
 Insert piggyback cartridge (CART or raw format).
 This works only if the first cartridge is a pass-through (currently only
 SpartaDOS X 64KB and 128KB types).
 .TP
-.BR "\-cart2\-type 0" .. 67
+.BR "\-cart2\-type 0 .. 160"
 Select type of the cartridge inserted with the \fB-cart2\fR option.
 When inserting a raw ROM image its type cannot be detected automatically,
 and must be provided with this option.
@@ -625,6 +701,9 @@ Record all input events to \fIfilename\fR. Can be used for gaming contests
 .TP
 .BI \-playback\  filename
 Playback input events from \fIfilename\fR. Watch an expert play the game.
+.TP
+.B \-playbacknoexit
+Don't exit the emulator after playback finishes.
 
 .TP
 .B \-refresh
@@ -720,8 +799,8 @@ palette (by default the loaded palette is displayed unmodified).
 .TP
 .BI \-screenshots\  pattern
 Set filename pattern for screenshots.
-Use to override the default \fIatari000.png\fR, \fIatari001.png\fR etc.
-filenames.
+Use to override the default pattern of \fIatari###.png\fR which produces
+\fIatari000.png\fR, \fIatari001.png\fR etc. filenames.
 Hashes are replaced with raising numbers.
 Existing files are overwritten only if all the files defined by the pattern
 exist.
@@ -741,11 +820,92 @@ Disable sound
 Set sound output frequency in Hz.
 The default is 44100 Hz.
 .TP
+.B \-stereo
+Enable stereo sound
+.TP
+.B \-nostereo
+Disable stereo sound
+.TP
 .B \-audio16
 Set sound output format to 16-bit
 .TP
 .B \-audio8
 Set sound output format to 8-bit
+.TP
+.BI \-aname\  pattern
+Set filename pattern for audio recordings.
+Use to override the default pattern of \fIatari###.wav\fR which produces
+\fIatari000.wav\fR, \fIatari001.wav\fR etc. filenames.
+Hashes are replaced with raising numbers.
+
+Note that WAV format files can support all audio codecs, including MP3,
+but many programs assume WAV files contain only PCM audio.
+
+If MP3 support was enabled when compiling the emulator, and MP3 audio is
+selected using the \fB\-acodec mp3\fR option below, the default pattern
+will be \fIatari###.mp3\fR to save in MP3 format files.
+.TP
+\fB\-acodec auto\fR|\fBpcm\fR|\fBmp3\fR|\fBmulaw\fR|\fBpcm_mulaw\fR|\fBadpcm\fR|\fBadpcm_ima_wav\fR|\fBadpcm_yahama\fR|\fBadpcm_ms\fR
+Select the audio codec used when saving to AVI or WAV files. Some codecs are
+lossy, meaning they reduce storage space while attempting to sound as close as
+possible to the original audio.
+
+.PP
+.RS
+.PD 0
+.TP
+.B auto
+The default.
+Use the codec that provides the best audio quality, which is PCM.
+.TP
+.B pcm
+Use uncompressed pulse-code modulated (PCM) samples. Lossless. Produces very
+large audio files.
+.TP
+.B mp3
+Use MP3 encoding. Lossy; only available with 16-bit audio, and provides the best
+possible quality of all the lossy codecs while also using the least storage space.
+This codec is only available if MP3 support is enabled when compiling the emulator.
+.TP
+.B mulaw
+Use mu-law encoding. Lossy; only available with 16-bit audio, and provides 2x
+reduction in size from PCM samples. Comparible acoustic quality to a 192kbps MP3 file.
+.TP
+.B pcm_mulaw
+Sames as \fBmulaw\fR, included to match ffmpeg codec name.
+.TP
+.B adpcm
+Use the best adaptive dynamic pulse-code modulated (ADPCM) codec. Lossy; all
+ADCPM codecs provide 4x reduction in size over PCM samples. Comparible
+acoustic quality to a 64kbps MP3 file.
+.TP
+.B adpcm_ima_wav
+Use the DVI IMA ADPCM algorithm. This seems to perform better on POKEY waveforms
+than other ADPCM algorithms and will be used when \fBadpcm\fR is selected.
+.TP
+.B adpcm_yamaha
+Use the Yamaha ADPCM algorithm.
+.TP
+.B adpcm_ms
+Use the Microsoft ADPCM algorithm.
+.PD
+.RE
+.TP
+.BI \-ab\  kbps
+Set the bitrate in kbps of the MP3 codec. The default is 128, and can range
+between 8 and 320. Higher numbers mean better quality at the cost of increased
+file size.
+.TP
+.BI \-ar\  freq
+Set the output sample rate in Hz of the MP3 codec. The default is the same
+sample rate as set by the \fB-dsprate\fR option. Only a limited set of choices
+are available: 8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100 and 48000.
+As with bitrate, higher numbers mean better quality and larger files.
+.TP
+.BI \-aq\  num
+Set the MP3 audio compression algorithm quality 0-9 (default 4). 0 means reduced
+quality but fast, 9 uses the slowest algorithms to try to increase quality.
+Does not affect storage space.
 .TP
 .BI \-snd\-buflen\  ms
 Set length of the hardware sound buffer in milliseconds.
@@ -756,6 +916,67 @@ Automatic setting should be OK in most cases.
 .BI \-snddelay\  ms
 Set sound latency in milliseconds. 
 Increase it if you experience gaps of silence during sound playback.
+
+.TP
+.BI \-vname\  pattern
+Set filename pattern for video recordings.
+Use to override the default pattern of \fIatari###.avi\fR which produces
+\fIatari000.avi\fR, \fIatari001.avi\fR etc. filenames.
+Hashes are replaced with raising numbers.
+.TP
+\fB\-vcodec auto\fR|\fBrle\fR|\fBmsrle\fR|\fBpng\fR|\fBzmbv\fR|\fBuzmbv\fR
+Select the video codec used to store image frames in AVI video recordings.
+All video codecs use lossless compression.
+.PP
+.RS
+.PD 0
+.TP
+.B auto
+The default.
+Use the codec that provides the best average compression ratio which is \fBzmbv\fR
+if available, otherwise \fBrle\fR.
+.TP
+.B rle
+Use run-length encoding (RLE) for very good compression of video frames. This codec is
+always available.
+.TP
+.B msrle
+Sames as \fBrle\fR, included to match ffmpeg codec name.
+.TP
+.B png
+Use PNG image compression for moderate compression of video frames. This codec is only
+available if PNG support was compiled into the emulator.
+.TP
+.B zmbv
+Use Zip Motion Blocks Video (ZMBV) for the best compression of video frames.
+This codec is only available if support for the zlib compression library was
+compiled into the emulator.
+.TP
+.B uzmbv
+Uncompressed Zip Motion Blocks Video is only available when compiled without the
+zlib compression library.
+.PD
+.RE
+.TP
+.B \-showstats
+Show elapsed recording time and file size on screen during recording of video or audio.
+.TP
+.B \-no-showstats
+Don't show multimedia statistics during recording of video or audio
+.TP
+.BI \-keyint\  num
+Set the keyframe interval to one keyframe every \fInum\fR frames (default is 50
+for PAL, 60 for NTSC). The RLE and ZMBV codecs use keyframes and inter-frames, which
+encode full frames and differences between frames, respectively. Inter-frames
+are typically much smaller than full frames, but most video players can only
+seek to keyframes.
+.TP
+.BI \-compression-level\  num
+Set compression level 0-9 (default 6) PNG or zlib compression used in the
+emulator. Zero means no compression and larger numbers correspond to higher
+compression and smaller image sizes, at the cost of increased time to generate
+the compressed image. This affects both screenshots and the video codec.
+
 
 .SS Curses Options
 
@@ -899,12 +1120,12 @@ Shows full overscan area, which can be up to 300 pixels in case of the XEP80.
 An exact number of visible scanlines can be set by providing a \fInumber\fR
 between 100 and 300.
 .PD
-.RE
 .PP
 Note that when displaying output of an XEP80 or Austin Franklin 80 column
 card, the \fBtv\fR setting will crop the top and bottom parts of text area,
 just like a real TV does - in such case setting the option to \fBfull\fR would
 be more appriopriate.
+.RE
 .TP
 .BI \-horiz\-shift\  number
 When the visible horizontal area is not set to \fBfull\fR, this option
@@ -1015,6 +1236,18 @@ Deactivates showing output of an 80 column hardware.
 .B \-nojoystick
 Do not initialize SDL joysticks
 .TP
+.B \-joy0hat
+Use hat of joystick 0 rather than the axis for joystick movement.
+.TP
+.B \-joy1hat
+Use hat of joystick 1 rather than the axis for joystick movement.
+.TP
+.B \-joy2hat
+Use hat of joystick 2 rather than the axis for joystick movement.
+.TP
+.B \-joy3hat
+Use hat of joystick 3 rather than the axis for joystick movement.
+.TP
 .BI \-joy0\  path\-to\-device
 Define path to device used in LPTjoy 0. Available on linux-ia32 only.
 .TP
@@ -1104,6 +1337,9 @@ Use XEP80 on joystick port \fIn\fR
 .TP
 .B \-af80
 Emulate the Austin Franklin 80 column daughterboard for Atari 800.
+.TP
+.B \-volume 0..100
+Sets global volume of Atari 800.
 
 
 .SS X11 Options
@@ -1206,6 +1442,9 @@ Sound settings
 .BR Alt + W
 Sound recording start/stop
 .TP
+.BR Alt + V
+Video recording start/stop
+.TP
 .BR Alt + S
 Save state file
 .TP
@@ -1215,22 +1454,22 @@ Load state file
 .BR Alt + A
 About the emulator
 .TP
-.B Insert
+.B Shift + Insert
 Insert line (Atari Shift+'>')
 .TP
-.BR Ctrl + Insert
+.BR Insert
 Insert character (Atari Ctrl+'>')
 .TP
 .BR Shift + Ctrl + Insert
 Shift+Ctrl+'>'
 .TP
-.B Delete
+.B Shift + Delete
 Delete line (Atari Shift+Backspace)
 .TP
 .BR Shift + Backspace
 Delete line (Atari Shift+Backspace)
 .TP
-.BR Ctrl + Delete
+.BR Delete
 Delete character (Atari Ctrl+Backspace)
 .TP
 .BR Ctrl + Backspace
@@ -1505,6 +1744,188 @@ Atari key (either Alt key will work)
 Joystick 0 is operated by the mouse position relative to the center of
 the screen. The mouse button acts as the trigger.  On Linux, standard
 joysticks are also supported.
+
+.PD 1
+.SH AUDIO RECORDING
+Audio can be recorded to WAV format sound files or as the audio track of AVI
+format multimedia files (described in the next section). A choice of audio
+codecs is available, some using lossy compression to reduce file size as
+compared to uncompressed audio. All lossy codecs require 16 bit sample sizes
+using the \fB\-audio16\fR option.
+
+The term "lossy" means the recorded sound is not bit-for-bit identical to the
+output of the emulator. Each codec provides a different method to reduce size,
+possibly reducing the audio quality. In practice, the audio produced by these
+codecs is not perceptibly worse than lossless encoding when using sample rates
+of 44.1kHz or 48kHz. However, the possibility exists that recompressing lossy
+audio (for instance by uploading to YouTube) could reduce quality.
+.PP
+The only lossless codec provided is the pulse-code modulation (PCM) codec, which
+simply stores the raw data generated by the POKEY emulation. This takes the most
+space of any codec, but provides the best possible audio quality. The sample
+size is specified by the \fB\-audio16\fR or \fB\-audio8\fR options. This is the
+recommended codec unless extremely long recording times are desired. See the
+tables in the \fBVIDEO RECORDING\fR section below.
+.PP
+The MP3 codec is the best choice of a lossy codec, as paramaters can be tuned
+to generate high quality audio for different situations. An audio bitrate of
+128kbps (the \fB-ab 128\fR option) results in high quality audio at about an
+8x reduction in storage space over PCM audio. The MP3 codec is a compile-time
+option, and will be included automatically if the libmp3lame library is found
+during compilation.
+.PP
+The remaining lossy codecs should not be considered unless the MP3 codec is
+not available. In most cases they produce reasonable quality, without many
+audible artifacts to the casual listener. But the algorithms were originally
+designed for compressing speech over telephone lines and they can produce
+audio distortion in some instances.
+.PP
+The mu-law codec uses a logarithmic scale to convert 16 bit samples into 8 bits
+of data, resulting in half the size of 16 bit PCM audio. This codec does not
+work with 8 bit audio. Waveform analysis shows the acoustic quality is similar
+to a 192kbps MP3 file, although the MP3 is half the size. Surprisingly,
+in many cases the acoustic quality of mu-law can be better than 8 bit PCM samples
+even though it takes the same storage space.
+.PP
+Adaptive differential pulse-code modulation (ADPCM) encodes differences between
+successive 16 bit audio samples into 4 bits, therefore the
+output is one quarter of the size of the PCM codec. The acoustic quality is
+similar to a 64kbps MP3 file, although the MP3 is 3x smaller. Audio
+distortio may be audible under certain conditions, like high volume
+square waves.
+.PD 1
+.SH VIDEO RECORDING
+.B atari800
+is capable of recording the emulated video and audio to AVI format multimedia
+files. A choice of lossless video codecs is available, while audio is stored
+with any of the lossless or lossy codecs as described above. To record without
+sound, specify the \fB\-nosound\fR option.
+.PP
+The most efficient video codec is the Zip Motion Block Video (ZMBV) codec. 
+This codec uses keyframes and inter-frames, and achieves its high compression
+because inter-frames use motion estimation when calculating differences to the
+previous frame. It is a compile-time option when building the emulator, and
+is the default if available. There is an uncompressed variant that is available
+when compiled without zlib; see the note below.
+.PP
+The Run-Length Encoding (RLE) video codec also uses keyframes and inter-frames.
+Its inter-frame compression is not as efficient as ZMBV, but still produces high
+compression in cases where only small parts of the screen change between frames.
+This codec is always available and is the default if compressed ZMBV is not
+available.
+.PP
+The PNG video codec has moderate compression because it uses only keyframes.
+It is useful in certain cases if the ZMBV codec is not available. It is a
+compile-time option when building the emulator.
+.PP
+Uncompressed ZMBV is typically inferior to RLE and PNG and is not recommended in
+general. There are a few limited instances (like detailed scrolling backgrounds)
+where uncompressed ZMBV will outperform RLE or PNG, and for that reason it is
+made available as the \fBuzmbv\fR codec when compiled without zlib. For testing
+purposes when compiled with zlib, uncompressed ZMBV video can be generated with
+the \fB-compression-level 0\fR command line argument.
+.PP
+Video Support:
+.TS
+tab(@), center, box;
+l | c | c | c c c
+l | c | c | cB cB cB.
+Application@Type@Platform@RLE@PNG@ZMBV
+_
+YouTube@Website@Browser@Yes@Yes@Yes
+Twitter@Website@Browser@No[1]@No[1]@No[1]
+FFmpeg@Transcoder@Win/Mac/Lin@Yes@Yes@Yes
+Handbrake@Transcoder@Win/Mac/Lin@Yes@Yes@Yes
+VLC@Player@Win/Mac/Lin@Yes@No[2]@Yes
+Windows Media Player@Player@Windows@Yes@No@No
+Win 10 Movies & TV@Player@Windows@No@No@No
+IINA@Player@Mac@Yes@Yes@Yes
+QuickTime@Player@Mac@No@No@No
+Totem (Gnome Videos)@Player@Linux@No@Yes@Yes
+MPV (Celluloid)@Player@Linux@Yes@Yes@Yes
+MPlayer@Player@Linux@Yes@Yes@Yes
+.TE
+.PP
+        [1] Twitter only accepts \fBmp4\fR files using the \fBh264\fR video
+            codec and the \fBaac\fR audio codec. The \fBavi\fR files produced
+            by \fBatari800\fR must be transcoded with an application like
+            FFmpeg or Handbrake. Videos are limited to 2 minutes and
+            20 seconds.
+.PP
+        [2] VLC recognizes and plays PNG-encoded video, but decodes the
+            video incorrectly resulting in garbled images.
+.PP
+Currently there is a limit of 4GB for video size. The maximum recording time for
+this size limit depends on many factors. Some examples can be seen in the tables
+below:
+.PP
+ZMBV codec (default compression level):
+.TS
+tab(@), center, box;
+l | c | c s s s s
+c | c | _ _ _ _ _
+c | c | c c c c c
+l | c | c c c c c
+l | cB | cB cB cB cB cB.
+@Average@Estimated recording time
+Game@video@
+@frame@mp3@mp3@ADPCM@8-bit@16-bit
+@size@128 kbps@320 kbps@audio@audio@audio
+_
+
+Jumpman@0.08k@49 hr@23 hr@38 hr@21 hr@11 hr@
+Miner 2049er@0.13k@43 hr@22 hr@35 hr@20 hr@11 hr@
+Alley Cat@0.37k@28 hr@17 hr@24 hr@16 hr@9h 40m@
+Dropzone@0.82k@17 hr@12 hr@15 hr@11 hr@7h 55m@
+AtariBlast!@1.2k@12 hr@9h 55m@11 hr@9h 30m@6h 50m@
+Boulder Dash@0.17k@40 hr@21 hr@33 hr@19 hr@10 hr@
+.TE
+
+.PP
+RLE codec:
+.TS
+tab(@), center, box;
+l | c | c s s s s
+c | c | _ _ _ _ _
+c | c | c c c c c
+l | c | c c c c c
+l | cB | cB cB cB cB cB.
+@Average@Estimated recording time
+Game@video@
+@frame@mp3@mp3@ADPCM@8-bit@16-bit
+@size@128 kbps@320 kbps@audio@audio@audio
+_
+
+Jumpman@0.36k@28 hr@17 hr@24 hr@16 hr@9h 45m@
+Miner 2049er@0.39k@27 hr@17 hr@24 hr@15 hr@9h 35m@
+Alley Cat@1.0k@14 hr@11 hr@13 hr@10 hr@7h 20m@
+Dropzone@2.3k@7h 25m@6h 20m@7h 05m@6h 10m@4h 55m@
+AtariBlast!@6.9k@2h 40m@2h 30m@2h 35m@2h 30m@2h 15m@
+Boulder Dash@9.1k@2h 00m@1h 55m@2h 00m@1h 55m@1h 45m@
+.TE
+
+.PP
+PNG codec (default compression level):
+.TS
+tab(@), center, box;
+l | c | c s s s s
+c | c | _ _ _ _ _
+c | c | c c c c c
+l | c | c c c c c
+l | cB | cB cB cB cB cB.
+@Average@Estimated recording time
+Game@video@
+@frame@mp3@mp3@ADPCM@8-bit@16-bit
+@size@128 kbps@320 kbps@audio@audio@audio
+_
+
+Jumpman@2.4k@7h 05m@6h 10m@6h 50m@5h 55m@4h 45m@
+Miner 2049er@2.2k@7h 40m@6h 35m@7h 20m@6h 20m@5h 00m@
+Alley Cat@4.1k@4h 20m@4h 00m@4h 15m@3h 55m@3h 20m@
+Dropzone@2.8k@6h 10m@5h 25m@6h 00m@5h 20m@4h 20m@
+AtariBlast!@4.4k@4h 05m@3h 45m@4h 00m@3h 40m@3h 10m@
+Boulder Dash@4.5k@4h 00m@3h 40m@3h 55m@3h 35m@3h 10m@
+.TE
 
 .PD 1
 

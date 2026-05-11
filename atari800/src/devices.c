@@ -292,7 +292,10 @@ static int Devices_ReadDir(char *fullpath, char *filename, int *isdir,
 			struct tm *ft;
 			int hour;
 			char ampm = 'a';
-			ft = localtime(&status.st_mtime);
+			{
+				time_t tim = status.st_mtime;
+				ft = localtime(&tim);
+			}
 			hour = ft->tm_hour;
 			if (hour >= 12) {
 				hour -= 12;
@@ -435,21 +438,17 @@ static int Devices_MakeDirectory(const char *filename)
 #ifdef __LIBRETRO__
 #include <file/file_path.h>
 #endif
+
 static int Devices_MakeDirectory(const char *filename)
 {
 #ifdef __LIBRETRO__
 	return path_mkdir(filename)==1;
 #else
-
-#ifdef __WIN32__
-#define MKDIR_TAKES_ONE_ARG 1
-#endif
 	return mkdir(filename
 #ifndef MKDIR_TAKES_ONE_ARG
 		, 0777
 #endif
 		) == 0;
-
 #endif
 }
 
@@ -503,6 +502,9 @@ int Devices_h_read_only = TRUE;
    command. if a path does not start with "Hn:", then the selected device
    is used. */
 char Devices_h_exe_path[FILENAME_MAX] = DEFAULT_H_PATH;
+
+/* H device rename; one can add 'D' in command line */
+char Devices_h_device_name = 'H';
 
 /* Devices_h_current_dir must be empty or terminated with Util_DIR_SEP_CHAR;
    only Util_DIR_SEP_CHAR can be used as a directory separator here */
@@ -612,6 +614,12 @@ int Devices_Initialise(int *argc, char *argv[])
 				Util_strlcpy(Devices_h_exe_path, argv[++i], FILENAME_MAX);
 			else a_m = TRUE;
 		}
+		else if (strcmp(argv[i], "-Hdevicename") == 0) {
+			if (i_a){
+				Devices_h_device_name = argv[++i][0];
+			}
+			else a_m = TRUE;
+		}
 		else if (strcmp(argv[i], "-hreadonly") == 0)
 			Devices_h_read_only = TRUE;
 		else if (strcmp(argv[i], "-hreadwrite") == 0)
@@ -625,6 +633,7 @@ int Devices_Initialise(int *argc, char *argv[])
 				Log_print("\t-H3 <path>       Set path for H3: device");
 				Log_print("\t-H4 <path>       Set path for H4: device");
 				Log_print("\t-Hpath <path>    Set path for Atari executables on the H: device");
+				Log_print("\t-Hdevicename <X> Use this letter to access the Host device, instead of H:");
 				Log_print("\t-hreadonly       Enable read-only mode for H: device");
 				Log_print("\t-hreadwrite      Disable read-only mode for H: device");
 				Log_print("\t-devbug          Debugging messages for H: and P: devices");
@@ -1544,7 +1553,7 @@ static void Devices_H_Load(int mydos)
 		int devnum;
 		const char *q;
 		char *r;
-		if (p[0] == 'H' && p[1] >= '1' && p[1] <= '4' && p[2] == ':') {
+		if (p[0] == Devices_h_device_name && p[1] >= '1' && p[1] <= '4' && p[2] == ':') {
 			devnum = p[1] - '1';
 			p += 3;
 		}
@@ -2275,6 +2284,30 @@ static void Devices_GetBasicCommand(void)
 static void Devices_OpenBasicFile(void)
 {
 	if (BINLOAD_bin_file != NULL) {
+		if (BINLOAD_loading_basic == BINLOAD_LOADING_BASIC_LISTED) {
+			/* determine its type now rather than during the loading */
+			unsigned char buf[2];
+			size_t buf_read;
+
+			fseek(BINLOAD_bin_file, 0, SEEK_END);
+			fseek(BINLOAD_bin_file, -2, SEEK_CUR);
+
+			buf_read = fread(buf, sizeof(buf[0]), 2, BINLOAD_bin_file);
+			if (buf_read == 2) {
+				/* simple heuristics - look at the last and possibly one before last character */
+				if (buf[1] == 0x9b) {
+					BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_ATARI;
+				} else if (buf[1] == 0x0a) {
+					BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_LF;
+					if (buf[0] == 0x0d) {
+						BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_CRLF;
+					}
+				} else if (buf[1] == 0x0d) {
+					BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_CR;
+				}
+			}
+		}
+
 		fseek(BINLOAD_bin_file, 0, SEEK_SET);
 		ESC_AddEscRts(ehclos_addr, ESC_EHCLOS, Devices_CloseBasicFile);
 		ESC_AddEscRts(ehread_addr, ESC_EHREAD, Devices_ReadBasicFile);
@@ -2297,22 +2330,10 @@ static void Devices_ReadBasicFile(void)
 		}
 		switch (BINLOAD_loading_basic) {
 		case BINLOAD_LOADING_BASIC_LISTED:
-			switch (ch) {
-			case 0x9b:
-				BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_ATARI;
-				break;
-			case 0x0a:
-				BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_LF;
-				ch = 0x9b;
-				break;
-			case 0x0d:
-				BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_CR_OR_CRLF;
-				ch = 0x9b;
-				break;
-			default:
-				break;
-			}
-			break;
+			/* can't be just LISTED at this point */
+			CPU_regY = 136;
+			CPU_SetN;
+			return;
 		case BINLOAD_LOADING_BASIC_LISTED_CR:
 			if (ch == 0x0d)
 				ch = 0x9b;
@@ -2330,21 +2351,6 @@ static void Devices_ReadBasicFile(void)
 					return;
 				}
 			}
-			if (ch == 0x0d)
-				ch = 0x9b;
-			break;
-		case BINLOAD_LOADING_BASIC_LISTED_CR_OR_CRLF:
-			if (ch == 0x0a) {
-				BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_CRLF;
-				ch = fgetc(BINLOAD_bin_file);
-				if (ch == EOF) {
-					CPU_regY = 136;
-					CPU_SetN;
-					return;
-				}
-			}
-			else
-				BINLOAD_loading_basic = BINLOAD_LOADING_BASIC_LISTED_CR;
 			if (ch == 0x0d)
 				ch = 0x9b;
 			break;
@@ -2403,6 +2409,7 @@ int Devices_enable_b_patch = FALSE;
 */
 int Devices_PatchOS(void)
 {
+	/* addr points to the ROM table of handler vectors. */
 	UWORD addr;
 	int i;
 	int patched = FALSE;
@@ -2412,16 +2419,16 @@ int Devices_PatchOS(void)
 	case SYSROM_A_PAL:
 	case SYSROM_B_NTSC:
 	case SYSROM_800_CUSTOM:
-		addr = 0xf0e3;
+		addr = 0xf0e3; /* labeled TBLENT in OS sources */
 		break;
 	case SYSROM_AA00R10:
-		addr = 0xc4fa;
+		addr = 0xc4fa; /* labeled THAV in OS sources */
 		break;
 	case SYSROM_AA01R11:
-		addr = 0xc479;
+		addr = 0xc479; /* labeled THAV in OS sources */
 		break;
 	case SYSROM_BB00R1:
-		addr = 0xc43c;
+		addr = 0xc43c; /* labeled THAV in OS sources */
 		break;
 	case SYSROM_BB01R2:
 	case SYSROM_BB01R3:
@@ -2429,23 +2436,25 @@ int Devices_PatchOS(void)
 	case SYSROM_BB01R59:
 	case SYSROM_BB01R59A:
 	case SYSROM_XL_CUSTOM:
-		addr = 0xc42e;
+		addr = 0xc42e; /* labeled THAV in OS sources */
 		break;
 	case SYSROM_BB02R3:
-		addr = 0xc42c;
+		addr = 0xc42c; /* labeled THAV in OS sources */
 		break;
 	case SYSROM_BB02R3V4:
-		addr = 0xc43b;
+		addr = 0xc43b; /* labeled THAV in OS sources */
 		break;
 	case SYSROM_CC01R4:
-		addr = 0xc3eb;
+		addr = 0xc3eb; /* labeled THAV in OS sources */
 		break;
+#if EMUOS_ALTIRRA
 	case SYSROM_ALTIRRA_800:
 		addr = 0xefd4; /* labeled InitHandlerTable in OS sources */
 		break;
 	case SYSROM_ALTIRRA_XL:
 		addr = 0xee90; /* labeled InitHandlerTable in OS sources */
 		break;
+#endif /* EMUOS_ALTIRRA */
 	default:
 		return FALSE;
 	}
@@ -2525,7 +2534,9 @@ int Devices_PatchOS(void)
    So after we put H: entry in HATABS, we only check if 'H' is still where
    we put it (h_entry_address).
    Devices_UpdateHATABSEntry and Devices_RemoveHATABSEntry can be used to add
-   other devices than H:. */
+   other devices than H:.
+   Keep in mind that H: can be renamed to whatever you want in command line.
+   */
 
 #define HATABS 0x31a
 
@@ -2605,7 +2616,7 @@ static UWORD b_entry_address = 0;
 void Devices_Frame(void)
 {
 	if (Devices_enable_h_patch)
-		h_entry_address = Devices_UpdateHATABSEntry('H', h_entry_address, H_TABLE_ADDRESS);
+		h_entry_address = Devices_UpdateHATABSEntry(Devices_h_device_name, h_entry_address, H_TABLE_ADDRESS);
 
 #ifdef R_IO_DEVICE
 	if (Devices_enable_r_patch)
@@ -2641,7 +2652,7 @@ void Devices_UpdatePatches(void)
 	}
 	else {						/* disable H: device */
 		/* remove H: entry from HATABS */
-		Devices_RemoveHATABSEntry('H', h_entry_address, H_TABLE_ADDRESS);
+		Devices_RemoveHATABSEntry(Devices_h_device_name, h_entry_address, H_TABLE_ADDRESS);
 		/* remove patches */
 		ESC_Remove(ESC_HHOPEN);
 		ESC_Remove(ESC_HHCLOS);

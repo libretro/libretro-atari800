@@ -25,6 +25,7 @@
 #include <malloc.h>
 #include <string.h>
 #include <GLES/gl.h>
+#define GL_GLEXT_PROTOTYPES 1
 #include <GLES/glext.h>
 
 #include "atari.h"
@@ -32,6 +33,7 @@
 #include "colours.h"
 #include "akey.h"
 #include "cpu.h"
+#include "log.h"
 
 #include "androidinput.h"
 #include "graphics.h"
@@ -49,6 +51,8 @@ int Android_ScreenW = 0;
 int Android_ScreenH = 0;
 int Android_Aspect;
 int Android_CropScreen[] = {0, SCREEN_HEIGHT, SCANLINE_LEN, -SCREEN_HEIGHT};
+int Android_PortPad;
+int Android_CovlHold;
 static struct RECT screenrect;
 static int screenclear;
 int Android_Bilinear;
@@ -70,7 +74,12 @@ enum {
 };
 static GLuint texture[TEX_MAXNAMES];
 static UWORD conkey_vrt[CONK_VERT_MAX];
-static int conkey_lbl[CONK_VERT_MAX >> 2];
+static struct {
+	int x;
+	int y;
+	int w;
+	int h;
+} conkey_lbl[CONK_VERT_MAX / 8];
 static UWORD conkey_shadow[2 * 4];
 
 void Android_PaletteUpdate(void)
@@ -166,12 +175,24 @@ int Android_InitGraphics(void)
 	for (i = 0; i < CONK_VERT_MAX; i += 2) {
 		/* translate */
 		conkey_vrt[i    ] += tmp;
-		conkey_vrt[i + 1] += 4;
+		conkey_vrt[i + 1] += (4 + ((Android_ScreenW < Android_ScreenH) ? Android_PortPad : 0));
 	}
-	for (i = 0; i < CONK_VERT_MAX; i += 8) {
-		conkey_lbl[i >> 2] = conkey_vrt[i] + 6;
-		conkey_lbl[(i >> 2) + 1] = Android_ScreenH - (conkey_vrt[i + 1] - 1);
+
+	/* Determine location of console keys' labels. */
+	{
+		int key_w = conkey_vrt[2] - conkey_vrt[0];
+		int key_h = conkey_vrt[3] - conkey_vrt[5];
+		int key_h_slant = conkey_vrt[6] - conkey_vrt[0];
+		int label_w = key_w * key_h * 4 / (key_h_slant + key_h*4);
+		int label_h = label_w / 4;
+		for (i = 0; i < CONK_NUM; ++i) {
+			conkey_lbl[i].x = conkey_vrt[i*8 + 6];
+			conkey_lbl[i].y = Android_ScreenH - (conkey_vrt[i*8 + 7] + label_h + 1);
+			conkey_lbl[i].w = label_w;
+			conkey_lbl[i].h = label_h;
+		}
 	}
+
 	AndroidInput_ConOvl.keycoo = conkey_vrt;
 	AndroidInput_ConOvl.bbox.l = conkey_vrt[0];
 	AndroidInput_ConOvl.bbox.b = conkey_vrt[1];
@@ -216,7 +237,7 @@ int Android_InitGraphics(void)
 		tmp = (h - screenrect.b + 1) / 2;
 		if (tmp < 0)
 			tmp = 0;
-		tmp = (Android_ScreenH - h) + tmp;
+		tmp = (Android_ScreenH - h) + tmp - ((Android_ScreenW < Android_ScreenH) ? Android_PortPad : 0);
 		screenrect.t += tmp;
 		screenclear = TRUE;
 	} else {
@@ -388,9 +409,9 @@ ck:	if (AndroidInput_ConOvl.ovl_visible) {
 		glEnable(GL_TEXTURE_2D);	/* enable texturing */
 
 		glColor4f(1.0f, 1.0f, 1.0f, AndroidInput_ConOvl.opacity);
-		for (i = 0; i < CONK_VERT_MAX >> 2; i += 2) {
-			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_CROP_RECT_OES, crop_lbl[i >> 1]);
-			glDrawTexiOES(conkey_lbl[i], conkey_lbl[i + 1], 0, 40, 9);
+		for (i = 0; i < CONK_NUM; ++i) {
+			glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_CROP_RECT_OES, crop_lbl[i]);
+			glDrawTexiOES(conkey_lbl[i].x, conkey_lbl[i].y, 0, conkey_lbl[i].w, conkey_lbl[i].h);
 		}
 		if (glGetError() != GL_NO_ERROR) Log_print("OpenGL error at console overlay");
 	}
@@ -432,8 +453,11 @@ void Update_Overlays(void)
 	switch (c->ovl_visible) {
 	case COVL_READY:
 		if (c->hitkey == CONK_NOKEY)
-			if (!c->statecnt--)
+			c->statecnt -= Android_CovlHold;
+			if (c->statecnt <= 0) {
+				c->statecnt = 0;
 				c->ovl_visible = COVL_FADEOUT;
+			}
 		break;
 	case COVL_FADEOUT:
 		if (c->opacity > OPACITY_CUTOFF)
@@ -449,9 +473,11 @@ void Update_Overlays(void)
 		else {
 			c->ovl_visible = COVL_READY;
 			c->opacity = COVL_MAX_OPACITY;
-			c->statecnt = COVL_HOLD_TIME;
+			c->statecnt = COVL_HOLD_TIME << 1;
 		}
 		break;
+	default: /* COVL_HIDDEN */
+		;
 	}
 	if (c->hitkey == CONK_RESET) {
 		if (c->resetcnt >= RESET_HARD) {

@@ -24,6 +24,9 @@
 
 #include "config.h"
 #include <string.h>
+#if HAVE_STDINT_H
+# include <stdint.h>
+#endif
 
 #include "antic.h"
 #include "atari.h"
@@ -1634,7 +1637,7 @@ static void prepare_an_antic_2(int nchars, const UBYTE *antic_memptr, const ULON
 static void draw_antic_2_gtia9(int nchars, const UBYTE *antic_memptr, UWORD *ptr, const ULONG *t_pm_scanline_ptr)
 {
 	INIT_ANTIC_2
-	if ((unsigned long) ptr & 2) { /* HSCROL & 1 */
+	if ((uintptr_t) ptr & 2) { /* HSCROL & 1 */
 		prepare_an_antic_2(nchars, antic_memptr, t_pm_scanline_ptr);
 		draw_an_gtia9(t_pm_scanline_ptr);
 		return;
@@ -1685,7 +1688,7 @@ static void draw_antic_2_gtia10(int nchars, const UBYTE *antic_memptr, UWORD *pt
 	UWORD lookup_gtia10[16];
 #endif
 	INIT_ANTIC_2
-	if ((unsigned long) ptr & 2) { /* HSCROL & 1 */
+	if ((uintptr_t) ptr & 2) { /* HSCROL & 1 */
 		prepare_an_antic_2(nchars, antic_memptr, t_pm_scanline_ptr);
 		draw_an_gtia10(t_pm_scanline_ptr);
 		return;
@@ -1746,7 +1749,7 @@ static void draw_antic_2_gtia10(int nchars, const UBYTE *antic_memptr, UWORD *pt
 static void draw_antic_2_gtia11(int nchars, const UBYTE *antic_memptr, UWORD *ptr, const ULONG *t_pm_scanline_ptr)
 {
 	INIT_ANTIC_2
-	if ((unsigned long) ptr & 2) { /* HSCROL & 1 */
+	if ((uintptr_t) ptr & 2) { /* HSCROL & 1 */
 		prepare_an_antic_2(nchars, antic_memptr, t_pm_scanline_ptr);
 		draw_an_gtia11(t_pm_scanline_ptr);
 		return;
@@ -2257,7 +2260,7 @@ static void prepare_an_antic_e(int nchars, const UBYTE *antic_memptr, const ULON
 static void draw_antic_e_gtia9(int nchars, const UBYTE *antic_memptr, UWORD *ptr, const ULONG *t_pm_scanline_ptr)
 {
 	ULONG lookup[16];
-	if ((unsigned long) ptr & 2) { /* HSCROL & 1 */
+	if ((uintptr_t) ptr & 2) { /* HSCROL & 1 */
 		prepare_an_antic_e(nchars, antic_memptr, t_pm_scanline_ptr);
 		draw_an_gtia9(t_pm_scanline_ptr);
 		return;
@@ -2402,7 +2405,7 @@ static void prepare_an_antic_f(int nchars, const UBYTE *antic_memptr, const ULON
 
 static void draw_antic_f_gtia9(int nchars, const UBYTE *antic_memptr, UWORD *ptr, const ULONG *t_pm_scanline_ptr)
 {
-	if ((unsigned long) ptr & 2) { /* HSCROL & 1 */
+	if ((uintptr_t) ptr & 2) { /* HSCROL & 1 */
 		prepare_an_antic_f(nchars, antic_memptr, t_pm_scanline_ptr);
 		draw_an_gtia9(t_pm_scanline_ptr);
 		return;
@@ -2447,7 +2450,7 @@ static void draw_antic_f_gtia10(int nchars, const UBYTE *antic_memptr, UWORD *pt
 #else
 	UWORD lookup_gtia10[16];
 #endif
-	if ((unsigned long) ptr & 2) { /* HSCROL & 1 */
+	if ((uintptr_t) ptr & 2) { /* HSCROL & 1 */
 		prepare_an_antic_f(nchars, antic_memptr, t_pm_scanline_ptr);
 		draw_an_gtia10(t_pm_scanline_ptr);
 		return;
@@ -2503,7 +2506,7 @@ static void draw_antic_f_gtia10(int nchars, const UBYTE *antic_memptr, UWORD *pt
 
 static void draw_antic_f_gtia11(int nchars, const UBYTE *antic_memptr, UWORD *ptr, const ULONG *t_pm_scanline_ptr)
 {
-	if ((unsigned long) ptr & 2) { /* HSCROL & 1 */
+	if ((uintptr_t) ptr & 2) { /* HSCROL & 1 */
 		prepare_an_antic_f(nchars, antic_memptr, t_pm_scanline_ptr);
 		draw_an_gtia11(t_pm_scanline_ptr);
 		return;
@@ -4085,6 +4088,64 @@ case we have ANTIC_cpu2antic_ptr[ANTIC_WSYNC_C+1]-1 = 8 and in the 2nd =12  */
 
 #ifndef BASIC
 
+void ANTIC_StateSave(void)
+{
+	STATESAV_TAG(antic);
+	StateSav_SaveUBYTE(&ANTIC_DMACTL, 1);
+	StateSav_SaveUBYTE(&ANTIC_CHACTL, 1);
+	StateSav_SaveUBYTE(&ANTIC_HSCROL, 1);
+	StateSav_SaveUBYTE(&ANTIC_VSCROL, 1);
+	StateSav_SaveUBYTE(&ANTIC_PMBASE, 1);
+	StateSav_SaveUBYTE(&ANTIC_CHBASE, 1);
+	StateSav_SaveUBYTE(&ANTIC_NMIEN, 1);
+	StateSav_SaveUBYTE(&ANTIC_NMIST, 1);
+	StateSav_SaveUBYTE(&IR, 1);
+	StateSav_SaveUBYTE(&anticmode, 1);
+	StateSav_SaveUBYTE(&dctr, 1);
+	StateSav_SaveUBYTE(&lastline, 1);
+	StateSav_SaveUBYTE(&need_dl, 1);
+	StateSav_SaveUBYTE(&vscrol_off, 1);
+
+	StateSav_SaveUWORD(&ANTIC_dlist, 1);
+	StateSav_SaveUWORD(&screenaddr, 1);
+
+	StateSav_SaveINT(&ANTIC_xpos, 1);
+	StateSav_SaveINT(&ANTIC_xpos_limit, 1);
+	StateSav_SaveINT(&ANTIC_ypos, 1);
+}
+
+void ANTIC_StateRead(void)
+{
+	StateSav_ReadUBYTE(&ANTIC_DMACTL, 1);
+	StateSav_ReadUBYTE(&ANTIC_CHACTL, 1);
+	StateSav_ReadUBYTE(&ANTIC_HSCROL, 1);
+	StateSav_ReadUBYTE(&ANTIC_VSCROL, 1);
+	StateSav_ReadUBYTE(&ANTIC_PMBASE, 1);
+	StateSav_ReadUBYTE(&ANTIC_CHBASE, 1);
+	StateSav_ReadUBYTE(&ANTIC_NMIEN, 1);
+	StateSav_ReadUBYTE(&ANTIC_NMIST, 1);
+	StateSav_ReadUBYTE(&IR, 1);
+	StateSav_ReadUBYTE(&anticmode, 1);
+	StateSav_ReadUBYTE(&dctr, 1);
+	StateSav_ReadUBYTE(&lastline, 1);
+	StateSav_ReadUBYTE(&need_dl, 1);
+	StateSav_ReadUBYTE(&vscrol_off, 1);
+
+	StateSav_ReadUWORD(&ANTIC_dlist, 1);
+	StateSav_ReadUWORD(&screenaddr, 1);
+
+	StateSav_ReadINT(&ANTIC_xpos, 1);
+	StateSav_ReadINT(&ANTIC_xpos_limit, 1);
+	StateSav_ReadINT(&ANTIC_ypos, 1);
+
+	ANTIC_PutByte(ANTIC_OFFSET_DMACTL, ANTIC_DMACTL);
+	ANTIC_PutByte(ANTIC_OFFSET_CHACTL, ANTIC_CHACTL);
+	ANTIC_PutByte(ANTIC_OFFSET_PMBASE, ANTIC_PMBASE);
+	ANTIC_PutByte(ANTIC_OFFSET_CHBASE, ANTIC_CHBASE);
+}
+
+#endif /* BASIC */
+
 #if defined(__LIBRETRO__)
 void Retro_ANTIC_StateSave(void)
 {
@@ -4141,60 +4202,3 @@ void Retro_ANTIC_StateRead(void)
 	ANTIC_PutByte(ANTIC_OFFSET_CHBASE, ANTIC_CHBASE);
 }
 #endif /* __LIBRETRO__ */
-
-void ANTIC_StateSave(void)
-{
-	StateSav_SaveUBYTE(&ANTIC_DMACTL, 1);
-	StateSav_SaveUBYTE(&ANTIC_CHACTL, 1);
-	StateSav_SaveUBYTE(&ANTIC_HSCROL, 1);
-	StateSav_SaveUBYTE(&ANTIC_VSCROL, 1);
-	StateSav_SaveUBYTE(&ANTIC_PMBASE, 1);
-	StateSav_SaveUBYTE(&ANTIC_CHBASE, 1);
-	StateSav_SaveUBYTE(&ANTIC_NMIEN, 1);
-	StateSav_SaveUBYTE(&ANTIC_NMIST, 1);
-	StateSav_SaveUBYTE(&IR, 1);
-	StateSav_SaveUBYTE(&anticmode, 1);
-	StateSav_SaveUBYTE(&dctr, 1);
-	StateSav_SaveUBYTE(&lastline, 1);
-	StateSav_SaveUBYTE(&need_dl, 1);
-	StateSav_SaveUBYTE(&vscrol_off, 1);
-
-	StateSav_SaveUWORD(&ANTIC_dlist, 1);
-	StateSav_SaveUWORD(&screenaddr, 1);
-
-	StateSav_SaveINT(&ANTIC_xpos, 1);
-	StateSav_SaveINT(&ANTIC_xpos_limit, 1);
-	StateSav_SaveINT(&ANTIC_ypos, 1);
-}
-
-void ANTIC_StateRead(void)
-{
-	StateSav_ReadUBYTE(&ANTIC_DMACTL, 1);
-	StateSav_ReadUBYTE(&ANTIC_CHACTL, 1);
-	StateSav_ReadUBYTE(&ANTIC_HSCROL, 1);
-	StateSav_ReadUBYTE(&ANTIC_VSCROL, 1);
-	StateSav_ReadUBYTE(&ANTIC_PMBASE, 1);
-	StateSav_ReadUBYTE(&ANTIC_CHBASE, 1);
-	StateSav_ReadUBYTE(&ANTIC_NMIEN, 1);
-	StateSav_ReadUBYTE(&ANTIC_NMIST, 1);
-	StateSav_ReadUBYTE(&IR, 1);
-	StateSav_ReadUBYTE(&anticmode, 1);
-	StateSav_ReadUBYTE(&dctr, 1);
-	StateSav_ReadUBYTE(&lastline, 1);
-	StateSav_ReadUBYTE(&need_dl, 1);
-	StateSav_ReadUBYTE(&vscrol_off, 1);
-
-	StateSav_ReadUWORD(&ANTIC_dlist, 1);
-	StateSav_ReadUWORD(&screenaddr, 1);
-
-	StateSav_ReadINT(&ANTIC_xpos, 1);
-	StateSav_ReadINT(&ANTIC_xpos_limit, 1);
-	StateSav_ReadINT(&ANTIC_ypos, 1);
-
-	ANTIC_PutByte(ANTIC_OFFSET_DMACTL, ANTIC_DMACTL);
-	ANTIC_PutByte(ANTIC_OFFSET_CHACTL, ANTIC_CHACTL);
-	ANTIC_PutByte(ANTIC_OFFSET_PMBASE, ANTIC_PMBASE);
-	ANTIC_PutByte(ANTIC_OFFSET_CHBASE, ANTIC_CHBASE);
-}
-
-#endif /* BASIC */

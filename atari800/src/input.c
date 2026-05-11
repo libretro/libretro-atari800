@@ -48,7 +48,7 @@
 #include <zlib.h>
 #endif
 
-#if defined (DREAMCAST) || defined(__LIBRETRO__)
+#if defined(DREAMCAST) || defined(__LIBRETRO__)
 extern int Atari_POT(int);
 #else
 #define Atari_POT(x) 228
@@ -68,7 +68,7 @@ int INPUT_joy_5200_min = 6;
 int INPUT_joy_5200_center = 114;
 int INPUT_joy_5200_max = 220;
 
-#if defined(__LIBRETRO__)
+#ifdef __LIBRETRO__
 int INPUT_digital_5200_min = 6;
 int INPUT_digital_5200_center = 114;
 int INPUT_digital_5200_max = 220;
@@ -136,6 +136,7 @@ static gzFile recordfp = NULL; /*output file for input recording*/
 static gzFile playbackfp = NULL; /*input file for playback*/
 static int recording = FALSE;
 static int playingback = FALSE;
+static int playingback_exit_after = TRUE;
 static void update_adler32_of_screen(void);
 static unsigned int compute_adler32_of_screen(void);
 static int recording_version;
@@ -242,6 +243,8 @@ int INPUT_Initialise(int *argc, char *argv[])
 				}
 			}
 			else a_m = TRUE;
+		} else if (strcmp(argv[i], "-playbacknoexit") == 0) {
+			playingback_exit_after = FALSE;
 		}
 #endif /* EVENT_RECORDING */
  		else if (strcmp(argv[i], "-directmouse") == 0) {
@@ -275,8 +278,12 @@ int INPUT_Initialise(int *argc, char *argv[])
 				Log_print("\t-directmouse     Use absolute X/Y mouse coords");
 				Log_print("\t-cx85 <n>        Emulate CX85 numeric keypad on port <n>");
 				Log_print("\t-multijoy        Emulate MultiJoy4 interface");
-				Log_print("\t-record <file>   Record input to <file>");
-				Log_print("\t-playback <file> Playback input from <file>");
+				#ifdef EVENT_RECORDING
+					Log_print("\t-record <file>   Record input to <file>");
+					Log_print("\t-playback <file> Playback input from <file>");
+					Log_print("\t-playbacknoexit  Don't exit the emulator after playback finishes");
+				#endif /* EVENT_RECORDING */
+				
 			}
 			argv[j++] = argv[i];
 		}
@@ -462,7 +469,7 @@ void INPUT_Frame(void)
 		sscanf(gzbuf, "%d %d %d ", &INPUT_key_code, &INPUT_key_shift, &INPUT_key_consol);
 	}
 	if (recording) {
-		gzprintf(recordfp, "%d %d %d \n", INPUT_key_code, INPUT_key_shift, INPUT_key_consol);
+		gzprintf(recordfp, "%d %d %d ", INPUT_key_code, INPUT_key_shift, INPUT_key_consol);
 	}
 #endif
 	i = Atari800_machine_type == Atari800_MACHINE_5200 ? INPUT_key_shift : (INPUT_key_code == AKEY_BREAK);
@@ -550,7 +557,7 @@ void INPUT_Frame(void)
 #ifdef EVENT_RECORDING
 	}
 	if (recording) {
-		gzprintf(recordfp,"%d \n",i);
+		gzprintf(recordfp,"%d ",i);
 	}
 #endif
 
@@ -566,7 +573,7 @@ void INPUT_Frame(void)
 #ifdef EVENT_RECORDING
 	}
 	if (recording) {
-		gzprintf(recordfp,"%d \n",i);
+		gzprintf(recordfp,"%d ",i);
 	}
 #endif
 	STICK[2] = i & 0x0f;
@@ -611,12 +618,17 @@ void INPUT_Frame(void)
 #ifdef EVENT_RECORDING
 		}
 		if(recording){
-			gzprintf(recordfp,"%d \n",TRIG_input[i]);
+			gzprintf(recordfp,"%d ",TRIG_input[i]);
 		}
 #endif
 		if ((INPUT_joy_autofire[i] == INPUT_AUTOFIRE_FIRE && !TRIG_input[i]) || (INPUT_joy_autofire[i] == INPUT_AUTOFIRE_CONT))
 			TRIG_input[i] = (Atari800_nframes & 2) ? 1 : 0;
 	}
+#ifdef EVENT_RECORDING
+	if(recording){
+		gzprintf(recordfp,"\n");
+	}
+#endif
 
 	/* handle analog joysticks in Atari 5200 */
 	if (Atari800_machine_type != Atari800_MACHINE_5200) {
@@ -631,38 +643,15 @@ void INPUT_Frame(void)
 	}
 	else {
 		for (i = 0; i < 4; i++) {
-#if defined (DREAMCAST)
+#if defined(DREAMCAST) || defined(__LIBRETRO__)
 			/* first get analog js data */
 			POKEY_POT_input[2 * i] = Atari_POT(2 * i);         /* x */
 			POKEY_POT_input[2 * i + 1] = Atari_POT(2 * i + 1); /* y */
 			if (POKEY_POT_input[2 * i] != INPUT_joy_5200_center
 			 || POKEY_POT_input[2 * i + 1] != INPUT_joy_5200_center)
 				continue;
+			/* if analog js is unused, alternatively try keypad */
 #endif
-#if defined(__LIBRETRO__)
-			/* first get analog js data */
-			POKEY_POT_input[2 * i] = Atari_POT(2 * i);         /* x */
-			POKEY_POT_input[2 * i + 1] = Atari_POT(2 * i + 1); /* y */
-			if (POKEY_POT_input[2 * i] != INPUT_joy_5200_center
-				|| POKEY_POT_input[2 * i + 1] != INPUT_joy_5200_center)
-				continue;
-
-			/* if analog js is unused, alternatively try keypad */
-			if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_LEFT)) == 0)
-				POKEY_POT_input[2 * i] = INPUT_digital_5200_min;
-			else if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_RIGHT)) == 0)
-				POKEY_POT_input[2 * i] = INPUT_digital_5200_max;
-			else
-				POKEY_POT_input[2 * i] = INPUT_digital_5200_center;
-			if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_FORWARD)) == 0)
-				POKEY_POT_input[2 * i + 1] = INPUT_digital_5200_min;
-			else if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_BACK)) == 0)
-				POKEY_POT_input[2 * i + 1] = INPUT_digital_5200_max;
-			else
-				POKEY_POT_input[2 * i + 1] = INPUT_digital_5200_center;
-		}
-#else
-			/* if analog js is unused, alternatively try keypad */
 			if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_LEFT)) == 0)
 				POKEY_POT_input[2 * i] = INPUT_joy_5200_min;
 			else if ((STICK[i] & (INPUT_STICK_CENTRE ^ INPUT_STICK_RIGHT)) == 0)
@@ -676,7 +665,6 @@ void INPUT_Frame(void)
 			else
 				POKEY_POT_input[2 * i + 1] = INPUT_joy_5200_center;
 		}
-#endif
 	}
 
 	/* handle mouse */
@@ -930,8 +918,10 @@ static void update_adler32_of_screen(void)
 	if (playingback && gzeof(playbackfp)) {
 		playingback = FALSE;
 		gzclose(playbackfp);
-		Atari800_ErrExit();
-		exit(adler32_errors > 0 ? 1 : 0); /* return code indicates errors*/
+		if (playingback_exit_after) { /* exit emulation when not set otherwise */
+			Atari800_ErrExit();
+			exit(adler32_errors > 0 ? 1 : 0); /* return code indicates errors*/
+		}
 	}
 }
 /* Compute the adler32 value of the visible screen */

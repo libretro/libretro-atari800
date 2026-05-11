@@ -264,12 +264,12 @@ typedef struct stPokeyState
 
 } PokeyState;
 
+PokeyState pokey_states[NPOKEYS];
+
 static struct {
     double s16;
     double s8;
 } volume;
-
-PokeyState pokey_states[NPOKEYS];
 
 /* Forward declarations for ResetPokeyState */
 
@@ -1426,7 +1426,6 @@ int MZPOKEYSND_Init(ULONG freq17, int playback_freq, UBYTE num_pokeys,
 #ifdef SYNCHRONIZED_SOUND
 	init_syncsound();
 #endif
-
         volume.s8 = POKEYSND_volume * 0xff / 256.0;
         volume.s16 = POKEYSND_volume * 0xffff / 256.0;
 
@@ -2398,11 +2397,11 @@ static void mzpokeysnd_process_16(void* sndbuffer, int sndn)
             }
 #endif
 #ifdef VOL_ONLY_SOUND
-            buffer[0] = (SWORD)floor((generate_sample(pokey_states) + POKEYSND_sampout)
-             * (65535.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 0.5 + 0.5 * rand() / RAND_MAX - 0.25);
+        buffer[0] = (SWORD)floor((generate_sample(pokey_states) + POKEYSND_sampout)
+         * (65535.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 0.5 + 0.5 * rand() / RAND_MAX - 0.25);
 #else
-            buffer[0] = (SWORD)floor(generate_sample(pokey_states)
-             * (65535.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 0.5 + 0.5 * rand() / RAND_MAX - 0.25);
+        buffer[0] = (SWORD)floor(generate_sample(pokey_states)
+         * (65535.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 0.5 + 0.5 * rand() / RAND_MAX - 0.25);
 #endif
         for(i=1; i<num_cur_pokeys; i++)
         {

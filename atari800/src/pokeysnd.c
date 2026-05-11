@@ -30,9 +30,10 @@
 #include "asap_internal.h"
 #else
 #include "atari.h"
-#ifndef __PLUS
-#include "sndsave.h"
-#else
+#ifdef AUDIO_RECORDING
+#include "file_export.h"
+#endif
+#ifdef __PLUS
 #include "sound_win.h"
 #endif
 #endif
@@ -118,9 +119,17 @@ static ULONG Samp_n_max,		/* Sample max.  For accuracy, it is *256 */
  Samp_n_cnt[2];					/* Sample cnt. */
 
 #ifdef INTERPOLATE_SOUND
-static UWORD last_val = 0;		/* last output value */
+#ifdef CLIP_SOUND
+static SWORD last_val = 0;		/* last output value */
+#else
+static UWORD last_val = 0;
+#endif
 #ifdef STEREO_SOUND
-static UWORD last_val2 = 0;	/* last output value */
+#ifdef CLIP_SOUND
+static SWORD last_val2 = 0;	/* last output value */
+#else
+static UWORD last_val2 = 0;
+#endif
 #endif
 #endif
 
@@ -157,7 +166,13 @@ static int mz_quality = 0;		/* default quality for mzpokeysnd */
 int mz_clear_regs = 0;
 #endif
 
+#ifndef __MINT__
 int POKEYSND_enable_new_pokey = TRUE;
+#else
+/* too slow on Falcon */
+int POKEYSND_enable_new_pokey = FALSE;
+#endif
+
 int POKEYSND_bienias_fix = TRUE;  /* when TRUE, high frequencies get emulated: better sound but slower */
 #if defined(__PLUS) && !defined(_WX_)
 #define BIENIAS_FIX (g_Sound.nBieniasFix)
@@ -167,7 +182,7 @@ int POKEYSND_bienias_fix = TRUE;  /* when TRUE, high frequencies get emulated: b
 #ifndef ASAP
 #if defined(__LIBRETRO__)
 int POKEYSND_stereo_enabled = TRUE;
-#else /* __LIBRETRO__ */
+#else
 int POKEYSND_stereo_enabled = FALSE;
 #endif
 #endif
@@ -285,7 +300,9 @@ static void init_vol_only(void)
 
 int POKEYSND_DoInit(void)
 {
-	SndSave_CloseSoundFile();
+#ifdef AUDIO_RECORDING
+	File_Export_StopRecording();
+#endif
 
 #ifdef VOL_ONLY_SOUND
 	init_vol_only();
@@ -351,8 +368,8 @@ void POKEYSND_Process(void *sndbuffer, int sndn)
 #if defined(PBI_XLD) || defined (VOICEBOX)
 	VOTRAXSND_Process(sndbuffer,sndn);
 #endif
-#if !defined(__PLUS) && !defined(ASAP)
-	SndSave_WriteToSoundFile((const unsigned char *)sndbuffer, sndn);
+#if defined(AUDIO_RECORDING)
+	File_Export_WriteAudio((const unsigned char *)sndbuffer, sndn);
 #endif
 }
 
@@ -373,8 +390,8 @@ int POKEYSND_UpdateProcessBuffer(void)
 #if defined(PBI_XLD) || defined (VOICEBOX)
 	VOTRAXSND_Process(POKEYSND_process_buffer, sndn);
 #endif
-#if !defined(__PLUS) && !defined(ASAP)
-	SndSave_WriteToSoundFile((const unsigned char *)POKEYSND_process_buffer, sndn);
+#if defined(AUDIO_RECORDING)
+	File_Export_WriteAudio((const unsigned char *)POKEYSND_process_buffer, sndn);
 #endif
 	return sndn;
 }
@@ -1045,9 +1062,15 @@ static void pokeysnd_process_8(void *sndbuffer, int sndn)
 #ifdef INTERPOLATE_SOUND
 			if (cur_val != last_val) {
 				if (*Samp_n_cnt < Samp_n_max) {		/* need interpolation */
+#ifdef CLIP_SOUND
+					iout = (cur_val * (SLONG)(*Samp_n_cnt) +
+							last_val * (SLONG)(Samp_n_max - *Samp_n_cnt))
+						/ (SLONG)Samp_n_max;
+#else
 					iout = (cur_val * (*Samp_n_cnt) +
 							last_val * (Samp_n_max - *Samp_n_cnt))
 						/ Samp_n_max;
+#endif
 				}
 				else
 					iout = cur_val;
@@ -1061,9 +1084,15 @@ static void pokeysnd_process_8(void *sndbuffer, int sndn)
 #endif
 			if (cur_val2 != last_val2) {
 				if (*Samp_n_cnt < Samp_n_max) {		/* need interpolation */
+#ifdef CLIP_SOUND
+					iout2 = (cur_val2 * (SLONG)(*Samp_n_cnt) +
+							last_val2 * (SLONG)(Samp_n_max - *Samp_n_cnt))
+						/ (SLONG)Samp_n_max;
+#else
 					iout2 = (cur_val2 * (*Samp_n_cnt) +
 							last_val2 * (Samp_n_max - *Samp_n_cnt))
 						/ Samp_n_max;
+#endif
 				}
 				else
 					iout2 = cur_val2;
@@ -1275,7 +1304,6 @@ static void pokeysnd_process_16(void *sndbuffer, int sndn)
 #else
 		int smp = ((int) ((SBYTE *) buffer)[i]) * POKEYSND_volume;
 #endif
-
 		if (smp > 32767)
 			smp = 32767;
 		else if (smp < -32768)

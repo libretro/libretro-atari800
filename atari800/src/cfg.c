@@ -62,6 +62,9 @@
 #ifdef SOUND
 #include "sound.h"
 #endif
+#if defined(HAVE_LIBPNG) || defined(HAVE_LIBZ) || defined(AUDIO_RECORDING) || defined(VIDEO_RECORDING)
+#include "file_export.h"
+#endif
 
 int CFG_save_on_exit = FALSE;
 #if defined(__LIBRETRO__)
@@ -76,15 +79,6 @@ extern const char *retro_system_directory;
 
 #ifndef SYSTEM_WIDE_CFG_FILE
 #define SYSTEM_WIDE_CFG_FILE "/etc/atari800.cfg"
-#endif
-
-#if defined (__PS3__) || defined(__PSL1GHT__)
-#define DEFAULT_CFG_NAME "/atari800.cfg"
-#endif
-
-#ifdef WIIU
-#define DEFAULT_CFG_NAME "fs:/vol/external01/retroarch/cores/system/atari800.cfg"
-#define SYSTEM_WIDE_CFG_FILE "fs:/vol/external01/retroarch/cores/system/atari800.cfg"
 #endif
 
 static char rtconfig_filename[FILENAME_MAX];
@@ -108,16 +102,11 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 	}
 	/* else use the default config name under the HOME folder */
 	else {
-#if !defined(__PS3__) && !defined(__PSL1GHT__)
 		char *home = getenv("HOME");
 		if (home != NULL)
 			Util_catpath(rtconfig_filename, home, DEFAULT_CFG_NAME);
 		else
 			strcpy(rtconfig_filename, DEFAULT_CFG_NAME);
-#else
-		strcpy(rtconfig_filename, retro_system_directory);
-		strcat(rtconfig_filename, DEFAULT_CFG_NAME);
-#endif
 	}
 
 	fp = fopen(fname, "r");
@@ -143,6 +132,11 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 	while (fgets(string, sizeof(string), fp)) {
 		char *ptr;
 		Util_chomp(string);
+		Util_trim(string);
+		/* Check for comments */
+		if (string[0] == '#') {
+			continue;
+		}
 		ptr = strchr(string, '=');
 		if (ptr != NULL) {
 			*ptr++ = '\0';
@@ -170,6 +164,8 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 				else
 					Util_strlcpy(UI_saved_files_dir[UI_n_saved_files_dir++], ptr, FILENAME_MAX);
 			}
+			else if (strcmp(string, "SHOW_HIDDEN_FILES") == 0)
+				UI_show_hidden_files = Util_sscanbool(ptr);
 			else if (strcmp(string, "DISK_DIR") == 0 || strcmp(string, "ROM_DIR") == 0
 				  || strcmp(string, "EXE_DIR") == 0 || strcmp(string, "STATE_DIR") == 0) {
 				/* ignore blank and "." values */
@@ -187,12 +183,16 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 				Util_strlcpy(Devices_atari_h_dir[3], ptr, FILENAME_MAX);
 			else if (strcmp(string, "HD_READ_ONLY") == 0)
 				Devices_h_read_only = Util_sscandec(ptr);
+			else if (strcmp(string, "HD_DEVICE_NAME") == 0)
+				Devices_h_device_name = *ptr;
 
 			else if (strcmp(string, "PRINT_COMMAND") == 0) {
 				if (!Devices_SetPrintCommand(ptr))
 					Log_print("Unsafe PRINT_COMMAND ignored");
 			}
 
+			else if (strcmp(string, "ACCURATE_SKIPPED_FRAMES") == 0)
+				Atari800_collisions_in_skipped_frames = Util_sscanbool(ptr);
 			else if (strcmp(string, "SCREEN_REFRESH_RATIO") == 0)
 				Atari800_refresh_rate = Util_sscandec(ptr);
 			else if (strcmp(string, "DISABLE_BASIC") == 0)
@@ -343,6 +343,10 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 			else if (Sound_ReadConfig(string, ptr)) {
 			}
 #endif /* defined(SOUND) && defined(SOUND_THIN_API) */
+#if defined(HAVE_LIBPNG) || defined(HAVE_LIBZ) || defined(AUDIO_RECORDING) || defined(VIDEO_RECORDING)
+			else if (File_Export_ReadConfig(string, ptr)) {
+			}
+#endif
 			else {
 #ifdef SUPPORTS_PLATFORM_CONFIGURE
 				if (!PLATFORM_Configure(string, ptr)) {
@@ -393,10 +397,12 @@ int CFG_WriteConfig(void)
 		fprintf(fp, "ATARI_FILES_DIR=%s\n", UI_atari_files_dir[i]);
 	for (i = 0; i < UI_n_saved_files_dir; i++)
 		fprintf(fp, "SAVED_FILES_DIR=%s\n", UI_saved_files_dir[i]);
+	fprintf(fp, "SHOW_HIDDEN_FILES=%d\n", UI_show_hidden_files);
 #endif
 	for (i = 0; i < 4; i++)
 		fprintf(fp, "H%c_DIR=%s\n", '1' + i, Devices_atari_h_dir[i]);
 	fprintf(fp, "HD_READ_ONLY=%d\n", Devices_h_read_only);
+	fprintf(fp, "HD_DEVICE_NAME=%c\n", Devices_h_device_name);
 
 #ifdef HAVE_SYSTEM
 	fprintf(fp, "PRINT_COMMAND=%s\n", Devices_print_command);
@@ -404,6 +410,7 @@ int CFG_WriteConfig(void)
 
 #ifndef BASIC
 	fprintf(fp, "SCREEN_REFRESH_RATIO=%d\n", Atari800_refresh_rate);
+	fprintf(fp, "ACCURATE_SKIPPED_FRAMES=%d\n", Atari800_collisions_in_skipped_frames);
 #endif
 
 	fprintf(fp, "MACHINE_TYPE=Atari %s\n", machine_type_string[Atari800_machine_type]);
@@ -482,6 +489,9 @@ int CFG_WriteConfig(void)
 #if defined(SOUND) && defined(SOUND_THIN_API)
 	Sound_WriteConfig(fp);
 #endif /* defined(SOUND) && defined(SOUND_THIN_API) */
+#if defined(HAVE_LIBPNG) || defined(HAVE_LIBZ) || defined(AUDIO_RECORDING) || defined(VIDEO_RECORDING)
+	File_Export_WriteConfig(fp);
+#endif
 #ifdef SUPPORTS_PLATFORM_CONFIGSAVE
 	PLATFORM_ConfigSave(fp);
 #endif

@@ -46,7 +46,7 @@ SOURCES_C += \
 	$(CORE_DIR)/atari800/src/cpu.c \
 	$(CORE_DIR)/atari800/src/crc32.c \
 	$(CORE_DIR)/atari800/src/devices.c \
-	$(CORE_DIR)/atari800/src/emuos.c \
+	$(CORE_DIR)/atari800/src/cartridge_info.c \
 	$(CORE_DIR)/atari800/src/esc.c \
 	$(CORE_DIR)/atari800/src/gtia.c \
 	$(CORE_DIR)/atari800/src/img_tape.c \
@@ -59,7 +59,6 @@ SOURCES_C += \
 	$(CORE_DIR)/atari800/src/pokeysnd.c \
 	$(CORE_DIR)/atari800/src/mzpokeysnd.c \
 	$(CORE_DIR)/atari800/src/remez.c \
-	$(CORE_DIR)/atari800/src/sndsave.c \
 	$(CORE_DIR)/atari800/src/rtime.c \
 	$(CORE_DIR)/atari800/src/sio.c \
 	$(CORE_DIR)/atari800/src/sysrom.c \
@@ -84,6 +83,7 @@ SOURCES_C += \
 	$(CORE_DIR)/atari800/src/ide.c \
 	$(CORE_DIR)/atari800/src/xep80.c \
 	$(CORE_DIR)/atari800/src/xep80_fonts.c \
+	$(CORE_DIR)/atari800/src/file_export.c \
 	$(CORE_DIR)/atari800/src/filter_ntsc.c \
 	$(CORE_DIR)/atari800/src/atari_ntsc/atari_ntsc.c \
 	$(CORE_DIR)/libretro/platform.c 
@@ -94,7 +94,8 @@ SOURCES_C += \
 	$(CORE_DIR)/atari800/src/roms/altirraos_xl.c \
 	$(CORE_DIR)/atari800/src/roms/altirraos_800.c \
 	$(CORE_DIR)/atari800/src/roms/altirra_basic.c \
-	$(CORE_DIR)/atari800/src/roms/altirra_5200_os.c
+	$(CORE_DIR)/atari800/src/roms/altirra_5200_os.c \
+	$(CORE_DIR)/atari800/src/roms/altirra_5200_charset.c
 
 ZLIB_INCFLAGS = -I$(DEPS_DIR)/zlib
 ZLIB_SOURCES_C = \

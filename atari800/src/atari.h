@@ -9,7 +9,7 @@
 
 /* Fundamental declarations ---------------------------------------------- */
 
-#define Atari800_TITLE  "Atari 800 Emulator, Version 3.1.0"
+#define Atari800_TITLE  "Atari 800 Emulator, Version " PACKAGE_VERSION
 
 #ifndef FALSE
 #define FALSE  0
@@ -94,8 +94,8 @@ extern int Atari800_tv_mode;
 /* TRUE to disable Atari BASIC when booting Atari (hold Option in XL/XE). */
 extern int Atari800_disable_basic;
 
-/* OS ROM version currently used by the emulator. Can be -1 for emuos/missing
-   ROM, or a value from the SYSROM enumerator. */
+/* OS ROM version currently used by the emulator. Can be -1 for missing ROM, or
+   a value from the SYSROM enumerator. */
 extern int Atari800_os_version;
 
 /* If Atari800_Frame() sets it to TRUE, then the current contents
@@ -117,6 +117,10 @@ extern int Atari800_collisions_in_skipped_frames;
 
 /* Set to TRUE to run emulated Atari as fast as possible */
 extern int Atari800_turbo;
+
+/* Set to TRUE to start in the monitor. It's up to each port's
+	main.c to implement this (initially only SDL supports it). */
+extern int Atari800_start_in_monitor;
 
 /* Initializes Atari800 emulation core. */
 int Atari800_Initialise(int *argc, char *argv[]);
@@ -187,10 +191,9 @@ void Atari800_StateRead(UBYTE version);
 /* Change TV mode. */
 void Atari800_SetTVMode(int mode);
 
+
 #if defined(__LIBRETRO__)
-/* Save State */
 void Retro_Atari800_StateSave(void);
 void Retro_Atari800_StateRead(UBYTE version);
 #endif
-
 #endif /* ATARI_H_ */

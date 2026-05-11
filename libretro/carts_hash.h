@@ -62,3 +62,8 @@ extern const a800_rom a800_game[];
 int is_5200_cart(ULONG crc);
 int is_800_cart(ULONG crc);
 int is_cart(ULONG crc);
+
+/* Resolve an atari800 CARTRIDGE_* type for an Atari 5200 ROM.
+   Uses CRC lookup in a5200_game[] first, falls back to size-based guess.
+   Returns CARTRIDGE_NONE (0) if nothing sensible can be picked. */
+int get_5200_cart_atari800_type(ULONG crc, int size);

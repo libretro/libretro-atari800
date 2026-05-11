@@ -1,4 +1,6 @@
 #include "carts_hash.h"
+#include "cartridge.h"
+#include "cartridge_info.h"
 
 const a5200_rom a5200_game[] = {
  { a5200,"5200menu.bin",8192,0x0de2db48},
@@ -885,4 +887,51 @@ int is_800_cart(ULONG crc) {
 
 int is_cart(ULONG crc) {
     return (is_5200_cart(crc) || is_800_cart(crc));
+}
+
+/* Map the internal a5200_* category + file size to an atari800 CARTRIDGE_*
+   type. Without this, raw .a52/.bin images of common sizes (16K, 32K, 64K,
+   128K, 256K, 512K) match multiple entries in CARTRIDGES[] and fall into
+   CARTRIDGE_UNKNOWN, which triggers UI_SelectCartType -> black screen when
+   booting a 5200 game. This reimplements the CRC-based autodetect that used
+   to live in atari800/src/cartridge.c (libretro patch, commit 1ac0cbc) and
+   was lost in the 3.1.0 -> 5.2.0 core update. */
+int get_5200_cart_atari800_type(ULONG crc, int size) {
+    int idx = 0;
+    while (a5200_game[idx].type != -1) {
+        if (crc == a5200_game[idx].crc) {
+            switch (a5200_game[idx].type) {
+            case a5200:
+                switch (size) {
+                case   4*1024: return CARTRIDGE_5200_4;
+                case   8*1024: return CARTRIDGE_5200_8;
+                case  16*1024: return CARTRIDGE_5200_NS_16;
+                case  32*1024: return CARTRIDGE_5200_32;
+                }
+                break;
+            case a5200_40:     return CARTRIDGE_5200_40;
+            case a5200_40_ALT: return CARTRIDGE_5200_40_ALT;
+            case a5200_ee_16:  return CARTRIDGE_5200_EE_16;
+            case a5200_64:     return CARTRIDGE_5200_SUPER_64;
+            case a5200_128:    return CARTRIDGE_5200_SUPER_128;
+            case a5200_256:    return CARTRIDGE_5200_SUPER_256;
+            case a5200_512:    return CARTRIDGE_5200_SUPER_512;
+            }
+            break;
+        }
+        idx++;
+    }
+    /* Size-based fallback for unknown 5200 ROMs (e.g. unlisted .a52). */
+    switch (size) {
+    case   4*1024: return CARTRIDGE_5200_4;
+    case   8*1024: return CARTRIDGE_5200_8;
+    case  16*1024: return CARTRIDGE_5200_NS_16;
+    case  32*1024: return CARTRIDGE_5200_32;
+    case  40*1024: return CARTRIDGE_5200_40;
+    case  64*1024: return CARTRIDGE_5200_SUPER_64;
+    case 128*1024: return CARTRIDGE_5200_SUPER_128;
+    case 256*1024: return CARTRIDGE_5200_SUPER_256;
+    case 512*1024: return CARTRIDGE_5200_SUPER_512;
+    }
+    return CARTRIDGE_NONE;
 }

@@ -226,14 +226,6 @@ public final class MainActivity extends Activity
 			return;
 		}
 
-		String rompath = _settings.get(false, "rompath");
-		if (rompath == null || rompath.equals("false")) {
-			pauseEmulation(true);
-			_bootupconfig = true;
-			showDialog(DLG_PATHSETUP);
-			return;
-		}
-
 		if (Integer.parseInt(instver) != getPInfo().versionCode) {
 			_bootupconfig = true;
 			pauseEmulation(true);
@@ -312,8 +304,9 @@ public final class MainActivity extends Activity
 						.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
 							@Override
 							public void onClick(DialogInterface d, int i) {
+								_bootupconfig = false;
+								pauseEmulation(false);
 								dismissDialog(DLG_PATHSETUP);
-								finish();
 							}
 							})
 						.create();
@@ -483,7 +476,7 @@ public final class MainActivity extends Activity
 		if (pause) {
 			if (_audio != null)	_audio.pause(pause);
 			if (_view != null)	_view.pause(pause);
-		} else {
+		} else if (!_bootupconfig) {
 			if (_view != null)	_view.pause(pause);
 			if (_audio != null)	_audio.pause(pause);
 		}
@@ -499,7 +492,7 @@ public final class MainActivity extends Activity
 	@Override
 	public void onResume() {
 		_aBar.hide(this, true, true);
-		if (!_bootupconfig)	pauseEmulation(false);
+		pauseEmulation(false);
 		super.onResume();
 	}
 
@@ -568,18 +561,21 @@ public final class MainActivity extends Activity
 
 		switch (reqc) {
 		case ACTIVITY_FSEL:
-			if (resc != RESULT_OK) {
-				if (_bootupconfig)	finish();
-				break;
-			}
 			if (data.getAction().equals(ACTION_SET_ROMPATH)) {
-				String p = data.getData().getPath();
-				_settings.putString("rompath", p);
-				_settings.simulateChanged("rompath");
+				if (resc == RESULT_OK) {
+					String p = data.getData().getPath();
+					_settings.putString("rompath", p);
+					_settings.simulateChanged("rompath");
+				}
 				_bootupconfig = false;
 				pauseEmulation(false);
 				break;
 			}
+
+			if (resc != RESULT_OK) {
+				break;
+			}
+
 			_curDiskFname = data.getData().getPath();
 			if (data.getAction().equals(ACTION_INSERT_REBOOT)) {
 				int r = NativeRunAtariProgram(_curDiskFname, 1, 1);
@@ -658,8 +654,8 @@ public final class MainActivity extends Activity
 			disk, sector, softjoy, up, down, left, right, fire, joyvisible, joysize,
 			joyopacity, joyrighth, joydeadband, joymidx, sound, mixrate, sound16bit,
 			hqpokey, mixbufsize, version, rompath, anchor, anchorstr, joygrace,
-			crophoriz, cropvert, derotkeys, actiona, actionb, actionc, ntsc, paddle,
-			plandef, browser, forceAT
+			crophoriz, cropvert, portpad, covlhold, derotkeys, actiona, actionb, actionc, ntsc,
+			paddle, plandef, browser, forceAT
 		};
 		private SharedPreferences _sharedprefs;
 		private Map<PreferenceName, String> _values, _newvalues;
@@ -695,7 +691,9 @@ public final class MainActivity extends Activity
 						   Integer.parseInt(_newvalues.get(PreferenceName.frameskip)),
 						   Boolean.parseBoolean(_newvalues.get(PreferenceName.collisions)),
 						   Integer.parseInt(_newvalues.get(PreferenceName.crophoriz)),
-						   Integer.parseInt(_newvalues.get(PreferenceName.cropvert)) );
+						   Integer.parseInt(_newvalues.get(PreferenceName.cropvert)),
+						   Integer.parseInt(_newvalues.get(PreferenceName.portpad)),
+						   Integer.parseInt(_newvalues.get(PreferenceName.covlhold)) );
 
 			if ( changed(PreferenceName.machine) || changed(PreferenceName.ntsc) ) {
 				if ( !NativePrefMachine(Integer.parseInt(_newvalues.get(PreferenceName.machine)),
@@ -852,7 +850,7 @@ public final class MainActivity extends Activity
 		}
 	}
 	private static native void NativePrefGfx(int aspect, boolean bilinear, int artifact,
-											 int frameskip, boolean collisions, int crophoriz, int cropvert);
+											 int frameskip, boolean collisions, int crophoriz, int cropvert, int portpad, int covlhold);
 	private static native boolean NativePrefMachine(int machine, boolean ntsc);
 	private static native void NativePrefEmulation(boolean basic, boolean speed, boolean disk,
 												   boolean sector, boolean browser);

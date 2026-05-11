@@ -79,7 +79,9 @@
 #include <signal.h>
 #include <time.h>
 #include <errno.h>
+#ifdef HAVE_UNISTD_H
 #include <unistd.h>
+#endif
 #include <sys/stat.h>
 
 #ifdef DEBUG
@@ -112,7 +114,6 @@
 static u_long ioctlsocket_non_block = 1; /* for ioctlsocket */
 #define perror(a) printf("%s:WSA error code:%d\n",a,WSAGetLastError())
 #define close(a) closesocket(a)
-typedef char *caddr_t;
 static void catch_disconnect(int sig);
 static int rdevice_win32_read(SOCKET s, char *buf, int len) {
   int r;
@@ -352,13 +353,13 @@ static void xio_34(void)
 ---------------------------------------------------------------------------*/
 static void xio_36(void)
 {
-  int aux1, aux2;
+  int aux1;
 #if defined(R_SERIAL) && !defined(DREAMCAST)
   struct termios options;
 #endif /* defined(R_SERIAL) && !defined(DREAMCAST) */
 
   aux1 = MEMORY_dGetByte(Devices_ICAX1Z);
-  aux2 = MEMORY_dGetByte(Devices_ICAX2Z);
+  /* aux2 = MEMORY_dGetByte(Devices_ICAX2Z); */
 
 #ifdef R_SERIAL
   if(RDevice_serial_enabled)
@@ -700,8 +701,8 @@ static void xio_40(void)
 
   int aux1;
 /*
-    if(connected == 0)
-      Poke(747,0);
+  if(connected == 0)
+    Poke(747,0);
 */
   CPU_regA = 1;
   CPU_regY = 1;
@@ -767,7 +768,7 @@ static void open_connection(char * address, int port)
         {
           snprintf(MESSAGE, sizeof(MESSAGE), "R*: Host = '%s'.",  host->h_name);
           DBG_APRINT(MESSAGE);
-          memcpy((caddr_t)&peer_in.sin_addr, host->h_addr_list[0], host->h_length);
+          memcpy(&peer_in.sin_addr, host->h_addr_list[0], host->h_length);
         }
         else
         {
@@ -805,7 +806,10 @@ static void open_connection(char * address, int port)
 
     /* Telnet negotiation */
     snprintf(MESSAGE, sizeof(MESSAGE), "%c%c%c%c%c%c%c%c%c", 0xff, 0xfb, 0x01, 0xff, 0xfb, 0x03, 0xff, 0xfd, 0x0f3);
-    write(rdev_fd, MESSAGE, 9);
+    if(write(rdev_fd, MESSAGE, 9) != 9)
+    {
+      DBG_APRINT("R*: warning, 'write' did not write all bytes");
+    }
     DBG_APRINT("R*: Negotiating Terminal Options...");
   }
 }
@@ -815,9 +819,9 @@ static void open_connection(char * address, int port)
 #if defined(R_SERIAL) && !defined(DREAMCAST)
 #ifdef __linux__
 #define TTY_DEV_NAME "/dev/ttyS0"   /* Linux */
-#elif defined (__NetBSD__) && defined(__i386__)
+#elif defined (__NetBSD__) && (defined(__i386__) || defined(__amd64__))
 #define TTY_DEV_NAME "/dev/tty00"   /* NetBSD/x86 */
-#elif defined (__FreeBSD__) && defined(__i386__)
+#elif defined (__FreeBSD__) && (defined(__i386__) || defined(__amd64__))
 #define TTY_DEV_NAME "/dev/ttyd1"   /* FreeBSD/x86 */
 #elif defined (__sun__)
 #define TTY_DEV_NAME "/dev/ttya"    /* Solaris */
@@ -1078,7 +1082,10 @@ void RDevice_WRIT(void)
         else
         {
 #ifndef DREAMCAST
-          write(rdev_fd, (char *)&out_char, 1); /* Write return */
+          if(write(rdev_fd, (char *)&out_char, 1) != 1) /* Write return */
+          {
+            DBG_APRINT("R*: warning, 'write' did not write all bytes");
+          }
 #else
           dc_write_serial(out_char);
 #endif
@@ -1283,7 +1290,10 @@ void RDevice_STAT(void)
 
         /* Telnet negotiation */
         snprintf(MESSAGE, sizeof(MESSAGE), "%c%c%c%c%c%c%c%c%c", 0xff, 0xfb, 0x01, 0xff, 0xfb, 0x03, 0xff, 0xfd, 0x0f3);
-        write(rdev_fd, MESSAGE, 9);
+        if(write(rdev_fd, MESSAGE, 9) != 9)
+        {
+          DBG_APRINT("R*: warning, 'write' did not write all bytes");
+        }
         DBG_APRINT("R*: Negotiating Terminal Options...");
 
         connected = 1;
@@ -1356,8 +1366,14 @@ void RDevice_STAT(void)
           }
           else
           {
-            write(rdev_fd, (char *)&one, 1);
-            write(rdev_fd, (char *)telnet_command, 2);
+            if(write(rdev_fd, (char *)&one, 1) != 1)
+            {
+              DBG_APRINT("R*: warning, 'write' did not write all bytes");
+            }
+            if(write(rdev_fd, (char *)telnet_command, 2) != 2)
+            {
+              DBG_APRINT("R*: warning, 'write' did not write all bytes");
+            }
           }
         }
         else

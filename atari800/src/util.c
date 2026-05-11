@@ -50,21 +50,17 @@
 #  include <time.h>
 # endif
 #endif
-
-#ifdef VITA
-#include <psp2/kernel/threadmgr.h>
-#elif defined(PSP)
-#include <pspthreadman.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h> /* getcwd() */
 #endif
-
-#if defined(__PS3__) && !defined(__PSL1GHT__)
-#include <sys/timer.h>
-#define usleep sys_timer_usleep
+#ifdef HAVE_DIRECT_H
+#include <direct.h> /* getcwd on MSVC*/
 #endif
 
 #include "atari.h"
 #include "platform.h"
 #include "util.h"
+#include "log.h"
 
 int Util_chrieq(char c1, char c2)
 {
@@ -91,6 +87,27 @@ int Util_stricmp(const char *str1, const char *str2)
 	return retval;
 }
 #endif
+
+int Util_striendswith(const char *s1, const char *s2)
+{
+	int pos;
+	pos = strlen(s1) - strlen(s2);
+	if (pos < 0)
+		return 0;
+	return Util_stricmp(s1 + pos, s2) == 0;
+}
+
+int Util_strnicmp(const char *str1, const char *str2, size_t size)
+{
+	int retval = 0;
+
+	while((size-- > 0) && ((retval = tolower(*str1) - tolower(*str2++)) == 0))
+	{
+		if (*str1++ == '\0')
+			break;
+	}
+	return retval;
+}
 
 char *Util_stpcpy(char *dest, const char *src)
 {
@@ -191,7 +208,7 @@ void Util_trim(char *s)
 int Util_sscandec(const char *s)
 {
 	int result;
-	if (*s == '\0')
+	if (s == NULL || *s == '\0')
 		return -1;
 	result = 0;
 	for (;;) {
@@ -208,6 +225,9 @@ int Util_sscandec(const char *s)
 int Util_sscansdec(char const *s, int *dest)
 {
 	int minus = FALSE;
+
+	if (s == NULL || dest == NULL) return FALSE;
+
 	switch(*s) {
 	case '-':
 		minus = TRUE;
@@ -228,6 +248,8 @@ int Util_sscandouble(char const *s, double *dest)
 	char *endptr;
 	double result;
 
+	if (s == NULL || dest == NULL) return FALSE;
+
 	result = strtod(s, &endptr);
 	if (endptr[0] != '\0' || errno == ERANGE)
 		return FALSE;
@@ -239,7 +261,7 @@ int Util_sscandouble(char const *s, double *dest)
 int Util_sscanhex(const char *s)
 {
 	int result;
-	if (*s == '\0')
+	if (s == NULL || *s == '\0')
 		return -1;
 	result = 0;
 	for (;;) {
@@ -259,6 +281,7 @@ int Util_sscanhex(const char *s)
 
 int Util_sscanbool(const char *s)
 {
+	if (s == NULL) return -1;
 	if (*s == '0' && s[1] == '\0')
 		return 0;
 	if (*s == '1' && s[1] == '\0')
@@ -343,6 +366,74 @@ void Util_catpath(char *result, const char *path1, const char *path2)
 		 || path2[0] == '/' || path1[strlen(path1) - 1] == '/'
 #endif
 			? "%s%s" : "%s" Util_DIR_SEP_STR "%s", path1, path2);
+}
+
+static int parse_hashes(const char *p, char *buffer, int bufsize)
+{
+	char *f = buffer;
+	char no_width = '0';
+	int no_max = 1;
+	/* 9 because sprintf'ed "no" can be 9 digits */
+	while (f < buffer + bufsize - 9) {
+		/* replace a sequence of hashes with e.g. "%05d" */
+		if (*p == '#') {
+			if (no_width > '0') /* already seen a sequence of hashes */
+				break;          /* invalid */
+			/* count hashes */
+			do {
+				no_max *= 10;
+				p++;
+				no_width++;
+				/* now no_width is the number of hashes seen so far
+				   and p points after the counted hashes */
+			} while (no_width < '9' && *p == '#'); /* no more than 9 hashes */
+			*f++ = '%';
+			*f++ = '0';
+			*f++ = no_width;
+			*f++ = 'd';
+			continue;
+		}
+		if (*p == '%')
+			*f++ = '%'; /* double the percents */
+		*f++ = *p;
+		if (*p == '\0')
+			return no_max; /* ok */
+		p++;
+	}
+	return 0;
+}
+
+int Util_filenamepattern(const char *p, char *buffer, int bufsize, const char *default_pattern)
+{
+	int no_max;
+
+	no_max = parse_hashes(p, buffer, bufsize);
+	if (!no_max && default_pattern) {
+		Log_print("Invalid filename pattern, using default.");
+		no_max = parse_hashes(default_pattern, buffer, bufsize);
+	}
+	return no_max;
+}
+
+int Util_findnextfilename(const char *format, int *no_last, int no_max, char *buffer, int bufsize, int allow_overwrite)
+{
+	int no;
+
+	/* negative number to initialize */
+	if (*no_last < 0) *no_last = -1;
+	no = *no_last;
+	for (;;) {
+		if ((++no >= no_max) & !allow_overwrite) {
+			return FALSE;
+		}
+		snprintf(buffer, bufsize, format, no % no_max);
+		*no_last = no;
+		if ((no >= no_max) && allow_overwrite)
+			break;
+		if (!Util_fileexists(buffer))
+			break; /* file does not exist - we can create it */
+	}
+	return TRUE;
 }
 
 int Util_fileexists(const char *filename)
@@ -477,7 +568,7 @@ double Util_time(void)
 #elif defined(HAVE_UCLOCK)
 	return uclock() * (1.0 / UCLOCKS_PER_SEC);
 #elif defined(HAVE_CLOCK)
-	return clock() * (1.0 / CLK_TCK);
+	return clock() * (1.0 / CLOCKS_PER_SEC);
 #else
 #error No function found for Util_time()
 #endif
@@ -488,13 +579,6 @@ double Util_time(void)
 
 void Util_sleep(double s)
 {
-#if defined(__LIBRETRO__)
-/* no need to sleep on retroarch (we are awake) */ 
-return;
-#elif defined(VITA) || defined(PSP)
-   sceKernelDelayThread(1e6 * s);
-#else
-
 #ifdef SUPPORTS_PLATFORM_SLEEP
 	PLATFORM_Sleep(s);
 #else /* !SUPPORTS_PLATFORM_SLEEP */
@@ -531,6 +615,18 @@ return;
 #endif
 	}
 #endif /* !SUPPORTS_PLATFORM_SLEEP */
+}
 
+char *Util_getcwd(char *buf, size_t size)
+{
+#ifdef HAVE_GETCWD
+	if (getcwd(buf, size) == NULL) {
+		buf[0] = '.';
+		buf[1] = '\0';
+	}
+#else
+	buf[0] = '.';
+	buf[1] = '\0';
 #endif
+	return buf;
 }

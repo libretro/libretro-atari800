@@ -66,8 +66,6 @@
 extern "C" {
 #endif
 
-	/* #define SIGNED_SAMPLES */ /* define for signed output */
-
 #ifdef  POKEYSND_SIGNED_SAMPLES			/* if signed output selected */
 #define POKEYSND_SAMP_MAX 127			/* then set signed 8-bit clipping ranges */
 #define POKEYSND_SAMP_MIN -128
@@ -113,6 +111,7 @@ void POKEYSND_UpdateConsol(int set);
 void POKEYSND_Process(void *sndbuffer, int sndn);
 int POKEYSND_DoInit(void);
 void POKEYSND_SetMzQuality(int quality);
+void POKEYSND_SetVolume(int vol);
 
 /* Volume only emulations declarations */
 #ifdef VOL_ONLY_SOUND

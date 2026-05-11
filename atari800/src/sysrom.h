@@ -1,6 +1,7 @@
 #ifndef SYSROM_H_
 #define SYSROM_H_
 
+#include "config.h"
 #include "atari.h"
 
 /* ROM IDs for all supported ROM images. */
@@ -57,12 +58,16 @@ enum {
 	SYSROM_BASIC_CUSTOM,/* Custom BASIC */
 	SYSROM_XEGAME_CUSTOM, /* Custom XEGS game */
 	SYSROM_LOADABLE_SIZE, /* Number of OS ROM loadable from file */
+#if EMUOS_ALTIRRA
 	/* --- Built-in free replacement OSes from Altirra --- */
 	SYSROM_ALTIRRA_800 = SYSROM_LOADABLE_SIZE, /* AltirraOS 400/800 */
 	SYSROM_ALTIRRA_XL, /* AltirraOS XL/XE/XEGS */
 	SYSROM_ALTIRRA_5200, /* Altirra 5200 OS */
 	SYSROM_ALTIRRA_BASIC, /* ATBASIC */
 	SYSROM_SIZE, /* Number of available OS ROMs */
+#else /* !EMUOS_ALTIRRA */
+	SYSROM_SIZE = SYSROM_LOADABLE_SIZE, /* Number of available OS ROMs */
+#endif /* !EMUOS_ALTIRRA */
 	SYSROM_AUTO = SYSROM_SIZE /* Use to indicate that OS revision should be chosen automatically */
 };
 typedef struct SYSROM_t {

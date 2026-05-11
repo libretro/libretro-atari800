@@ -89,7 +89,7 @@ enum
 #define SOFTJOY_MAXACTIONS 3
 #define SOFTJOY_ACTIONBASE SOFTJOY_MAXKEYS
 #define ACTION_NONE 0xFF
-extern UBYTE softjoymap[SOFTJOY_MAXKEYS + SOFTJOY_MAXACTIONS][2];
+extern SWORD softjoymap[SOFTJOY_MAXKEYS + SOFTJOY_MAXACTIONS][2];
 
 extern int Android_SoftjoyEnable;
 extern int Android_Joyleft;
@@ -109,3 +109,4 @@ void Keyboard_Enqueue(int key);
 int  Keyboard_Dequeue(void);
 int  Keyboard_Peek(void);
 void Android_SplitCalc(void);
+void Joy_Reposition(void);

@@ -50,6 +50,10 @@
 #include "input.h"
 #include "pbi.h"
 
+#ifdef POKEYREC
+#include "pokeyrec.h"
+#endif
+
 #ifdef VOICEBOX
 #include "voicebox.h"
 #include "votraxsnd.h"
@@ -447,6 +451,10 @@ void POKEY_Frame(void)
 
 void POKEY_Scanline(void)
 {
+#ifdef POKEYREC
+    POKEYREC_Recorder();
+#endif
+
 #ifdef POKEY_UPDATE
 	pokey_update();
 #endif
@@ -634,6 +642,65 @@ static void Update_Counter(int chan_mask)
 
 #ifndef BASIC
 
+void POKEY_StateSave(void)
+{
+	int shift_key = 0;
+	int keypressed = 0;
+
+	STATESAV_TAG(pokey);
+	StateSav_SaveUBYTE(&POKEY_KBCODE, 1);
+	StateSav_SaveUBYTE(&POKEY_IRQST, 1);
+	StateSav_SaveUBYTE(&POKEY_IRQEN, 1);
+	StateSav_SaveUBYTE(&POKEY_SKCTL, 1);
+
+	StateSav_SaveINT(&shift_key, 1);
+	StateSav_SaveINT(&keypressed, 1);
+	StateSav_SaveINT(&POKEY_DELAYED_SERIN_IRQ, 1);
+	StateSav_SaveINT(&POKEY_DELAYED_SEROUT_IRQ, 1);
+	StateSav_SaveINT(&POKEY_DELAYED_XMTDONE_IRQ, 1);
+
+	StateSav_SaveUBYTE(&POKEY_AUDF[0], 4);
+	StateSav_SaveUBYTE(&POKEY_AUDC[0], 4);
+	StateSav_SaveUBYTE(&POKEY_AUDCTL[0], 1);
+
+	StateSav_SaveINT(&POKEY_DivNIRQ[0], 4);
+	StateSav_SaveINT(&POKEY_DivNMax[0], 4);
+	StateSav_SaveINT(&POKEY_Base_mult[0], 1);
+}
+
+void POKEY_StateRead(void)
+{
+	int i;
+	int shift_key;
+	int keypressed;
+
+	StateSav_ReadUBYTE(&POKEY_KBCODE, 1);
+	StateSav_ReadUBYTE(&POKEY_IRQST, 1);
+	StateSav_ReadUBYTE(&POKEY_IRQEN, 1);
+	StateSav_ReadUBYTE(&POKEY_SKCTL, 1);
+
+	StateSav_ReadINT(&shift_key, 1);
+	StateSav_ReadINT(&keypressed, 1);
+	StateSav_ReadINT(&POKEY_DELAYED_SERIN_IRQ, 1);
+	StateSav_ReadINT(&POKEY_DELAYED_SEROUT_IRQ, 1);
+	StateSav_ReadINT(&POKEY_DELAYED_XMTDONE_IRQ, 1);
+
+	StateSav_ReadUBYTE(&POKEY_AUDF[0], 4);
+	StateSav_ReadUBYTE(&POKEY_AUDC[0], 4);
+	StateSav_ReadUBYTE(&POKEY_AUDCTL[0], 1);
+	for (i = 0; i < 4; i++) {
+		POKEY_PutByte((UWORD) (POKEY_OFFSET_AUDF1 + i * 2), POKEY_AUDF[i]);
+		POKEY_PutByte((UWORD) (POKEY_OFFSET_AUDC1 + i * 2), POKEY_AUDC[i]);
+	}
+	POKEY_PutByte(POKEY_OFFSET_AUDCTL, POKEY_AUDCTL[0]);
+
+	StateSav_ReadINT(&POKEY_DivNIRQ[0], 4);
+	StateSav_ReadINT(&POKEY_DivNMax[0], 4);
+	StateSav_ReadINT(&POKEY_Base_mult[0], 1);
+}
+
+#endif
+
 #if defined(__LIBRETRO__)
 void Retro_POKEY_StateSave(void)
 {
@@ -707,61 +774,3 @@ void Retro_POKEY_StateRead(void)
 		random_scanline_counter_lo;
 }
 #endif /* __LIBRETRO__ */
-
-void POKEY_StateSave(void)
-{
-	int shift_key = 0;
-	int keypressed = 0;
-
-	StateSav_SaveUBYTE(&POKEY_KBCODE, 1);
-	StateSav_SaveUBYTE(&POKEY_IRQST, 1);
-	StateSav_SaveUBYTE(&POKEY_IRQEN, 1);
-	StateSav_SaveUBYTE(&POKEY_SKCTL, 1);
-
-	StateSav_SaveINT(&shift_key, 1);
-	StateSav_SaveINT(&keypressed, 1);
-	StateSav_SaveINT(&POKEY_DELAYED_SERIN_IRQ, 1);
-	StateSav_SaveINT(&POKEY_DELAYED_SEROUT_IRQ, 1);
-	StateSav_SaveINT(&POKEY_DELAYED_XMTDONE_IRQ, 1);
-
-	StateSav_SaveUBYTE(&POKEY_AUDF[0], 4);
-	StateSav_SaveUBYTE(&POKEY_AUDC[0], 4);
-	StateSav_SaveUBYTE(&POKEY_AUDCTL[0], 1);
-
-	StateSav_SaveINT(&POKEY_DivNIRQ[0], 4);
-	StateSav_SaveINT(&POKEY_DivNMax[0], 4);
-	StateSav_SaveINT(&POKEY_Base_mult[0], 1);
-}
-
-void POKEY_StateRead(void)
-{
-	int i;
-	int shift_key;
-	int keypressed;
-
-	StateSav_ReadUBYTE(&POKEY_KBCODE, 1);
-	StateSav_ReadUBYTE(&POKEY_IRQST, 1);
-	StateSav_ReadUBYTE(&POKEY_IRQEN, 1);
-	StateSav_ReadUBYTE(&POKEY_SKCTL, 1);
-
-	StateSav_ReadINT(&shift_key, 1);
-	StateSav_ReadINT(&keypressed, 1);
-	StateSav_ReadINT(&POKEY_DELAYED_SERIN_IRQ, 1);
-	StateSav_ReadINT(&POKEY_DELAYED_SEROUT_IRQ, 1);
-	StateSav_ReadINT(&POKEY_DELAYED_XMTDONE_IRQ, 1);
-
-	StateSav_ReadUBYTE(&POKEY_AUDF[0], 4);
-	StateSav_ReadUBYTE(&POKEY_AUDC[0], 4);
-	StateSav_ReadUBYTE(&POKEY_AUDCTL[0], 1);
-	for (i = 0; i < 4; i++) {
-		POKEY_PutByte((UWORD) (POKEY_OFFSET_AUDF1 + i * 2), POKEY_AUDF[i]);
-		POKEY_PutByte((UWORD) (POKEY_OFFSET_AUDC1 + i * 2), POKEY_AUDC[i]);
-	}
-	POKEY_PutByte(POKEY_OFFSET_AUDCTL, POKEY_AUDCTL[0]);
-
-	StateSav_ReadINT(&POKEY_DivNIRQ[0], 4);
-	StateSav_ReadINT(&POKEY_DivNMax[0], 4);
-	StateSav_ReadINT(&POKEY_Base_mult[0], 1);
-}
-
-#endif

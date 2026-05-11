@@ -63,11 +63,6 @@ void POKEY_Scanline(void);
 void POKEY_StateSave(void);
 void POKEY_StateRead(void);
 
-#if defined(__LIBRETRO__)
-void Retro_POKEY_StateSave(void);
-void Retro_POKEY_StateRead(void);
-#endif
-
 #endif
 
 /* CONSTANT DEFINITIONS */
@@ -124,4 +119,9 @@ extern int POKEY_Base_mult[POKEY_MAXPOKEYS];	/* selects either 64Khz or 15Khz cl
 extern UBYTE POKEY_poly9_lookup[POKEY_POLY9_SIZE];
 extern UBYTE POKEY_poly17_lookup[16385];
 
+
+#if defined(__LIBRETRO__)
+void Retro_POKEY_StateSave(void);
+void Retro_POKEY_StateRead(void);
+#endif
 #endif /* POKEY_H_ */

@@ -20,6 +20,9 @@ static dc_storage* dc;
 #include "cassette.h"
 #include "artifact.h"
 #include "statesav.h"
+#include "pokeysnd.h"
+#include "sound.h"
+#include "cartridge_info.h"
 
 #include "carts_hash.h"
 #include "crc32.h"
@@ -112,6 +115,7 @@ unsigned atari_devices[4];
 // libretro-Atari800 core options variables
 int keyboard_type = 0;
 int autorunCartridge = NO_CART;
+int autorun5200CartType = 0;    /* atari800 CARTRIDGE_* type when autorunCartridge == A5200_CART */
 int atari_joyhack = 0;
 int paddle_mode = 0;
 int paddle_speed = 3;
@@ -549,32 +553,80 @@ static void update_variables(void)
 {
     struct retro_variable var;
 
+    /* Stereo POKEY user option. Stock Atari 800/XL/XE has a single POKEY chip,
+       so default is mono -- most authentic and most compatible (Bounty Bob,
+       Road Race and other titles that hit mirrored POKEY registers lock up
+       or lose audio with stereo enabled). User can enable to emulate the
+       Atari Stereo Sound Mod (second POKEY at $D210-$D21F). 5200 always
+       forces mono below regardless of this option. */
+    var.key = "atari800_pokey_stereo";
+    var.value = NULL;
+    {
+        int want_stereo = FALSE;
+        if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value
+            && strcmp(var.value, "enabled") == 0)
+            want_stereo = TRUE;
+        POKEYSND_stereo_enabled = want_stereo;
+        Sound_desired.channels = want_stereo ? 2 : 1;
+    }
+
     /* Moved here for better consistency and when system options that require EMU reset to occur */
+    autorun5200CartType = 0;
     if (strcmp(RPATH, "") == 0)  // Start core with no content
         autorunCartridge = NO_CART;
     /* Most complex case - .bin (common) and .rom (rare) can be used for both Atari 5200 console and Atari 8bit computers */
     else if  (HandleExtension((char*)RPATH, "bin") || HandleExtension((char*)RPATH, "BIN")
-           || HandleExtension((char*)RPATH, "rom") || HandleExtension((char*)RPATH, "ROM")) {
-        autorunCartridge = A800_CART; // default Atari 8bit, as most/all Atari 5200 games should be in atari5200_hash.h
-        ULONG crc;
+           || HandleExtension((char*)RPATH, "rom") || HandleExtension((char*)RPATH, "ROM")
+           || HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52")) {
+        int is_a52 = HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52");
+        autorunCartridge = is_a52 ? A5200_CART : A800_CART;
+        ULONG crc = 0;
+        long fsize = 0;
         FILE *fp;
         fp = fopen((char*)RPATH, "rb");
         if (fp != NULL) {
             CRC32_FromFile(fp, &crc);
+            fseek(fp, 0, SEEK_END);
+            fsize = ftell(fp);
             fclose(fp);
             if (is_5200_cart(crc)) {
                 autorunCartridge = A5200_CART;
-                log_cb(RETRO_LOG_INFO,"[update_variables] Found Atari 5200 bin file in DB for: %s\n", (char*)RPATH);
-            } else
+                log_cb(RETRO_LOG_INFO,"[update_variables] Found Atari 5200 cart in DB for: %s\n", (char*)RPATH);
+            } else if (!is_a52) {
                 log_cb(RETRO_LOG_INFO,"[update_variables] Assumming Atari 8bit bin file: %s\n", (char*)RPATH);
+            }
+            if (autorunCartridge == A5200_CART) {
+                autorun5200CartType = get_5200_cart_atari800_type(crc, (int)fsize);
+                log_cb(RETRO_LOG_INFO,"[update_variables] 5200 cart type: %d (size %ld, crc %08lx)\n",
+                    autorun5200CartType, fsize, (unsigned long)crc);
+            }
         } else {
-            log_cb(RETRO_LOG_INFO,"[update_variables] Error opening bin file: %s\n", (char*)RPATH );
+            log_cb(RETRO_LOG_INFO,"[update_variables] Error opening cart file: %s\n", (char*)RPATH );
         }
-    }   /* bin, rom files */
-    else if   (HandleExtension((char*)RPATH, "a52") || HandleExtension((char*)RPATH, "A52"))
-        autorunCartridge = A5200_CART;
-    else if   (HandleExtension((char*)RPATH, "car") || HandleExtension((char*)RPATH, "CAR"))
+    }   /* bin, rom, a52 files */
+    else if   (HandleExtension((char*)RPATH, "car") || HandleExtension((char*)RPATH, "CAR")) {
         autorunCartridge = A800_CART;
+        /* Bounty Bob Strikes Back (CARTRIDGE_BBSB_40 = 18) writes to mirrored
+           POKEY registers (e.g. $D210 aliasing to $D200 on a single-POKEY 800).
+           Stereo POKEY decodes bit 4 as chip-select, which routes those writes
+           to a nonexistent second chip and locks the game in the menu. Peek at
+           the .car header (16 bytes: "CART" + 4-byte big-endian type) so we
+           can force mono before Sound_Initialise(). */
+        FILE *fp = fopen((char*)RPATH, "rb");
+        if (fp != NULL) {
+            unsigned char hdr[8];
+            if (fread(hdr, 1, 8, fp) == 8
+             && hdr[0] == 'C' && hdr[1] == 'A' && hdr[2] == 'R' && hdr[3] == 'T') {
+                int car_type = (hdr[4] << 24) | (hdr[5] << 16) | (hdr[6] << 8) | hdr[7];
+                if (car_type == CARTRIDGE_BBSB_40) {
+                    POKEYSND_stereo_enabled = FALSE;
+                    Sound_desired.channels = 1;
+                    log_cb(RETRO_LOG_INFO, "[update_variables] BBSB_40 .car detected, forcing mono POKEY\n");
+                }
+            }
+            fclose(fp);
+        }
+    }
     /* Non cartridges extensions*/
     else if   (HandleExtension((char*)RPATH, "xex") || HandleExtension((char*)RPATH, "XEX")
             || HandleExtension((char*)RPATH, "com") || HandleExtension((char*)RPATH, "COM")
@@ -648,6 +700,13 @@ static void update_variables(void)
             Atari800_jumper = FALSE;
             Atari800_builtin_game = FALSE;
             Atari800_keyboard_detached = FALSE;
+            /* Real Atari 5200 has a single POKEY. Stereo POKEY makes the chip
+               decode bit 4 of the address as a chip-select, so writes to mirrored
+               POKEY registers (e.g. $E810 aliasing to $E800 on real hardware)
+               hit a nonexistent second chip. Bounty Bob Strikes Back relies on
+               this aliasing and locks up otherwise. */
+            POKEYSND_stereo_enabled = FALSE;
+            Sound_desired.channels = 1;
             /* Force Atari 5200 joystick layout for Atari 5200 machine emulation */
             retro_set_controller_port_device(0, RETRO_DEVICE_ATARI_5200_JOYSTICK);
             retro_set_controller_port_device(1, RETRO_DEVICE_ATARI_5200_JOYSTICK);
@@ -1291,9 +1350,9 @@ void retro_get_system_info(struct retro_system_info* info)
     memset(info, 0, sizeof(*info));
     info->library_name = "Atari800";
 #ifdef GIT_VERSION
-    info->library_version = "3.1.0" GIT_VERSION;
+    info->library_version = "5.2.0" GIT_VERSION;
 #else
-    info->library_version = "3.1.0";
+    info->library_version = "5.2.0";
 #endif
     info->valid_extensions = "xfd|atr|dcm|cas|bin|a52|zip|atx|car|rom|com|xex|m3u";
     info->need_fullpath = true;
