@@ -1,95 +1,73 @@
-This is an updated version of lr-atari800 to add in missing features.
+# libretro-atari800
 
-1) full keyboard support including the SHIFT and CTRL keys, so you can type all the characters. Useful for adventure games, programming in BASIC, etc.
+Libretro port of the [Atari800](https://atari800.github.io/) emulator —
+Atari 8-bit computers (400/800/600XL/800XL/130XE/XEGS) and the Atari 5200
+console.
 
-2) four controller support when the emulator is set to 400/800 (useful for games like M.U.L.E.) Note that only the 400/800 had four joystick ports. See http://www.atarimania.com/faq-atari-400-800-xl-xe-what-games-support-4-or-more-simultaneous-players_93.html for a list of games that support four controllers.
+The bundled Atari800 core is version **5.2.0**. The upstream emulator is
+maintained by the Atari800 Development Team (see `atari800/DOC/CREDITS`)
+and is released under the GPL (see `atari800/COPYING`).
 
+## Controls
 
-WIP Libretro port of Atari800 emulator version 3.1.0
-----------------------------------------------------
+Four controllers are supported when the emulated system is set to 400/800
+— useful for games such as *M.U.L.E.*; see the
+[Atari 4+ player list](http://www.atarimania.com/faq-atari-400-800-xl-xe-what-games-support-4-or-more-simultaneous-players_93.html).
 
-In joy mode
+### Atari 8-bit mode
 
-L3  NA
+| Button | Function |
+| ------ | -------- |
+| D-Pad  | Joystick direction |
+| B      | Fire 1 |
+| A      | Fire 2 |
+| Y      | Space / Fire 3 |
+| X      | Return |
+| L      | Option (CONSOL) |
+| R      | Atari800 menu |
+| L2     | Esc |
+| R2     | Help |
+| L3     | Virtual keyboard toggle |
+| Select | Select (CONSOL) |
+| Start  | Start (CONSOL) |
 
-R3  NA 
+### Atari 5200 mode
 
-L2  KEY SPACE
+| Button | Function |
+| ------ | -------- |
+| D-Pad  | Joystick (digital) |
+| B      | Fire 1 |
+| A      | Fire 2 |
+| Y      | Numpad `#` |
+| X      | Numpad `*` |
+| L      | Numpad `0` |
+| R      | Numpad `1` |
+| L2     | Numpad `2` |
+| R2     | Numpad `3` |
+| L3     | Numpad `7` |
+| R3     | Virtual keyboard toggle |
+| Select | Pause |
+| Start  | Start |
 
-R2  KEY ESCAPE
+## BIOS / firmware
 
-L   CONSOL_OPTION
+The core uses the optional ROM files listed in `atari800_libretro.info`
+(`5200.rom`, `ATARIBAS.ROM`, `ATARIOSA.ROM`, `ATARIOSB.ROM`, `ATARIXL.ROM`,
+`BB01R4_OS.ROM`, `XEGAME.ROM`). When real ROMs are not present, the
+bundled AltirraOS replacement ROMs are used.
 
-R   TOGGLE UI
+## Building
 
-SEL CONSOL_SELECT
+```sh
+make -f Makefile
+```
 
-STR CONSOL_START
+Standard libretro `platform=` overrides apply
+(`platform=unix`, `platform=win`, `platform=wiiu`, `platform=ps2`, ...).
 
-A   FIRE1/KEY RETURN IN GUI
+## Links
 
-B   KEY RETURN 
-
-X   FIRE2/KEY ESCAPE IN GUI
-
-Y   VKBD ON/OFF
-
-In Keyboard mode
-
-F1 MAIN GUI
-
-F2 CONSOL_OPTION
-
-F3 CONSOL_SELECT
-
-F4 CONSOL_START
-
-UP
-
-DOWN
-
-LEFT
-
-RIGHT
-
-RETURN 
-
-ESCAPE 
-
-SPACE
-
-
-Atari800 emulator version 3.1.0
--------------------------------
-
-This is a free and portable Atari 8-bit computer and 5200 console emulator,
-originally written by David Firth and now developed by the Atari800
-Development Team (please see DOC/CREDITS). This program is copyrighted and
-released under the GPL (see COPYING).
-
-Please read DOC/README, DOC/INSTALL and DOC/USAGE.
-
-For news in this release please do read DOC/NEWS.
-
-If you have a problem running this emulator please read DOC/FAQ first.
-If the problem persists then please ask in newsgroup comp.sys.atari.8bit
-or in the atari800-users mailing list (see below).
-
-Look at DOC/BUGS before reporting something you consider a bug.
-
-If you want to help developing Atari800 emulator you can subscribe to our
-mailing list (http://lists.sourceforge.net/lists/listinfo/atari800-users).
-DOC/TODO might point you in the right direction.
-
-This version, and all versions back to 0.8.2 have been released by me (Petr
-Stehlik) and are now available at Sourceforge.net (URL below). Thanks
-go to David Firth and all the people that helped making this release.
-
-EnJoy!
-
-Petr Stehlik
-April 12, 2014
-
-E-mail: pstehlik@sophics.cz
-
-Project homepage: http://atari800.sourceforge.net/
+- Libretro core: <https://github.com/libretro/libretro-atari800>
+- Upstream Atari800 emulator: <https://atari800.github.io/>
+- Upstream documentation: see `atari800/DOC/` (`README`, `INSTALL`,
+  `USAGE`, `FAQ`, `NEWS`, `BUGS`, `TODO`)
