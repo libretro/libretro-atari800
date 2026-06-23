@@ -49,6 +49,9 @@
 #include "log.h"
 #include "input.h"
 #include "pbi.h"
+#ifdef NETSIO
+#include "netsio.h"
+#endif
 
 #ifdef POKEYREC
 #include "pokeyrec.h"
@@ -143,9 +146,6 @@ UBYTE POKEY_GetByte(UWORD addr, int no_side_effects)
 #ifdef DEBUG3
 		printf("SERIO: SERIN read, bytevalue %02x\n", POKEY_SERIN);
 #endif
-#ifdef SERIO_SOUND
-		POKEYSND_UpdateSerio(0,byte);
-#endif
 		break;
 	case POKEY_OFFSET_IRQST:
 		byte = POKEY_IRQST;
@@ -167,12 +167,33 @@ static void Update_Counter(int chan_mask);
 
 static int POKEY_siocheck(void)
 {
-	return (((POKEY_AUDF[POKEY_CHAN3] == 0x28 || POKEY_AUDF[POKEY_CHAN3] == 0x10
-	        || POKEY_AUDF[POKEY_CHAN3] == 0x08 || POKEY_AUDF[POKEY_CHAN3] == 0x0a)
-		&& POKEY_AUDF[POKEY_CHAN4] == 0x00) /* intelligent peripherals speeds */
+	int intelligent_peripheral_speed =
+		((POKEY_AUDF[POKEY_CHAN3] == 0x28 || POKEY_AUDF[POKEY_CHAN3] == 0x10
+		  || POKEY_AUDF[POKEY_CHAN3] == 0x08 || POKEY_AUDF[POKEY_CHAN3] == 0x0a)
+		 && POKEY_AUDF[POKEY_CHAN4] == 0x00);
+#ifdef NETSIO
+	if (netsio_enabled && POKEY_AUDF[POKEY_CHAN3] > 0x00 && POKEY_AUDF[POKEY_CHAN3] <= 0x28
+	 && POKEY_AUDF[POKEY_CHAN4] == 0x00)
+		intelligent_peripheral_speed = 1;
+#endif /* NETSIO */
+
+	return ((intelligent_peripheral_speed
 		|| (POKEY_SKCTL & 0x78) == 0x28) /* cassette save mode */
-		&& (POKEY_AUDCTL[0] & 0x28) == 0x28;
+		&& (POKEY_AUDCTL[0] & 0x28) == 0x28);
 }
+
+#ifdef NETSIO
+static int POKEY_serial_byte_delay(void)
+{
+	int divisor = POKEY_AUDF[POKEY_CHAN3];
+
+	if (divisor <= 0)
+		divisor = 1;
+
+	/* Match the existing SIO byte timing formula instead of forcing 19200 baud. */
+	return ((SIO_SERIN_INTERVAL * divisor - 1) / 0x28 + 1);
+}
+#endif /* NETSIO */
 
 #ifndef SOUND_GAIN /* sound gain can be pre-defined in the configure/Makefile */
 #define SOUND_GAIN 4
@@ -217,6 +238,9 @@ void POKEY_PutByte(UWORD addr, UBYTE byte)
 
 		Update_Counter((1 << POKEY_CHAN1) | (1 << POKEY_CHAN2) | (1 << POKEY_CHAN3) | (1 << POKEY_CHAN4));
 		POKEYSND_Update(POKEY_OFFSET_AUDCTL, byte, 0, SOUND_GAIN);
+#ifdef NETSIO
+		netsio_netstream_update_pokey(POKEY_SKCTL, POKEY_AUDCTL[0], POKEY_AUDF[POKEY_CHAN3], POKEY_AUDF[POKEY_CHAN4]);
+#endif
 		break;
 	case POKEY_OFFSET_AUDF1:
 		POKEY_AUDF[POKEY_CHAN1] = byte;
@@ -232,11 +256,17 @@ void POKEY_PutByte(UWORD addr, UBYTE byte)
 		POKEY_AUDF[POKEY_CHAN3] = byte;
 		Update_Counter((POKEY_AUDCTL[0] & POKEY_CH3_CH4) ? ((1 << POKEY_CHAN4) | (1 << POKEY_CHAN3)) : (1 << POKEY_CHAN3));
 		POKEYSND_Update(POKEY_OFFSET_AUDF3, byte, 0, SOUND_GAIN);
+#ifdef NETSIO
+		netsio_netstream_update_pokey(POKEY_SKCTL, POKEY_AUDCTL[0], POKEY_AUDF[POKEY_CHAN3], POKEY_AUDF[POKEY_CHAN4]);
+#endif
 		break;
 	case POKEY_OFFSET_AUDF4:
 		POKEY_AUDF[POKEY_CHAN4] = byte;
 		Update_Counter(1 << POKEY_CHAN4);
 		POKEYSND_Update(POKEY_OFFSET_AUDF4, byte, 0, SOUND_GAIN);
+#ifdef NETSIO
+		netsio_netstream_update_pokey(POKEY_SKCTL, POKEY_AUDCTL[0], POKEY_AUDF[POKEY_CHAN3], POKEY_AUDF[POKEY_CHAN4]);
+#endif
 		break;
 	case POKEY_OFFSET_IRQEN:
 		POKEY_IRQEN = byte;
@@ -260,14 +290,38 @@ void POKEY_PutByte(UWORD addr, UBYTE byte)
 #ifdef VOICEBOX
 		VOICEBOX_SEROUTPutByte(byte);
 #endif
+/* Netstream raw serial path: only active after Fuji enable + MOTOR + matching POKEY setup. */
+#ifdef NETSIO
+		if (netsio_enabled && netsio_netstream_active())
+			NetSIO_PutByte(byte);
+		else
+#endif
 		if ((POKEY_SKCTL & 0x70) == 0x20 && POKEY_siocheck())
 			SIO_PutByte(byte);
+#ifdef NETSIO
+		/* TODO: proper way to enable modem
+		 * When testing various FujiNet provided peripherals, I've noticed modem was not working.
+		 * Quick fix was to test (POKEY_SKCTL & 0x70) == 0x70 instead of calling more complex POKEY_siocheck().
+		 * Modem started to work (tested Ice-T with CP/M, BobTerm). However, I'm not sure how to test POKEY
+		 * registers for only valid serial port output modes.
+		 */
+		else if (netsio_enabled && (POKEY_SKCTL & 0x70) == 0x70)
+			NetSIO_PutByte(byte);
+#endif
+
 		/* check if cassette 2-tone mode has been enabled */
 		if ((POKEY_SKCTL & 0x08) == 0x00) {
+#ifdef NETSIO
+			/* Use the active serial divisor for modem/netstream timing. */
+			POKEY_DELAYED_SEROUT_IRQ = POKEY_serial_byte_delay();
+			POKEY_IRQST |= 0x08;
+			POKEY_DELAYED_XMTDONE_IRQ = POKEY_DELAYED_SEROUT_IRQ * 2 - 1;
+#else
 			/* intelligent device */
 			POKEY_DELAYED_SEROUT_IRQ = SIO_SEROUT_INTERVAL;
 			POKEY_IRQST |= 0x08;
 			POKEY_DELAYED_XMTDONE_IRQ = SIO_XMTDONE_INTERVAL;
+#endif /* NETSIO */
 		}
 		else {
 			/* cassette */
@@ -284,9 +338,6 @@ void POKEY_PutByte(UWORD addr, UBYTE byte)
 				POKEY_DELAYED_XMTDONE_IRQ = 0;
 			}
 		};
-#ifdef SERIO_SOUND
-		POKEYSND_UpdateSerio(1, byte);
-#endif
 		break;
 	case POKEY_OFFSET_STIMER:
 		POKEY_DivNIRQ[POKEY_CHAN1] = POKEY_DivNMax[POKEY_CHAN1];
@@ -303,6 +354,9 @@ void POKEY_PutByte(UWORD addr, UBYTE byte)
 #endif
 		POKEY_SKCTL = byte;
 		POKEYSND_Update(POKEY_OFFSET_SKCTL, byte, 0, SOUND_GAIN);
+#ifdef NETSIO
+		netsio_netstream_update_pokey(POKEY_SKCTL, POKEY_AUDCTL[0], POKEY_AUDF[POKEY_CHAN3], POKEY_AUDF[POKEY_CHAN4]);
+#endif
 		if (byte & 4)
 			pot_scanline = 228;	/* fast pot mode - return results immediately */
 		if ((byte & 0x03) == 0) {
@@ -384,6 +438,9 @@ int POKEY_Initialise(int *argc, char *argv[])
 	POKEY_IRQEN = 0x00;
 	POKEY_SKSTAT = 0xef;
 	POKEY_SKCTL = 0x00;
+#ifdef NETSIO
+	netsio_netstream_update_pokey(POKEY_SKCTL, 0, 0, 0);
+#endif
 
 	for (i = 0; i < (POKEY_MAXPOKEYS * 4); i++) {
 		POKEY_AUDC[i] = 0;
@@ -459,10 +516,6 @@ void POKEY_Scanline(void)
 	pokey_update();
 #endif
 
-#ifdef VOL_ONLY_SOUND
-	POKEYSND_UpdateVolOnly();
-#endif
-
 #ifndef BASIC
 	INPUT_Scanline();	/* Handle Amiga and ST mice. */
 						/* It's not a part of POKEY emulation, */
@@ -486,30 +539,48 @@ void POKEY_Scanline(void)
 
 	if (POKEY_DELAYED_SERIN_IRQ > 0) {
 		if (--POKEY_DELAYED_SERIN_IRQ == 0) {
-			/* Load a byte to SERIN - even when the IRQ is disabled. */
-			POKEY_SERIN = SIO_GetByte();
-			if (POKEY_IRQEN & 0x20) {
-				if (POKEY_IRQST & 0x20) {
-					POKEY_IRQST &= 0xdf;
-#ifdef DEBUG2
-					printf("SERIO: SERIN Interrupt triggered, bytevalue %02x\n", POKEY_SERIN);
+#ifdef NETSIO
+			/* Preserve FIFO ordering: don't overwrite SERIN while the previous byte is still pending. */
+			if (netsio_enabled && !(POKEY_IRQST & 0x20) && netsio_available() > 0) {
+				POKEY_DELAYED_SERIN_IRQ = 1;
+			}
+			else
 #endif
+			{
+				/* Load a byte to SERIN - even when the IRQ is disabled. */
+				POKEY_SERIN = SIO_GetByte();
+				if (POKEY_IRQEN & 0x20) {
+					if (POKEY_IRQST & 0x20) {
+						POKEY_IRQST &= 0xdf;
+#ifdef DEBUG2
+						printf("SERIO: SERIN Interrupt triggered, bytevalue %02x\n", POKEY_SERIN);
+#endif
+					}
+					else {
+						POKEY_SKSTAT &= 0xdf;
+#ifdef DEBUG2
+						printf("SERIO: SERIN Interrupt triggered, bytevalue %02x\n", POKEY_SERIN);
+#endif
+					}
+					CPU_GenerateIRQ();
 				}
+#ifdef DEBUG2
 				else {
-					POKEY_SKSTAT &= 0xdf;
-#ifdef DEBUG2
-					printf("SERIO: SERIN Interrupt triggered, bytevalue %02x\n", POKEY_SERIN);
-#endif
+					printf("SERIO: SERIN Interrupt missed, bytevalue %02x\n", POKEY_SERIN);
 				}
-				CPU_GenerateIRQ();
-			}
-#ifdef DEBUG2
-			else {
-				printf("SERIO: SERIN Interrupt missed, bytevalue %02x\n", POKEY_SERIN);
-			}
 #endif
+			}
 		}
 	}
+#ifdef NETSIO
+	/* Check NetSIO for pending Rx bytes */
+	if (netsio_enabled && POKEY_DELAYED_SERIN_IRQ == 0 && (POKEY_IRQST & 0x20)) {
+		int avail = netsio_available();
+		if (avail > 0) {
+			POKEY_DELAYED_SERIN_IRQ = POKEY_serial_byte_delay();
+		}
+	}
+#endif /* NETSIO */
 
 	if (POKEY_DELAYED_SEROUT_IRQ > 0) {
 		if (--POKEY_DELAYED_SEROUT_IRQ == 0) {
@@ -566,6 +637,9 @@ void POKEY_Scanline(void)
 			CPU_GenerateIRQ();
 		}
 	}
+#ifdef NETSIO
+	netsio_poll();
+#endif /* NETSIO */
 }
 
 /*****************************************************************************/

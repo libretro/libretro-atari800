@@ -1,0 +1,580 @@
+/*
+ * netsiowin.c - NetSIO Windows implementation for FujiNet-PC <-> Atari800 Emulator
+ *
+ * Complete Win32 replacement for netsio.c: Winsock2, CreateThread, ring-buffer FIFO.
+ * Protocol handling mirrors netsio.c; constants from netsio.h.
+ */
+#include "config.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdint.h>
+#include <winsock2.h>
+#include <windows.h>
+#include "netsio.h"
+#include "log.h"
+
+/* State variables (same as netsio.c) */
+volatile int netsio_enabled = 0;
+static int netsio_initialized = 0;
+uint8_t netsio_sync_num = 0;
+int fujinet_known = 0;
+volatile int netsio_sync_wait = 0;
+int netsio_cmd_state = 0;
+volatile int netsio_next_write_size = 0;
+
+/* Netstream gate state (same semantics as netsio.c) */
+static volatile int netsio_netstream_pending_enable = 0;
+static volatile int netsio_netstream_fuji_enabled = 0;
+static volatile int netsio_netstream_motor_on = 0;
+static volatile int netsio_netstream_pokey_ok = 0;
+static volatile int netsio_netstream_is_active = 0;
+
+/* Socket and address */
+static SOCKET sockfd = INVALID_SOCKET;
+static struct sockaddr_storage fujinet_addr;
+static int fujinet_addr_len = sizeof(fujinet_addr);
+
+/* RX thread control */
+static volatile int rx_quit = 0;
+static HANDLE rx_thread_handle = NULL;
+
+/* Ring buffer FIFO: FujiNet -> emulator */
+#define FIFO_SIZE NETSIO_FIFO_SIZE
+static uint8_t fifo_buf[FIFO_SIZE];
+static unsigned int fifo_head = 0;  /* next read */
+static unsigned int fifo_tail = 0;  /* next write */
+static unsigned int fifo_count = 0;
+static CRITICAL_SECTION fifo_cs;
+static HANDLE fifo_data_event = NULL;  /* signaled when data available */
+
+static void send_to_fujinet(const uint8_t *pkt, size_t len);
+static void enqueue_to_emulator(const uint8_t *pkt, size_t len);
+
+static void millisleep(unsigned int ms)
+{
+    Sleep(ms);
+}
+
+/* Push bytes to ring buffer (from RX thread) */
+static void enqueue_to_emulator(const uint8_t *pkt, size_t len)
+{
+    unsigned int i;
+    EnterCriticalSection(&fifo_cs);
+    for (i = 0; i < len && fifo_count < FIFO_SIZE; i++) {
+        fifo_buf[fifo_tail] = pkt[i];
+        fifo_tail = (fifo_tail + 1) % FIFO_SIZE;
+        fifo_count++;
+    }
+    if (fifo_count > 0)
+        SetEvent(fifo_data_event);
+    LeaveCriticalSection(&fifo_cs);
+}
+
+/* Send packet to FujiNet (Winsock2) */
+static void send_to_fujinet(const uint8_t *pkt, size_t len)
+{
+    int n;
+    int addr_len;
+
+    if (!fujinet_known || fujinet_addr.ss_family != AF_INET)
+        return;
+    addr_len = sizeof(struct sockaddr_in);
+    n = sendto(sockfd, (const char *)pkt, (int)len, 0,
+               (struct sockaddr *)&fujinet_addr, addr_len);
+    if (n < 0 || (size_t)n != len) {
+#ifdef DEBUG
+        Log_print("netsio: sendto fn failed: %d", WSAGetLastError());
+#endif
+    }
+}
+
+static void send_block_to_fujinet(const uint8_t *block, size_t len)
+{
+    uint8_t packet[512 + 2];
+    if (len == 0 || len > 512) return;
+    packet[0] = NETSIO_DATA_BLOCK;
+    memcpy(&packet[1], block, len);
+    packet[1 + len] = 0xFF;
+    send_to_fujinet(packet, len + 2);
+}
+
+static void netsio_netstream_recalc(void)
+{
+    int active = 0;
+    if (netsio_enabled
+     && netsio_netstream_fuji_enabled
+     && netsio_netstream_motor_on
+     && netsio_netstream_pokey_ok)
+        active = 1;
+    if (active != netsio_netstream_is_active) {
+        netsio_netstream_is_active = active;
+#ifdef DEBUG
+        Log_print("netsio: netstream %s (fuji=%d motor=%d pokey=%d)",
+            active ? "enter" : "exit",
+            netsio_netstream_fuji_enabled,
+            netsio_netstream_motor_on,
+            netsio_netstream_pokey_ok);
+#endif
+    }
+}
+
+/* RX thread: recvfrom -> protocol dispatch */
+static DWORD WINAPI fujinet_rx_thread(LPVOID arg)
+{
+    uint8_t buf[4096];
+    uint8_t cmd;
+    int n;
+
+    (void)arg;
+    while (!rx_quit && sockfd != INVALID_SOCKET) {
+        fujinet_addr_len = sizeof(fujinet_addr);
+        n = recvfrom(sockfd, (char *)buf, sizeof(buf), 0,
+                     (struct sockaddr *)&fujinet_addr, &fujinet_addr_len);
+        if (n <= 0) {
+            if (rx_quit) break;
+            if (WSAGetLastError() != WSAEWOULDBLOCK)
+                millisleep(5);
+            continue;
+        }
+        fujinet_known = 1;
+        if (fujinet_addr.ss_family == AF_INET)
+            fujinet_addr_len = sizeof(struct sockaddr_in);
+        if (n < 1) continue;
+        cmd = buf[0];
+
+        switch (cmd) {
+            case NETSIO_PING_REQUEST: {
+                uint8_t r = NETSIO_PING_RESPONSE;
+                send_to_fujinet(&r, 1);
+                break;
+            }
+            case NETSIO_DEVICE_CONNECTED:
+                netsio_enabled = 1;
+                netsio_netstream_recalc();
+                break;
+            case NETSIO_DEVICE_DISCONNECTED:
+                netsio_enabled = 0;
+                netsio_netstream_pending_enable = 0;
+                netsio_netstream_fuji_enabled = 0;
+                netsio_netstream_is_active = 0;
+                break;
+            case NETSIO_ALIVE_REQUEST: {
+                uint8_t r = NETSIO_ALIVE_RESPONSE;
+                send_to_fujinet(&r, 1);
+                break;
+            }
+            case NETSIO_CREDIT_STATUS: {
+                uint8_t reply[2];
+                reply[0] = NETSIO_CREDIT_UPDATE;
+                reply[1] = 3;
+                send_to_fujinet(reply, sizeof(reply));
+                break;
+            }
+            case NETSIO_SPEED_CHANGE: {
+                if (n < 5) break;
+                send_to_fujinet(buf, 5);
+                break;
+            }
+            case NETSIO_SYNC_RESPONSE: {
+                uint8_t resp_sync, ack_type, ack_byte;
+                uint16_t write_size;
+                if (n < 6) break;
+                resp_sync = buf[1];
+                ack_type = buf[2];
+                ack_byte = buf[3];
+                write_size = (uint16_t)buf[4] | (uint16_t)buf[5] << 8;
+                if (resp_sync == netsio_sync_num && ack_type == 1) {
+                    netsio_next_write_size = write_size;
+                    enqueue_to_emulator(&ack_byte, 1);
+                }
+                netsio_sync_wait = 0;
+                break;
+            }
+            case NETSIO_PROCEED_ON:
+            case NETSIO_PROCEED_OFF:
+            case NETSIO_INTERRUPT_ON:
+            case NETSIO_INTERRUPT_OFF:
+                break;
+            case NETSIO_DATA_BYTE: {
+                if (n < 2) break;
+                enqueue_to_emulator(&buf[1], 1);
+                break;
+            }
+            case NETSIO_DATA_BLOCK: {
+                if (n < 2) break;
+                enqueue_to_emulator(buf + 1, (size_t)(n - 1));
+                break;
+            }
+            default:
+                break;
+        }
+    }
+    return 0;
+}
+
+int netsio_init(uint16_t port)
+{
+    struct sockaddr_in addr;
+    WSADATA wsa;
+    int broadcast = 1;
+    int reuse = 1;
+
+    if (netsio_initialized)
+        return 0;
+
+    if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0) {
+        Log_print("netsio: WSAStartup failed (error %d)", WSAGetLastError());
+        return -1;
+    }
+
+    InitializeCriticalSection(&fifo_cs);
+    fifo_data_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (!fifo_data_event) {
+        Log_print("netsio: CreateEvent failed (error %lu)", (unsigned long)GetLastError());
+        WSACleanup();
+        return -1;
+    }
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    if (sockfd == INVALID_SOCKET) {
+        Log_print("netsio: socket failed (error %d)", WSAGetLastError());
+        CloseHandle(fifo_data_event);
+        WSACleanup();
+        return -1;
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(port);
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+
+    setsockopt(sockfd, SOL_SOCKET, SO_BROADCAST, (const char *)&broadcast, sizeof(broadcast));
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const char *)&reuse, sizeof(reuse));
+
+    if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) == SOCKET_ERROR) {
+        Log_print("netsio: bind port %u failed (error %d, port may be in use)", (unsigned)port, WSAGetLastError());
+        closesocket(sockfd);
+        sockfd = INVALID_SOCKET;
+        CloseHandle(fifo_data_event);
+        WSACleanup();
+        return -1;
+    }
+
+    rx_quit = 0;
+    rx_thread_handle = CreateThread(NULL, 0, fujinet_rx_thread, NULL, 0, NULL);
+    if (!rx_thread_handle) {
+        Log_print("netsio: CreateThread failed (error %lu)", (unsigned long)GetLastError());
+        closesocket(sockfd);
+        sockfd = INVALID_SOCKET;
+        CloseHandle(fifo_data_event);
+        WSACleanup();
+        return -1;
+    }
+
+    netsio_initialized = 1;
+    Log_print("netsio (Windows): initialized, UDP port %u", (unsigned)port);
+    return 0;
+}
+
+void netsio_shutdown(void)
+{
+    if (!netsio_initialized) return;
+
+    if (netsio_enabled) {
+        uint8_t pkt = NETSIO_DEVICE_DISCONNECTED;
+        send_to_fujinet(&pkt, 1);
+    }
+
+    rx_quit = 1;
+    if (sockfd != INVALID_SOCKET) {
+        closesocket(sockfd);
+        sockfd = INVALID_SOCKET;
+    }
+    if (rx_thread_handle) {
+        WaitForSingleObject(rx_thread_handle, 3000);
+        CloseHandle(rx_thread_handle);
+        rx_thread_handle = NULL;
+    }
+    if (fifo_data_event) {
+        CloseHandle(fifo_data_event);
+        fifo_data_event = NULL;
+    }
+    DeleteCriticalSection(&fifo_cs);
+
+    netsio_enabled = 0;
+    netsio_initialized = 0;
+    netsio_sync_num = 0;
+    fujinet_known = 0;
+    netsio_sync_wait = 0;
+    netsio_cmd_state = 0;
+    netsio_next_write_size = 0;
+    netsio_netstream_pending_enable = 0;
+    netsio_netstream_fuji_enabled = 0;
+    netsio_netstream_motor_on = 0;
+    netsio_netstream_pokey_ok = 0;
+    netsio_netstream_is_active = 0;
+    fifo_head = fifo_tail = fifo_count = 0;
+    memset(&fujinet_addr, 0, sizeof(fujinet_addr));
+    fujinet_addr_len = sizeof(fujinet_addr);
+}
+
+void netsio_wait_for_sync(void)
+{
+    int ticker = 0;
+    while (netsio_sync_wait) {
+        millisleep(5);
+        if (ticker++ > 7) {
+            netsio_sync_wait = 0;
+            break;
+        }
+    }
+}
+
+int netsio_available(void)
+{
+    int avail;
+    EnterCriticalSection(&fifo_cs);
+    avail = (int)fifo_count;
+    LeaveCriticalSection(&fifo_cs);
+    return avail;
+}
+
+void netsio_flush_fifo(void)
+{
+    EnterCriticalSection(&fifo_cs);
+    fifo_head = fifo_tail = fifo_count = 0;
+    ResetEvent(fifo_data_event);
+    LeaveCriticalSection(&fifo_cs);
+}
+
+int netsio_cmd_on(void)
+{
+    uint8_t p = NETSIO_COMMAND_ON;
+    netsio_cmd_state = 1;
+    send_to_fujinet(&p, 1);
+    return 0;
+}
+
+int netsio_cmd_off(void)
+{
+    uint8_t p = NETSIO_COMMAND_OFF;
+    send_to_fujinet(&p, 1);
+    return 0;
+}
+
+int netsio_cmd_off_sync(void)
+{
+    uint8_t p[2];
+    p[0] = NETSIO_COMMAND_OFF_SYNC;
+    netsio_sync_num++;
+    p[1] = netsio_sync_num;
+    send_to_fujinet(p, sizeof(p));
+    netsio_sync_wait = 1;
+    return 0;
+}
+
+void netsio_toggle_cmd(int v)
+{
+    if (!v)
+        netsio_cmd_off_sync();
+    else
+        netsio_cmd_on();
+}
+
+int netsio_motor_on(void)
+{
+    uint8_t p = NETSIO_MOTOR_ON;
+    send_to_fujinet(&p, 1);
+    return 0;
+}
+
+int netsio_motor_off(void)
+{
+    uint8_t p = NETSIO_MOTOR_OFF;
+    send_to_fujinet(&p, 1);
+    return 0;
+}
+
+void netsio_netstream_set_motor(int motor_on)
+{
+    netsio_netstream_motor_on = motor_on ? 1 : 0;
+    if (netsio_enabled) {
+        if (motor_on)
+            netsio_motor_on();
+        else
+            netsio_motor_off();
+    }
+    netsio_netstream_recalc();
+}
+
+void netsio_netstream_note_command_frame(const uint8_t *cmd, size_t len)
+{
+    if (len >= 2 && cmd != NULL && cmd[0] == 0x70 && cmd[1] == 0xF0) {
+        netsio_netstream_pending_enable = 1;
+#ifdef DEBUG
+        Log_print("netsio: netstream pending enable (cf 70/F0)");
+#endif
+    }
+}
+
+void netsio_netstream_note_status_byte(uint8_t status)
+{
+    if (!netsio_netstream_pending_enable)
+        return;
+    netsio_netstream_pending_enable = 0;
+    netsio_netstream_fuji_enabled = (status == 'A') ? 1 : 0;
+#ifdef DEBUG
+    Log_print("netsio: netstream enable %s (status=%02X)",
+        netsio_netstream_fuji_enabled ? "accepted" : "rejected",
+        status);
+#endif
+    netsio_netstream_recalc();
+}
+
+void netsio_netstream_clear_pending(void)
+{
+    netsio_netstream_pending_enable = 0;
+}
+
+void netsio_netstream_update_pokey(uint8_t skctl, uint8_t audctl, uint8_t audf3, uint8_t audf4)
+{
+    uint8_t mode = skctl & 0x70;
+    (void)audf3;
+    (void)audf4;
+    netsio_netstream_pokey_ok =
+        ((audctl & 0x28) == 0x28)
+        && (mode == 0x00 || mode == 0x10 || mode == 0x30 || mode == 0x40);
+    netsio_netstream_recalc();
+}
+
+int netsio_netstream_active(void)
+{
+    return netsio_netstream_is_active;
+}
+
+int netsio_send_byte(uint8_t b)
+{
+    uint8_t pkt[2] = { NETSIO_DATA_BYTE, b };
+    send_to_fujinet(pkt, 2);
+    return 0;
+}
+
+int netsio_send_block(const uint8_t *block, ssize_t len)
+{
+    if (len <= 0 || len > 512) return 0;
+    send_block_to_fujinet(block, (size_t)len);
+    return 0;
+}
+
+int netsio_send_byte_sync(uint8_t b)
+{
+    uint8_t p[3];
+    p[0] = NETSIO_DATA_BYTE_SYNC;
+    p[1] = b;
+    netsio_sync_num++;
+    p[2] = netsio_sync_num;
+    send_to_fujinet(p, sizeof(p));
+    netsio_sync_wait = 1;
+    return 0;
+}
+
+int netsio_recv_byte(uint8_t *b)
+{
+    /* Block until data available, with a total timeout matching POSIX select behaviour.
+     * NETSIO_RECV_BYTE_TIMEOUT_SEC * 1000 ms total; poll in 100 ms slices so we can
+     * check netsio_enabled and bail out cleanly when the device disconnects. */
+#ifndef NETSIO_RECV_BYTE_TIMEOUT_SEC
+#define NETSIO_RECV_BYTE_TIMEOUT_SEC 10
+#endif
+    int elapsed = 0;
+    const int slice_ms = 100;
+    const int timeout_ms = NETSIO_RECV_BYTE_TIMEOUT_SEC * 1000;
+
+    for (;;) {
+        EnterCriticalSection(&fifo_cs);
+        if (fifo_count > 0) {
+            *b = fifo_buf[fifo_head];
+            fifo_head = (fifo_head + 1) % FIFO_SIZE;
+            fifo_count--;
+            LeaveCriticalSection(&fifo_cs);
+            return 0;
+        }
+        LeaveCriticalSection(&fifo_cs);
+
+        if (!netsio_enabled)
+            return -1;
+
+        if (WaitForSingleObject(fifo_data_event, slice_ms) == WAIT_OBJECT_0)
+            continue;
+
+        elapsed += slice_ms;
+        if (elapsed >= timeout_ms) {
+#ifdef DEBUG
+            Log_print("netsio: recv_byte: timeout waiting for FIFO data");
+#endif
+            return -1;
+        }
+    }
+}
+
+int netsio_cold_reset(void)
+{
+    uint8_t pkt = 0xFF;
+    netsio_netstream_pending_enable = 0;
+    netsio_netstream_fuji_enabled = 0;
+    netsio_netstream_recalc();
+    send_to_fujinet(&pkt, 1);
+    return 0;
+}
+
+int netsio_warm_reset(void)
+{
+    uint8_t pkt = 0xFE;
+    netsio_netstream_pending_enable = 0;
+    netsio_netstream_fuji_enabled = 0;
+    netsio_netstream_recalc();
+    send_to_fujinet(&pkt, 1);
+    return 0;
+}
+
+void netsio_test_cmd(void)
+{
+    uint8_t p[6] = { 0x70, 0xE8, 0x00, 0x00, 0x59 };
+    netsio_cmd_on();
+    send_block_to_fujinet(p, sizeof(p));
+    netsio_cmd_off_sync();
+}
+
+/* netsio_poll: called from POKEY_Scanline() to apply buffered PROCEED/INTERRUPT
+ * pin states.  The Windows implementation does not yet track these signals, so
+ * this is a no-op stub. */
+void netsio_poll(void)
+{
+}
+
+/* netsio_cmd_cancel: called from sio.c when a command frame is too short or
+ * invalid.  The Windows implementation has no deferred COMMAND_ON state, so
+ * this is a no-op stub. */
+void netsio_cmd_cancel(void)
+{
+}
+
+/* netsio_recover_stale_sio_transaction: clear stale NetSIO state when SIO
+ * begins a new command frame mid-transaction (e.g. after cold boot). */
+void netsio_recover_stale_sio_transaction(void)
+{
+    if (!netsio_enabled)
+        return;
+
+    netsio_sync_wait = 0;
+    netsio_next_write_size = 0;
+
+    if (netsio_cmd_state) {
+        netsio_cmd_off();
+        netsio_cmd_state = 0;
+    }
+
+    /* Drain stale bytes from the ring-buffer FIFO (Windows replacement for POSIX pipe drain). */
+    netsio_flush_fifo();
+}

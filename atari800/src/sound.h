@@ -11,11 +11,7 @@ void Sound_Exit(void);
 void Sound_Update(void);
 void Sound_Pause(void);
 void Sound_Continue(void);
-#ifdef SUPPORTS_SOUND_REINIT
-void Sound_Reinit(void);
-#endif /* SUPPORTS_SOUND_REINIT */
 
-#ifdef SOUND_THIN_API
 /* Nomenclature used:
    Sample - a single portion of one channel of audio signal. Sample size equals
    1 byte for 8-bit audio and 2 bytes for 16-bit audio.
@@ -79,7 +75,6 @@ void Sound_Callback(UBYTE *buffer, unsigned int size);
 int Sound_ReadConfig(char *option, char *ptr);
 void Sound_WriteConfig(FILE *fp);
 
-#ifdef SYNCHRONIZED_SOUND
 /* Sound latency in ms. Don't change directly - use Sound_SetLatency instead. */
 extern unsigned int Sound_latency;
 
@@ -89,13 +84,10 @@ void Sound_SetLatency(unsigned int latency);
  * so that if the sound buffer is too full or too empty. The emulation
  * slows down or speeds up to match the actual speed of sound output. */
 double Sound_AdjustSpeed(void);
-#endif /* SYNCHRONIZED_SOUND */
 
 /* Helper function for use when hardware audio buffer size is required to
    equal a power of 2. Returns a power of 2 that is not lower than NUM
    (0 <= NUM < UINT_MAX). */
 unsigned int Sound_NextPow2(unsigned int num);
-
-#endif /* SOUND_THIN_API */
 
 #endif /* SOUND_H_ */
