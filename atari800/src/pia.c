@@ -31,6 +31,9 @@
 #include "pia.h"
 #include "sio.h"
 #include "pokey.h"
+#ifdef NETSIO
+#include "netsio.h"
+#endif
 #ifdef XEP80_EMULATION
 #include "xep80.h"
 #endif
@@ -47,12 +50,23 @@ UBYTE PIA_PORT_input[2];
 
 UBYTE PIA_PORTA_mask;
 UBYTE PIA_PORTB_mask;
+/* PROCEED (CA1) pin state */
+int PIA_CA1 = 1;
+int PIA_CA1_negpending = 0;
+int PIA_CA1_pospending = 0;
+/* CA2 (cassette motor) pin state */
 int PIA_CA2 = 1;
 int PIA_CA2_negpending = 0;
 int PIA_CA2_pospending = 0;
+/* INTERRUPT (CB1) pin state */
+int PIA_CB1 = 1;
+int PIA_CB1_negpending = 0;
+int PIA_CB1_pospending = 0;
+/* CB2 (command frame) pin state */
 int PIA_CB2 = 1;
 int PIA_CB2_negpending = 0;
 int PIA_CB2_pospending = 0;
+/* PIA IRQ status */
 int PIA_IRQ = 0;
 
 int PIA_Initialise(int *argc, char *argv[])
@@ -86,6 +100,9 @@ static void set_CA2(int value)
 	if (PIA_CA2 != value) {
 		/* The motor status has changed */
 		CASSETTE_TapeMotor(!value);
+#ifdef NETSIO
+		netsio_netstream_set_motor(value == 0);
+#endif
 	}
 	PIA_CA2 = value;
 }
@@ -99,8 +116,34 @@ static void set_CB2(int value)
 	}
 	PIA_CB2 = value;
 }
+    
+/* Set PROCEED pin (CA1) */
+void PIA_SetCA1(int value)
+{
+	if (PIA_CA1 != value) {
+		int active_transition = ((value == 1) == ((PIA_PACTL & 0x01) != 0));
+		if (active_transition) {
+			PIA_PACTL |= 0x80;
+			update_PIA_IRQ();
+		}
+		PIA_CA1 = value;
+	}
+}
 
-static void update_PIA_IRQ(void)
+/* Set INTERRUPT pin (CB1) */
+void PIA_SetCB1(int value)
+{
+	if (PIA_CB1 != value) {
+		int active_transition = ((value == 1) == ((PIA_PBCTL & 0x01) != 0));
+		if (active_transition) {
+			PIA_PBCTL |= 0x80;
+			update_PIA_IRQ();
+		}
+		PIA_CB1 = value;
+	}
+}
+
+void update_PIA_IRQ(void)
 {
 	PIA_IRQ = 0;
 	if (((PIA_PACTL & 0x40) && (PIA_PACTL & 0x28) == 0x08) || 
