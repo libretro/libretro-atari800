@@ -11,7 +11,15 @@ ifeq ($(STATIC_LINKING), 1)
 INCFLAGS += -I$(CORE_DIR)/libretro/include
 endif
 
-SOURCES_C := \
+SOURCES_C :=
+
+# When the core is statically linked into RetroArch (console targets set
+# STATIC_LINKING=1), RetroArch already provides libretro-common, so building our
+# own copy duplicates every symbol (memory_stream.o etc.) — a fatal "multiple
+# definition" under the newer ps2dev/devkit GCC. Only build libretro-common in
+# the normal shared-core case.
+ifneq ($(STATIC_LINKING), 1)
+SOURCES_C += \
 	$(LIBRETRO_COMM_DIR)/libco/libco.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
@@ -23,6 +31,7 @@ SOURCES_C := \
 	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
 	$(LIBRETRO_COMM_DIR)/time/rtime.c \
 	$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c
+endif
 
 SOURCES_C += \
 	$(CORE_DIR)/libretro/carts_hash.c \
