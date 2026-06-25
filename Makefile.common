@@ -13,11 +13,16 @@ endif
 
 SOURCES_C :=
 
-# When the core is statically linked into RetroArch (console targets set
-# STATIC_LINKING=1), RetroArch already provides libretro-common, so building our
-# own copy duplicates every symbol (memory_stream.o etc.) — a fatal "multiple
-# definition" under the newer ps2dev/devkit GCC. Only build libretro-common in
-# the normal shared-core case.
+# memory_stream is consumed directly by the core's savestate code
+# (atari800/src/statesav.c). It must be linked into the core itself even
+# on statically-linked console targets (STATIC_LINKING=1): the frontend
+# does not export the libretro-common symbols this core needs, so leaving
+# it out produces undefined references to memstream_* at link time.
+SOURCES_C += $(LIBRETRO_COMM_DIR)/streams/memory_stream.c
+
+# The remaining libretro-common helpers below are only built for the
+# normal shared-core case; under STATIC_LINKING the frontend provides
+# equivalents and building our own copy would duplicate symbols.
 ifneq ($(STATIC_LINKING), 1)
 SOURCES_C += \
 	$(LIBRETRO_COMM_DIR)/libco/libco.c \
@@ -27,7 +32,6 @@ SOURCES_C += \
 	$(LIBRETRO_COMM_DIR)/encodings/encoding_utf.c \
 	$(LIBRETRO_COMM_DIR)/file/file_path.c \
 	$(LIBRETRO_COMM_DIR)/file/file_path_io.c \
-	$(LIBRETRO_COMM_DIR)/streams/memory_stream.c \
 	$(LIBRETRO_COMM_DIR)/string/stdstring.c \
 	$(LIBRETRO_COMM_DIR)/time/rtime.c \
 	$(LIBRETRO_COMM_DIR)/vfs/vfs_implementation.c

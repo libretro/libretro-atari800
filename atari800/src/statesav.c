@@ -485,12 +485,13 @@ int Retro_SaveAtariState(uint8_t* data, size_t size, UBYTE SaveVerbose)
 	UBYTE StateVersion = SAVE_VERSION_NUMBER;
 	Retro_SaveState_Size = 0;
 
-	if (state_stream) { memstream_close(state_stream); memstream_set_buffer(NULL, 0); state_stream = NULL; }
+	if (state_stream) { memstream_close(state_stream); state_stream = NULL; }
 	state_stream_error = false;
 	if (!data || size < 1) goto error;
 
-	memstream_set_buffer(data, size);
-	state_stream = memstream_open(1);
+	/* memstream_open() now takes the backing buffer and size up front
+	 * (upstream libretro-common removed memstream_set_buffer). */
+	state_stream = memstream_open(data, size, 1);
 	if (!state_stream) goto error;
 
 	if (memstream_write(state_stream, "ATARI800", 8) != 8) goto error;
@@ -528,13 +529,13 @@ int Retro_SaveAtariState(uint8_t* data, size_t size, UBYTE SaveVerbose)
 	{ int local_xld_enabled = FALSE; Retro_SaveINT(&local_xld_enabled, 1); }
 #endif
 
-	memstream_close(state_stream); memstream_set_buffer(NULL, 0); state_stream = NULL;
+	memstream_close(state_stream); state_stream = NULL;
 	if (state_stream_error) return FALSE;
 	return Retro_SaveState_Size;
 
 error:
 	if (state_stream) memstream_close(state_stream);
-	memstream_set_buffer(NULL, 0); state_stream = NULL; state_stream_error = true;
+	state_stream = NULL; state_stream_error = true;
 	return FALSE;
 }
 
@@ -545,11 +546,10 @@ int Retro_ReadAtariState(const uint8_t* data, size_t size)
 	UBYTE SaveVerbose = 0;
 	Retro_SaveState_Size = 0;
 
-	if (state_stream) { memstream_close(state_stream); memstream_set_buffer(NULL, 0); state_stream = NULL; }
+	if (state_stream) { memstream_close(state_stream); state_stream = NULL; }
 	state_stream_error = false;
 
-	memstream_set_buffer((uint8_t*)data, size);
-	state_stream = memstream_open(0);
+	state_stream = memstream_open((uint8_t*)data, size, 0);
 	if (!state_stream) goto error;
 
 	if (memstream_read(state_stream, header_string, 8) != 8) goto error;
@@ -593,14 +593,14 @@ int Retro_ReadAtariState(const uint8_t* data, size_t size)
 #endif
 	}
 
-	memstream_close(state_stream); memstream_set_buffer(NULL, 0); state_stream = NULL;
+	memstream_close(state_stream); state_stream = NULL;
 	if (state_stream_error) return FALSE;
 	GTIA_consol_override = 0;
 	return Retro_SaveState_Size;
 
 error:
 	if (state_stream) memstream_close(state_stream);
-	memstream_set_buffer(NULL, 0); state_stream = NULL; state_stream_error = true;
+	state_stream = NULL; state_stream_error = true;
 	return FALSE;
 }
 
