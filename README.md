@@ -4,7 +4,7 @@ Libretro port of the [Atari800](https://atari800.github.io/) emulator —
 Atari 8-bit computers (400/800/600XL/800XL/130XE/XEGS) and the Atari 5200
 console.
 
-The bundled Atari800 core is version **5.2.0**. The upstream emulator is
+The bundled Atari800 core is version **6.1.0**. The upstream emulator is
 maintained by the Atari800 Development Team (see `atari800/DOC/CREDITS`)
 and is released under the GPL (see `atari800/COPYING`).
 
