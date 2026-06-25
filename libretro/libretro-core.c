@@ -28,9 +28,6 @@ static dc_storage* dc;
 #include "crc32.h"
 #include "colours.h"
 
-cothread_t mainThread;
-cothread_t emuThread;
-
 static void fallback_log(enum retro_log_level level, const char* fmt, ...);
 retro_log_printf_t log_cb = fallback_log;
 
@@ -1105,9 +1102,13 @@ static void update_variables(void)
     }
 }
 
-static void retro_wrap_emulator()
+/* Performs the one-time emulator initialisation (pre_main -> skel_main ->
+ * Atari800_Initialise). Called once from retro_load_game after RPATH and
+ * the machine/TV settings have been configured, which is the same point
+ * the old code reached via the first co_switch(emuThread). No fiber. */
+void libretro_emu_init_run(void)
 {
-    log_cb(RETRO_LOG_INFO, "WRAP EMU THD\n");
+    log_cb(RETRO_LOG_INFO, "INIT EMU\n");
     log_cb(RETRO_LOG_INFO, "Atari800_machine_type =%d\n", Atari800_machine_type);
     log_cb(RETRO_LOG_INFO, "Atari800_tv_mode =%d\n", Atari800_tv_mode);
     log_cb(RETRO_LOG_INFO, "CURRENT_TV =%d\n", CURRENT_TV);
@@ -1115,23 +1116,6 @@ static void retro_wrap_emulator()
     log_cb(RETRO_LOG_INFO, "RPATH =%s\n", RPATH);
 
     pre_main(RPATH);
-
-
-    log_cb(RETRO_LOG_INFO, "EXIT EMU THD\n");
-    pauseg = -1;
-
-    //environ_cb(RETRO_ENVIRONMENT_SHUTDOWN, 0);
-
-    // Were done here
-    co_switch(mainThread);
-
-    // Dead emulator, but libco says not to return
-    while (true)
-    {
-        log_cb(RETRO_LOG_INFO, "Running a dead emulator.");
-        co_switch(mainThread);
-    }
-
 }
 
 void Emu_init() {
@@ -1143,12 +1127,6 @@ void Emu_init() {
     //  update_variables();
 
     memset(Key_State, 0, 512);
-
-    if (!emuThread && !mainThread)
-    {
-        mainThread = co_active();
-        emuThread = co_create(65536 * sizeof(void*), retro_wrap_emulator);
-    }
 
     old_Atari800_machine_type[0] = 0;
 
@@ -1298,17 +1276,7 @@ extern void main_exit();
 void retro_deinit(void)
 {
     Emu_uninit();
-
-    co_switch(emuThread);
     log_cb(RETRO_LOG_INFO, "exit emu\n");
-    // main_exit();
-    co_switch(mainThread);
-    log_cb(RETRO_LOG_INFO, "exit main\n");
-    if (emuThread)
-    {
-        co_delete(emuThread);
-        emuThread = 0;
-    }
 
     // Clean the m3u storage
     if (dc)
@@ -1379,6 +1347,14 @@ void retro_audio_cb(int16_t l, int16_t r)
     audio_cb(l, r);
 }
 
+/* Emit a block of interleaved stereo frames in a single call. Used by the
+ * per-frame audio path so one retro_run() emits exactly one frame's worth
+ * of consecutive samples. */
+size_t retro_audio_batch_cb(const int16_t *data, size_t frames)
+{
+    return audio_batch_cb(data, frames);
+}
+
 /* Forward declarations */
 void retro_sound_update(void);
 int Retro_PollEvent(void);
@@ -1414,15 +1390,22 @@ void retro_run(void)
             Atari800_SetTVMode(CURRENT_TV); // Should include POKEYSND_Init(POKEYSND_FREQ_17_EXACT, 44100, 2, 1);
         }
 
+        /* Deterministic single-frame step (no fiber, no self-pacing):
+         *   1. sample input once, up front
+         *   2. emulate exactly one frame
+         *   3. emit that frame's audio batch
+         *   4. emit that frame's video
+         * Steps 3 and 4 cover the same frame, emitted together, so audio
+         * and video never straddle a frame boundary. */
+        Retro_PollEvent();
+
+        libretro_run_frame();
+
         if (retro_sound_finalized)
             retro_sound_update();
-
-        Retro_PollEvent();
     }
 
     video_cb(Retro_Screen, retrow, retroh, retrow << PIXEL_BYTES);
-
-    co_switch(emuThread);
 }
 
 extern char Key_State[512];
@@ -1511,7 +1494,9 @@ bool retro_load_game(const struct retro_game_info* info)
     //sprintf(msg, "File type detected=%i\n", fileType);
     //retro_message(msg, 10000, 0);
 
-    co_switch(emuThread);
+    /* One-time emulator init now runs synchronously (no fiber). After
+     * this returns the core is ready and retro_run() will drive frames. */
+    libretro_emu_init_run();
 
     return true;
 }

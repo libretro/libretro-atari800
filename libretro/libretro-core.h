@@ -31,10 +31,9 @@
 #define WINDOW_WIDTH 400
 #define WINDOW_HEIGHT 300
 
-#include "libco.h"
-
-extern cothread_t mainThread;
-extern cothread_t emuThread;
+/* libco removed: the libretro frontend drives one frame per retro_run().
+ * libretro_run_frame() (platform.c) emulates exactly one frame. */
+extern void libretro_run_frame(void);
 
 extern char Key_State[512];
 

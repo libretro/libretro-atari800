@@ -81,21 +81,26 @@ int skel_main(int argc, char **argv)
 	//POKEYSND_Init(POKEYSND_FREQ_17_EXACT, 44100, 1, 1);
 	retro_sound_finalized=1;
 
-	printf("First retrun to main thread!\n");
-    co_switch(mainThread);
+	/* No fiber, no internal frame loop: the libretro frontend drives one
+	 * frame per retro_run() (see libretro_run_frame() in libretro-core.c).
+	 * skel_main now only performs the one-time core initialisation and
+	 * returns. */
+	return 0;
+}
 
-	/* main loop */
-	for (;;) {
-		INPUT_key_code = PLATFORM_Keyboard();
-		//SDL_INPUT_Mouse();
-		Atari800_Frame();
-		if (Atari800_display_screen)
-			PLATFORM_DisplayScreen();
-		
-		if(CURRENT_TV!=Atari800_tv_mode){
-			CURRENT_TV=Atari800_tv_mode;
-			ToggleTV=1;
-		}
+/* One emulated frame, called once per retro_run(). This is the body that
+ * used to live in skel_main()'s for(;;) loop, lifted out so the frontend
+ * is the sole frame clock. */
+void libretro_run_frame(void)
+{
+	INPUT_key_code = PLATFORM_Keyboard();
+	Atari800_Frame();
+	if (Atari800_display_screen)
+		PLATFORM_DisplayScreen();
+
+	if(CURRENT_TV!=Atari800_tv_mode){
+		CURRENT_TV=Atari800_tv_mode;
+		ToggleTV=1;
 	}
 }
 
@@ -176,6 +181,16 @@ int PLATFORM_Keyboard(void)
 
 	UI_alt_function = -1;
 
+	/* The built-in atari800 UI (ui.c/ui_basic.c) runs nested blocking
+	 * loops that paced themselves by yielding one frame per iteration via
+	 * Atari800_Sync(). With the libco fiber removed and Atari800_Sync() a
+	 * no-op, entering those loops would spin forever. The libretro
+	 * frontend already provides content loading, save states, disk/cart
+	 * control, system/sound options and an about screen, so the internal
+	 * UI is redundant here and is left disabled (UI_alt_function stays -1,
+	 * and the AKEY_UI dispatch in Atari800_Frame is guarded out for
+	 * __LIBRETRO__). */
+#ifndef __LIBRETRO__
 	if (Key_State[RETROK_LALT]){
 
 		if (Key_State[RETROK_r])
@@ -202,6 +217,7 @@ int PLATFORM_Keyboard(void)
 			return AKEY_PBI_BB_MENU;
 
 	}
+#endif
 
 	/* SHIFT STATE */
 	//if ((Key_State[RETROK_LSHIFT]) || (Key_State[RETROK_RSHIFT]))

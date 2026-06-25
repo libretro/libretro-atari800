@@ -6,6 +6,9 @@
 #include "input.h"
 #include "pokey.h"
 #include "atari.h"
+#include "sound.h"
+
+extern size_t retro_audio_batch_cb(const int16_t *data, size_t frames);
 
 //CORE VAR
 #ifdef _WIN32
@@ -151,18 +154,59 @@ extern int UI_is_active;
 extern int CURRENT_TV;
 
 void retro_sound_update(void)
-{	
+{
+   /* Number of samples this frame. Audio is generated at a fixed 44100 Hz
+    * but the frame rate is the (non-integer) Atari FPS, so a fixed
+    * per-frame count drifts against the true rate. Accumulate the
+    * fractional remainder and emit floor() each frame, carrying the rest,
+    * so the long-run output rate is exactly 44100 / fps. */
+   static double sample_accumulator = 0.0;
+   static int16_t out[2048 * 2];           /* interleaved L/R, generous */
+   const double fps   = (CURRENT_TV == Atari800_TV_PAL)
+                        ? Atari800_FPS_PAL : Atari800_FPS_NTSC;
+   const double exact = 44100.0 / fps;     /* ~884.86 PAL, ~736.10 NTSC */
+   unsigned channels  = Sound_out.channels ? Sound_out.channels : 1;
+   int frames, x;
 
-   int x,stop=CURRENT_TV==Atari800_TV_PAL ? snd_sampler_pal : snd_sampler_ntsc;
-   if (! UI_is_active)
+   if (UI_is_active)
+      return;
+
+   sample_accumulator += exact;
+   frames = (int)sample_accumulator;       /* whole samples to emit now */
+   sample_accumulator -= frames;
+
+   if (frames <= 0)
+      return;
+   if (frames > 2048)
+      frames = 2048;                        /* clamp to buffer */
+
+   /* Pull `frames` samples (channels interleaved) from the emulator. */
+   Sound_Callback(SNDBUF, (unsigned)frames * channels * 2);
+
    {
-      int16_t *p = (int16_t *)SNDBUF;
-
-      Sound_Callback(SNDBUF, stop * 2 * 2);
-      for (x = 0; x < stop; p += 2, x++)
-         retro_audio_cb(*p, *p + 1);
-
+      const int16_t *p = (const int16_t *)SNDBUF;
+      if (channels >= 2)
+      {
+         /* Already interleaved L/R from POKEY stereo. */
+         for (x = 0; x < frames; x++)
+         {
+            out[x * 2]     = p[x * 2];
+            out[x * 2 + 1] = p[x * 2 + 1];
+         }
+      }
+      else
+      {
+         /* Mono: duplicate the single channel to both outputs. */
+         for (x = 0; x < frames; x++)
+         {
+            int16_t s      = p[x];
+            out[x * 2]     = s;
+            out[x * 2 + 1] = s;
+         }
+      }
    }
+
+   retro_audio_batch_cb(out, (size_t)frames);
 }
 
 //extern void vkbd_key(int key,int pressed);

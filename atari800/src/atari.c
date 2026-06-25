@@ -1170,6 +1170,15 @@ static void autoframeskip(double curtime, double lasttime)
 
 void Atari800_Sync(void)
 {
+#ifdef __LIBRETRO__
+	/* As a libretro core the frontend is the sole timing authority: it
+	 * paces retro_run() to the display/audio clock and handles fast-
+	 * forward, rewind, frame-stepping, run-ahead and VRR. The core must
+	 * NOT pace itself. The old wall-clock Util_sleep() here both fought
+	 * the frontend's pacing and made frame output depend on host
+	 * scheduling jitter (non-deterministic). One Atari800_Frame() now
+	 * maps to exactly one retro_run(), so this is a no-op. */
+#else
 	static double lasttime = 0;
 	double deltatime = 1.0 / ((Atari800_tv_mode == Atari800_TV_PAL) ? Atari800_FPS_PAL : Atari800_FPS_NTSC);
 	double curtime;
@@ -1193,10 +1202,7 @@ void Atari800_Sync(void)
 
 	if ((lasttime + deltatime) < curtime)
 		lasttime = curtime;
-
-#ifdef __LIBRETRO__
-	co_switch(mainThread);
-#endif
+#endif /* __LIBRETRO__ */
 }
 
 #if defined(BASIC) || defined(VERY_SLOW) || defined(CURSES_BASIC)
@@ -1378,6 +1384,13 @@ void Atari800_Frame(void)
 		Atari800_turbo = !Atari800_turbo;
 		break;
 	case AKEY_UI:
+#ifdef __LIBRETRO__
+		/* UI_Run() runs a blocking loop that paced itself via
+		 * Atari800_Sync(); with that now a no-op (frontend-driven
+		 * timing) it would spin forever. The internal UI is disabled in
+		 * the libretro build, so ignore the key. */
+		break;
+#else
 #ifdef SOUND
 		Sound_Pause();
 #endif
@@ -1386,6 +1399,7 @@ void Atari800_Frame(void)
 		Sound_Continue();
 #endif
 		break;
+#endif /* __LIBRETRO__ */
 #ifdef SCREENSHOTS
 	case AKEY_SCREENSHOT:
 		Screen_SaveNextScreenshot(FALSE);
