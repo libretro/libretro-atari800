@@ -20,12 +20,20 @@ SOURCES_C :=
 # it out produces undefined references to memstream_* at link time.
 SOURCES_C += $(LIBRETRO_COMM_DIR)/streams/memory_stream.c
 
+# libco is likewise used directly by the core (retro_wrap_emulator /
+# Emu_init / retro_run in libretro-core.c, Atari800_Sync in atari.c,
+# skel_main in platform.c all call co_switch/co_create/co_delete/
+# co_active). The frontend does not export these for statically-linked
+# console builds, so libco.c must also be compiled into the core. libco.c
+# auto-includes the correct per-arch backend (armeabi.c, aarch64.c, ...),
+# so only libco.c itself is listed here.
+SOURCES_C += $(LIBRETRO_COMM_DIR)/libco/libco.c
+
 # The remaining libretro-common helpers below are only built for the
 # normal shared-core case; under STATIC_LINKING the frontend provides
 # equivalents and building our own copy would duplicate symbols.
 ifneq ($(STATIC_LINKING), 1)
 SOURCES_C += \
-	$(LIBRETRO_COMM_DIR)/libco/libco.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strl.c \
 	$(LIBRETRO_COMM_DIR)/compat/compat_strcasestr.c \
 	$(LIBRETRO_COMM_DIR)/compat/fopen_utf8.c \
