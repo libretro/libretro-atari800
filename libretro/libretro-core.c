@@ -27,6 +27,9 @@ static dc_storage* dc;
 #include "carts_hash.h"
 #include "crc32.h"
 #include "colours.h"
+#include "colours_ntsc.h"
+#include "colours_pal.h"
+#include "external_palette.h"
 
 static void fallback_log(enum retro_log_level level, const char* fmt, ...);
 retro_log_printf_t log_cb = fallback_log;
@@ -119,6 +122,7 @@ int paddle_speed = 3;
 int atarixegs_keyboard_detached = 0;
 int atari800_f10 = 0;
 
+int external_palette = 0;
 int color_first_time = TRUE;
 double color_hue = 0.0;
 double color_saturation = 0.0;
@@ -214,6 +218,47 @@ int HandleExtension(char* path, char* ext)
     }
 
     return 0;
+}
+
+void UpdateExternalPalette(void)
+{
+    const unsigned char *active_palette = NULL;
+
+    if (external_palette == 1)
+        active_palette = default_palette;
+    else if (external_palette == 2)
+        active_palette = gray_palette;
+    else if (external_palette == 3)
+        active_palette = jakub_palette;
+    else if (external_palette == 4)
+        active_palette = real_palette;
+    else if (external_palette == 5)
+        active_palette = xformer_palette;
+
+    if (external_palette == 0 || active_palette == NULL) {
+        // If the core option is not enabled, check for the presence of the legacy config palette file
+        if (COLOURS_NTSC_external.filename[0] != '\0' && COLOURS_EXTERNAL_Read(&COLOURS_NTSC_external)) {
+            COLOURS_NTSC_external.loaded = TRUE;
+        } else {
+            COLOURS_NTSC_external.loaded = FALSE;
+        }
+
+        if (COLOURS_PAL_external.filename[0] != '\0' && COLOURS_EXTERNAL_Read(&COLOURS_PAL_external)) {
+            COLOURS_PAL_external.loaded = TRUE;
+        } else {
+            COLOURS_PAL_external.loaded = FALSE;
+        }
+    } else {
+        memcpy(COLOURS_NTSC_external.palette, active_palette, 768);
+        COLOURS_NTSC_external.loaded = TRUE;
+        
+        memcpy(COLOURS_PAL_external.palette, active_palette, 768);
+        COLOURS_PAL_external.loaded = TRUE;
+    }
+
+    if (Colours_external != NULL) {
+        Colours_Update();
+    }
 }
 
 //*****************************************************************************
@@ -838,8 +883,42 @@ static void update_variables(void)
         color_first_time = FALSE;
     }
     
-    
-    
+    var.key = "external_palette";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int old_palette = external_palette;
+
+        if (strcmp(var.value, "none") == 0)
+        {
+            external_palette = 0;
+        }
+        else if (strcmp(var.value, "default") == 0)
+        {
+            external_palette = 1;
+        }
+        else if (strcmp(var.value, "gray") == 0)
+        {
+            external_palette = 2;
+        }
+        else if (strcmp(var.value, "jakub") == 0)
+        {
+            external_palette = 3;
+        }
+        else if (strcmp(var.value, "real") == 0)
+        {
+            external_palette = 4;
+        }
+        else if (strcmp(var.value, "xformer") == 0)
+        {
+            external_palette = 5;
+        }
+
+        if (old_palette != external_palette) {
+            UpdateExternalPalette();
+        }
+    }
 
     /* Activate or deactivate built in internal BASIC*/
     var.key = "atari800_internalbasic";
@@ -1497,6 +1576,8 @@ bool retro_load_game(const struct retro_game_info* info)
     /* One-time emulator init now runs synchronously (no fiber). After
      * this returns the core is ready and retro_run() will drive frames. */
     libretro_emu_init_run();
+
+    UpdateExternalPalette();
 
     return true;
 }
