@@ -226,6 +226,7 @@ extern void CART_Remove(void);
 extern int CASSETTE_Insert(const char* filename);
 extern void CASSETTE_Remove(void);
 extern void CASSETTE_Seek(unsigned int position);
+extern int CASSETTE_hold_start;
 
 //extern int SIO_RotateDisks(void);
 
@@ -1154,7 +1155,27 @@ void retro_reset(void) {
         retro_set_image_index(0);
     }
 
-    AFILE_OpenFile(RPATH, 1, 1, 0);
+    /* For tapes, AFILE_OpenFile() force-sets CASSETTE_hold_start = TRUE
+     * (boot-tape autoload). That overrides the user's "Cassette boot"
+     * option and breaks games that are loaded by hand from BASIC
+     * (LOAD/CLOAD): after a reset they would try to autoboot and never
+     * load, so the game had to be fully reloaded. Re-insert and rewind the
+     * tape and cold-start while keeping the configured hold_start. */
+    if (dc && get_image_unit() == DC_IMAGE_TYPE_TAPE)
+    {
+        int hold = CASSETTE_hold_start;
+        if (CASSETTE_Insert(RPATH))
+        {
+            CASSETTE_Seek(0);
+            dc->eject_state = false;
+        }
+        CASSETTE_hold_start = hold;
+        Atari800_Coldstart();
+    }
+    else
+    {
+        AFILE_OpenFile(RPATH, 1, 1, 0);
+    }
 }
 
 void retro_get_system_av_info(struct retro_system_av_info* info)
