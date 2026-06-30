@@ -758,30 +758,51 @@ int PLATFORM_GetRawKey(void)
 }
 */
 
+extern int retrow, retroh;
+
 void retro_Render(void)
 {
 	int x, y;
 	UBYTE *src, *src_line;
 	UWORD *dst, *dst_line;
 
-	src_line = ((UBYTE *) Screen_atari) + 24;
-	dst_line = Retro_Screen;
+	/* The ANTIC output (Screen_atari) is a fixed Screen_WIDTH x Screen_HEIGHT
+	 * (384x240) paletted bitmap. The frontend framebuffer is retrow x retroh,
+	 * chosen by the "Internal resolution" core option, and video_cb() reports
+	 * a row stride of retrow. We must therefore fill the destination using
+	 * retrow as the stride, otherwise the image shears (this was the old
+	 * hard-coded 336-wide blit's bug for every non-default resolution).
+	 *
+	 * When the requested size is smaller than the ANTIC frame we crop the
+	 * centre of the source; when it is larger we centre the frame and leave
+	 * the surrounding border black (letterbox). The default 336x240 produces
+	 * exactly the same output as before (source offset (384-336)/2 = 24). */
+	const int sw = Screen_WIDTH;            /* 384 */
+	const int sh = Screen_HEIGHT;           /* 240 */
+	const int cw = retrow < sw ? retrow : sw;   /* columns to copy */
+	const int ch = retroh < sh ? retroh : sh;   /* rows to copy    */
+	const int src_xoff = (sw - cw) / 2;
+	const int src_yoff = (sh - ch) / 2;
+	const int dst_xoff = (retrow - cw) / 2;
+	const int dst_yoff = (retroh - ch) / 2;
 
-	for (y = 0; y < 240; y++) {
+	/* black borders when the framebuffer is larger than the cropped frame */
+	if (dst_xoff != 0 || dst_yoff != 0)
+		memset(Retro_Screen, 0, (size_t)retrow * retroh * sizeof(UWORD));
+
+	src_line = ((UBYTE *) Screen_atari) + src_yoff * sw + src_xoff;
+	dst_line = Retro_Screen + dst_yoff * retrow + dst_xoff;
+
+	for (y = 0; y < ch; y++) {
 
 		src = src_line;
 		dst = dst_line;
 
-		for (x = 0; x < 336; x += 8) {
+		for (x = 0; x < cw; x++)
+			*dst++ = palette[*src++];
 
-			*dst++ = palette[*src++]; *dst++ = palette[*src++];
-					*dst++ = palette[*src++]; *dst++ = palette[*src++];
-					*dst++ = palette[*src++]; *dst++ = palette[*src++];
-					*dst++ = palette[*src++]; *dst++ = palette[*src++];
-		}
-
-		src_line += 384;
-		dst_line += 336;
+		src_line += sw;
+		dst_line += retrow;
 	}
 }
 
