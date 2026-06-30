@@ -1339,9 +1339,9 @@ void retro_get_system_info(struct retro_system_info* info)
     memset(info, 0, sizeof(*info));
     info->library_name = "Atari800";
 #ifdef GIT_VERSION
-    info->library_version = "6.1.0" GIT_VERSION;
+    info->library_version = "7.0.0" GIT_VERSION;
 #else
-    info->library_version = "6.1.0";
+    info->library_version = "7.0.0";
 #endif
     info->valid_extensions = "xfd|atr|dcm|cas|bin|a52|zip|atx|car|rom|com|xex|m3u";
     info->need_fullpath = true;
