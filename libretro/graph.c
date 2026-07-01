@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include <math.h>
 
 #include "graph.h"
@@ -256,7 +257,7 @@ void filter_scale2x(unsigned char *srcPtr, unsigned srcPitch,
 
 void Retro_Draw_string(char *surf, signed short int x, signed short int y, const  char *string,unsigned short maxstrlen,unsigned short xscale, unsigned short yscale, unsigned  fg, unsigned  bg)
 {
-    	int k,strlen;
+    	int k,slen;
     	unsigned char *linesurf;
     	signed  int ypixel;
     	int col, bit;
@@ -281,10 +282,10 @@ unsigned char *mbuffer=(unsigned char *)surf;
 #endif
 
     	if(string==NULL)return;
-		strlen = sizeof(string);
-		if (strlen>maxstrlen) strlen = maxstrlen;
+		slen = (int)strlen(string);
+		if (slen>maxstrlen) slen = maxstrlen;
 
-	int surfw=strlen * 7 * xscale;
+	int surfw=slen * 7 * xscale;
 	int surfh=8 * yscale;
 
 #if defined PITCH && PITCH == 4	
@@ -300,7 +301,7 @@ unsigned char *mbuffer=(unsigned char *)surf;
 
 	for(ypixel = 0; ypixel<8; ypixel++) {
 
-        	for(col=0; col<strlen; col++) {
+        	for(col=0; col<slen; col++) {
 
             		b = font_array[(string[col]^0x80)*8 + ypixel];
 

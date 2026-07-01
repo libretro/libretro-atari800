@@ -16,7 +16,12 @@ static dc_storage* dc;
 #include "afile.h"
 #include "devices.h"
 #include "esc.h"
+#include "input.h"
 #include "memory.h"
+#include "screen.h"
+#include "xep80.h"
+#include "rtime.h"
+#include "binload.h"
 #include "cassette.h"
 #include "artifact.h"
 #include "statesav.h"
@@ -861,7 +866,9 @@ static void update_variables(void)
             Atari800_InitialiseMachine();
     }
 
-    /* Set whether SIO acceleration is activated.  Currently an ALL or nothing setup. */
+    /* Set whether SIO (fast disk) acceleration is activated. The P: and R:
+       device patches, which are unrelated to disk speed, have their own
+       options (atari800_pdevice / atari800_rdevice) below. */
     var.key = "atari800_sioaccel";
     var.value = NULL;
 
@@ -869,11 +876,11 @@ static void update_variables(void)
     {
         if (strcmp(var.value, "enabled") == 0)
         {
-            ESC_enable_sio_patch = Devices_enable_h_patch = Devices_enable_p_patch = Devices_enable_r_patch = TRUE;
+            ESC_enable_sio_patch = Devices_enable_h_patch = TRUE;
         }
         else if (strcmp(var.value, "disabled") == 0)
         {
-            ESC_enable_sio_patch = Devices_enable_h_patch = Devices_enable_p_patch = Devices_enable_r_patch = FALSE;
+            ESC_enable_sio_patch = Devices_enable_h_patch = FALSE;
         }
 
         if (!libretro_runloop_active)
@@ -978,6 +985,76 @@ static void update_variables(void)
 
         ANTIC_UpdateArtifacting();
     }
+
+    /* Set joystick autofire mode for all ports. */
+    var.key = "atari800_autofire";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int mode = INPUT_AUTOFIRE_OFF;
+        if (strcmp(var.value, "fire") == 0)
+            mode = INPUT_AUTOFIRE_FIRE;
+        else if (strcmp(var.value, "always") == 0)
+            mode = INPUT_AUTOFIRE_CONT;
+        INPUT_joy_autofire[0] = INPUT_joy_autofire[1] =
+        INPUT_joy_autofire[2] = INPUT_joy_autofire[3] = mode;
+    }
+
+    /* On-screen status indicators (take effect immediately). */
+    var.key = "atari800_show_speed";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Screen_show_atari_speed = (strcmp(var.value, "enabled") == 0);
+
+    var.key = "atari800_show_diskled";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Screen_show_disk_led = (strcmp(var.value, "enabled") == 0);
+
+    var.key = "atari800_show_sector";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Screen_show_sector_counter = (strcmp(var.value, "enabled") == 0);
+
+    var.key = "atari800_show_1200leds";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Screen_show_1200_leds = (strcmp(var.value, "enabled") == 0);
+
+    /* XEP80 80-column display (applied on next machine init). */
+    var.key = "atari800_xep80";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "port 1") == 0)      { XEP80_enabled = TRUE;  XEP80_port = 0; }
+        else if (strcmp(var.value, "port 2") == 0) { XEP80_enabled = TRUE;  XEP80_port = 1; }
+        else                                       { XEP80_enabled = FALSE; }
+    }
+
+    /* R-Time 8 real-time clock cartridge. */
+    var.key = "atari800_rtime";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        RTIME_enabled = (strcmp(var.value, "enabled") == 0);
+
+    /* P: device (printer) SIO patch. */
+    var.key = "atari800_pdevice";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Devices_enable_p_patch = (strcmp(var.value, "enabled") == 0);
+
+    /* R: device (serial) SIO patch. */
+    var.key = "atari800_rdevice";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Devices_enable_r_patch = (strcmp(var.value, "enabled") == 0);
+
+    /* Slow (accurate) loading of DOS binary (.xex) files. */
+    var.key = "atari800_slowxex";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        BINLOAD_slow_xex_loading = (strcmp(var.value, "enabled") == 0);
 
     /* Set whether paddle mode is active. */
     var.key = "paddle_active";
@@ -1379,6 +1456,8 @@ size_t retro_audio_batch_cb(const int16_t *data, size_t frames)
 /* Forward declarations */
 void retro_sound_update(void);
 int Retro_PollEvent(void);
+void retro_virtualkb(void);
+extern int SHOWKEY;
 
 void retro_run(void)
 {
@@ -1424,6 +1503,12 @@ void retro_run(void)
 
         if (retro_sound_finalized)
             retro_sound_update();
+
+        /* Draw the on-screen keyboard overlay last, on top of the freshly
+           rendered frame, so PLATFORM_DisplayScreen() cannot overwrite it.
+           It must land in Retro_Screen just before video_cb() below. */
+        if (SHOWKEY == 1)
+            retro_virtualkb();
     }
 
     video_cb(Retro_Screen, retrow, retroh, retrow << PIXEL_BYTES);

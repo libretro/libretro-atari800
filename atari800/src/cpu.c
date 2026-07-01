@@ -68,6 +68,9 @@
 #include "esc.h"
 #include "memory.h"
 #include "monitor.h"
+#ifdef __LIBRETRO__
+#include "log.h"
+#endif
 #ifndef BASIC
 #include "statesav.h"
 #ifndef __PLUS
@@ -2319,7 +2322,18 @@ void CPU_GO(int limit)
 		UI_crash_address = GET_PC();
 		UI_crash_afterCIM = GET_PC() + 1;
 		UI_crash_code = insn;
+#ifdef __LIBRETRO__
+		/* UI_Run() opens the built-in crash menu, a nested blocking loop
+		   that yielded frames via Atari800_Sync(). With the libco fiber
+		   removed and Atari800_Sync() a no-op, that loop would spin forever
+		   and hang the frontend (e.g. a bad ATX / corrupt image hitting a
+		   CIM). Recover instead by logging and warm-resetting the machine. */
+		Log_print("CPU CIM (illegal opcode $%02X) at $%04X - warm resetting",
+		          insn, (unsigned)GET_PC());
+		Atari800_Warmstart();
+#else
 		UI_Run();
+#endif /* __LIBRETRO__ */
 #else
 		CPU_cim_encountered = TRUE;
 #ifdef LIBATARI800
