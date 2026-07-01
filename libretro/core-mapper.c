@@ -755,8 +755,10 @@ int Retro_PollEvent()
    if(gmy>retroh-1)
       gmy = retroh-1;
 
-   if(SHOWKEY==1 && pauseg==0)
-      retro_virtualkb();
+   /* The virtual keyboard overlay is drawn from retro_run(), AFTER the
+      emulated frame has been rendered into Retro_Screen. Drawing it here
+      (before libretro_run_frame) would let PLATFORM_DisplayScreen()
+      overwrite it, making the on-screen keyboard invisible. */
 
    return 1;
 }

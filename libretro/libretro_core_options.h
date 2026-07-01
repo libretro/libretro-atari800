@@ -694,6 +694,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "F1"
    },
    {
+      "atari800_vkbd_enabled",
+      "Virtual keyboard",
+      NULL,
+      "Show or hide the on-screen virtual keyboard overlay. It can also be toggled in-game with the mapped controller button (L3 for the Atari joystick, R3 for the 5200).",
+      NULL,
+      "input",
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
       "keyboard_defines",
       "Atari Keyboard Defines",
       NULL,
@@ -731,6 +745,148 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "Internal BASIC (hold OPTION on boot) (Restart)",
       NULL,
       "Enable for content that needs Atari BASIC in order to run.  A proper ROM file (ATARIBAS.ROM) is needed.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "atari800_autofire",
+      "Joystick Autofire",
+      NULL,
+      "Autofire mode for all joystick ports.  Fire: autofire while the fire button is held.  Always: continuous autofire without holding the button.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "fire",     "While fire held" },
+         { "always",   "Continuous" },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "atari800_show_speed",
+      "Show Atari Speed %",
+      NULL,
+      "Overlay the emulation speed as a percentage on screen.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "atari800_show_diskled",
+      "Show Disk/Tape Activity",
+      NULL,
+      "Overlay a disk-drive / tape activity indicator on screen.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "enabled"
+   },
+   {
+      "atari800_show_sector",
+      "Show Sector/Block Counter",
+      NULL,
+      "Overlay the current disk sector / tape block number on screen.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "atari800_show_1200leds",
+      "Show 1200XL LEDs",
+      NULL,
+      "Overlay the two 1200XL keyboard LEDs on screen (Atari 1200XL only).",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "enabled"
+   },
+   {
+      "atari800_xep80",
+      "XEP80 80-Column Display (Restart)",
+      NULL,
+      "Emulate the XEP80 80-column display interface on the chosen joystick port.  Requires the XEP80 charset ROM.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "port 1",   "Port 1" },
+         { "port 2",   "Port 2" },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "atari800_rtime",
+      "R-Time 8 Clock (Restart)",
+      NULL,
+      "Emulate the ICD R-Time 8 real-time clock cartridge.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "enabled"
+   },
+   {
+      "atari800_pdevice",
+      "P: Device / Printer (Restart)",
+      NULL,
+      "Enable the P: printer device SIO patch.",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "enabled"
+   },
+   {
+      "atari800_rdevice",
+      "R: Device / Serial (Restart)",
+      NULL,
+      "Enable the R: serial device SIO patch (Atari 850 emulation / Coder's Cable).",
+      NULL,
+      NULL,
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "atari800_slowxex",
+      "Slow DOS Binary Loading",
+      NULL,
+      "Load DOS binary (.xex) files at the slower, more accurate original speed instead of instantly.",
       NULL,
       NULL,
       {

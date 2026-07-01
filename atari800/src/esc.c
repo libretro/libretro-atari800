@@ -145,7 +145,18 @@ void ESC_Run(UBYTE esc_code)
 	UI_crash_address = CPU_regPC;
 	UI_crash_afterCIM = CPU_regPC + 2;
 	UI_crash_code = MEMORY_dGetByte(UI_crash_address);
+#ifdef __LIBRETRO__
+	/* UI_Run() opens the built-in crash menu, a nested blocking loop that
+	   yielded frames via Atari800_Sync(). With the libco fiber removed and
+	   Atari800_Sync() a no-op, that loop would spin forever and hang the
+	   frontend - this is exactly the path a bad ATX image trips. Recover by
+	   logging and warm-resetting instead of entering the disabled UI. */
+	Log_print("Invalid ESC code %02x at address %04x - warm resetting",
+	          esc_code, (unsigned)CPU_regPC);
+	Atari800_Warmstart();
+#else
 	UI_Run();
+#endif /* __LIBRETRO__ */
 #else /* CRASH_MENU */
 	CPU_cim_encountered = 1;
 	Log_print("Invalid ESC code %02x at address %04x", esc_code, CPU_regPC - 2);

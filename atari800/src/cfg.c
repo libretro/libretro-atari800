@@ -77,6 +77,8 @@ extern const char *retro_system_directory;
 #define DEFAULT_CFG_NAME ".atari800.cfg"
 #endif
 
+char CFG_data_dir[FILENAME_MAX];
+
 #ifndef SYSTEM_WIDE_CFG_FILE
 #define SYSTEM_WIDE_CFG_FILE "/etc/atari800.cfg"
 #endif
@@ -91,6 +93,7 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 #ifndef BASIC
 	int was_obsolete_dir = FALSE;
 #endif
+	char fallback_cfg[FILENAME_MAX];
 
 #ifdef SUPPORTS_PLATFORM_CONFIGINIT
 	PLATFORM_ConfigInit();
@@ -102,22 +105,39 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 	}
 	/* else use the default config name under the HOME folder */
 	else {
-		char *home = getenv("HOME");
-		if (home != NULL)
+		char home[FILENAME_MAX];
+		if (Util_GetHomeDir(home, sizeof(home)) != NULL)
 			Util_catpath(rtconfig_filename, home, DEFAULT_CFG_NAME);
 		else
 			strcpy(rtconfig_filename, DEFAULT_CFG_NAME);
 	}
+	Util_splitpath(rtconfig_filename, CFG_data_dir, NULL);
+	if (CFG_data_dir[0] == '\0')
+		Util_getcwd(CFG_data_dir, sizeof(CFG_data_dir));
 
 	fp = fopen(fname, "r");
 	if (fp == NULL) {
 		Log_print("User config file '%s' not found.", rtconfig_filename);
 
+		/* portable mode: fall back to HOME config for backward compatibility */
+		if (alternate_config_filename != NULL) {
+			char home[FILENAME_MAX];
+			if (Util_GetHomeDir(home, sizeof(home)) != NULL) {
+				Util_catpath(fallback_cfg, home, DEFAULT_CFG_NAME);
+				Log_print("Trying $HOME config file: %s", fallback_cfg);
+				fp = fopen(fallback_cfg, "r");
+				if (fp != NULL)
+					fname = fallback_cfg;
+			}
+		}
+
 #ifdef SYSTEM_WIDE_CFG_FILE
-		/* try system wide config file */
-		fname = SYSTEM_WIDE_CFG_FILE;
-		Log_print("Trying system wide config file: %s", fname);
-		fp = fopen(fname, "r");
+		if (fp == NULL) {
+			/* try system wide config file */
+			fname = SYSTEM_WIDE_CFG_FILE;
+			Log_print("Trying system wide config file: %s", fname);
+			fp = fopen(fname, "r");
+		}
 #endif
 		if (fp == NULL) {
 			Log_print("No configuration file found, will create fresh one from scratch:");
@@ -126,7 +146,7 @@ int CFG_LoadConfig(const char *alternate_config_filename)
 	}
 
 	if (fgets(string, sizeof(string), fp) != NULL) {
-		Log_print("Using Atari800 config file: %s\nCreated by %s", fname, string);
+		Log_print("Reading Atari800 config file: %s\nCreated by %s", fname, string);
 	}
 
 	while (fgets(string, sizeof(string), fp)) {

@@ -16,7 +16,12 @@ static dc_storage* dc;
 #include "afile.h"
 #include "devices.h"
 #include "esc.h"
+#include "input.h"
 #include "memory.h"
+#include "screen.h"
+#include "xep80.h"
+#include "rtime.h"
+#include "binload.h"
 #include "cassette.h"
 #include "artifact.h"
 #include "statesav.h"
@@ -161,6 +166,7 @@ extern int ToggleTV;
 extern int CURRENT_TV;
 
 extern int SHIFTON, pauseg, SND;
+extern int SHOWKEY, SHOWKEYDELAY;
 extern UBYTE SNDBUF[];
 
 char RPATH[512];
@@ -226,6 +232,7 @@ extern void CART_Remove(void);
 extern int CASSETTE_Insert(const char* filename);
 extern void CASSETTE_Remove(void);
 extern void CASSETTE_Seek(unsigned int position);
+extern int CASSETTE_hold_start;
 
 //extern int SIO_RotateDisks(void);
 
@@ -860,7 +867,9 @@ static void update_variables(void)
             Atari800_InitialiseMachine();
     }
 
-    /* Set whether SIO acceleration is activated.  Currently an ALL or nothing setup. */
+    /* Set whether SIO (fast disk) acceleration is activated. The P: and R:
+       device patches, which are unrelated to disk speed, have their own
+       options (atari800_pdevice / atari800_rdevice) below. */
     var.key = "atari800_sioaccel";
     var.value = NULL;
 
@@ -868,11 +877,11 @@ static void update_variables(void)
     {
         if (strcmp(var.value, "enabled") == 0)
         {
-            ESC_enable_sio_patch = Devices_enable_h_patch = Devices_enable_p_patch = Devices_enable_r_patch = TRUE;
+            ESC_enable_sio_patch = Devices_enable_h_patch = TRUE;
         }
         else if (strcmp(var.value, "disabled") == 0)
         {
-            ESC_enable_sio_patch = Devices_enable_h_patch = Devices_enable_p_patch = Devices_enable_r_patch = FALSE;
+            ESC_enable_sio_patch = Devices_enable_h_patch = FALSE;
         }
 
         if (!libretro_runloop_active)
@@ -977,6 +986,76 @@ static void update_variables(void)
 
         ANTIC_UpdateArtifacting();
     }
+
+    /* Set joystick autofire mode for all ports. */
+    var.key = "atari800_autofire";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int mode = INPUT_AUTOFIRE_OFF;
+        if (strcmp(var.value, "fire") == 0)
+            mode = INPUT_AUTOFIRE_FIRE;
+        else if (strcmp(var.value, "always") == 0)
+            mode = INPUT_AUTOFIRE_CONT;
+        INPUT_joy_autofire[0] = INPUT_joy_autofire[1] =
+        INPUT_joy_autofire[2] = INPUT_joy_autofire[3] = mode;
+    }
+
+    /* On-screen status indicators (take effect immediately). */
+    var.key = "atari800_show_speed";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Screen_show_atari_speed = (strcmp(var.value, "enabled") == 0);
+
+    var.key = "atari800_show_diskled";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Screen_show_disk_led = (strcmp(var.value, "enabled") == 0);
+
+    var.key = "atari800_show_sector";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Screen_show_sector_counter = (strcmp(var.value, "enabled") == 0);
+
+    var.key = "atari800_show_1200leds";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Screen_show_1200_leds = (strcmp(var.value, "enabled") == 0);
+
+    /* XEP80 80-column display (applied on next machine init). */
+    var.key = "atari800_xep80";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        if (strcmp(var.value, "port 1") == 0)      { XEP80_enabled = TRUE;  XEP80_port = 0; }
+        else if (strcmp(var.value, "port 2") == 0) { XEP80_enabled = TRUE;  XEP80_port = 1; }
+        else                                       { XEP80_enabled = FALSE; }
+    }
+
+    /* R-Time 8 real-time clock cartridge. */
+    var.key = "atari800_rtime";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        RTIME_enabled = (strcmp(var.value, "enabled") == 0);
+
+    /* P: device (printer) SIO patch. */
+    var.key = "atari800_pdevice";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Devices_enable_p_patch = (strcmp(var.value, "enabled") == 0);
+
+    /* R: device (serial) SIO patch. */
+    var.key = "atari800_rdevice";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        Devices_enable_r_patch = (strcmp(var.value, "enabled") == 0);
+
+    /* Slow (accurate) loading of DOS binary (.xex) files. */
+    var.key = "atari800_slowxex";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+        BINLOAD_slow_xex_loading = (strcmp(var.value, "enabled") == 0);
 
     /* Set whether paddle mode is active. */
     var.key = "paddle_active";
@@ -1100,6 +1179,25 @@ static void update_variables(void)
         unsigned deadzone = string_to_unsigned(var.value);
         pot_analog_deadzone = (int)((float)deadzone * 0.01f * (float)LIBRETRO_ANALOG_RANGE);
     }
+
+    /* Virtual keyboard show/hide. SHOWKEY is also toggled at runtime by the
+       mapped controller button (L3/R3), so only follow this option when its
+       value actually changes -- otherwise a re-poll of the variables would
+       override the user's in-game toggle every frame. */
+    var.key = "atari800_vkbd_enabled";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        static int last_vkbd_enabled = -1;
+        int vkbd_enabled = (strcmp(var.value, "enabled") == 0) ? 1 : 0;
+
+        if (vkbd_enabled != last_vkbd_enabled)
+        {
+            SHOWKEY = vkbd_enabled ? 1 : -1;
+            SHOWKEYDELAY = 20;
+            last_vkbd_enabled = vkbd_enabled;
+        }
+    }
 }
 
 /* Performs the one-time emulator initialisation (pre_main -> skel_main ->
@@ -1154,7 +1252,27 @@ void retro_reset(void) {
         retro_set_image_index(0);
     }
 
-    AFILE_OpenFile(RPATH, 1, 1, 0);
+    /* For tapes, AFILE_OpenFile() force-sets CASSETTE_hold_start = TRUE
+     * (boot-tape autoload). That overrides the user's "Cassette boot"
+     * option and breaks games that are loaded by hand from BASIC
+     * (LOAD/CLOAD): after a reset they would try to autoboot and never
+     * load, so the game had to be fully reloaded. Re-insert and rewind the
+     * tape and cold-start while keeping the configured hold_start. */
+    if (dc && get_image_unit() == DC_IMAGE_TYPE_TAPE)
+    {
+        int hold = CASSETTE_hold_start;
+        if (CASSETTE_Insert(RPATH))
+        {
+            CASSETTE_Seek(0);
+            dc->eject_state = false;
+        }
+        CASSETTE_hold_start = hold;
+        Atari800_Coldstart();
+    }
+    else
+    {
+        AFILE_OpenFile(RPATH, 1, 1, 0);
+    }
 }
 
 void retro_get_system_av_info(struct retro_system_av_info* info)
@@ -1318,9 +1436,9 @@ void retro_get_system_info(struct retro_system_info* info)
     memset(info, 0, sizeof(*info));
     info->library_name = "Atari800";
 #ifdef GIT_VERSION
-    info->library_version = "6.1.0" GIT_VERSION;
+    info->library_version = "7.0.0" GIT_VERSION;
 #else
-    info->library_version = "6.1.0";
+    info->library_version = "7.0.0";
 #endif
     info->valid_extensions = "xfd|atr|dcm|cas|bin|a52|zip|atx|car|rom|com|xex|m3u";
     info->need_fullpath = true;
@@ -1358,6 +1476,8 @@ size_t retro_audio_batch_cb(const int16_t *data, size_t frames)
 /* Forward declarations */
 void retro_sound_update(void);
 int Retro_PollEvent(void);
+void retro_virtualkb(void);
+extern int SHOWKEY;
 
 void retro_run(void)
 {
@@ -1403,6 +1523,12 @@ void retro_run(void)
 
         if (retro_sound_finalized)
             retro_sound_update();
+
+        /* Draw the on-screen keyboard overlay last, on top of the freshly
+           rendered frame, so PLATFORM_DisplayScreen() cannot overwrite it.
+           It must land in Retro_Screen just before video_cb() below. */
+        if (SHOWKEY == 1)
+            retro_virtualkb();
     }
 
     video_cb(Retro_Screen, retrow, retroh, retrow << PIXEL_BYTES);
