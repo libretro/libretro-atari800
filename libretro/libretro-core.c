@@ -166,6 +166,7 @@ extern int ToggleTV;
 extern int CURRENT_TV;
 
 extern int SHIFTON, pauseg, SND;
+extern int SHOWKEY, SHOWKEYDELAY;
 extern UBYTE SNDBUF[];
 
 char RPATH[512];
@@ -1177,6 +1178,25 @@ static void update_variables(void)
     {
         unsigned deadzone = string_to_unsigned(var.value);
         pot_analog_deadzone = (int)((float)deadzone * 0.01f * (float)LIBRETRO_ANALOG_RANGE);
+    }
+
+    /* Virtual keyboard show/hide. SHOWKEY is also toggled at runtime by the
+       mapped controller button (L3/R3), so only follow this option when its
+       value actually changes -- otherwise a re-poll of the variables would
+       override the user's in-game toggle every frame. */
+    var.key = "atari800_vkbd_enabled";
+    var.value = NULL;
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        static int last_vkbd_enabled = -1;
+        int vkbd_enabled = (strcmp(var.value, "enabled") == 0) ? 1 : 0;
+
+        if (vkbd_enabled != last_vkbd_enabled)
+        {
+            SHOWKEY = vkbd_enabled ? 1 : -1;
+            SHOWKEYDELAY = 20;
+            last_vkbd_enabled = vkbd_enabled;
+        }
     }
 }
 

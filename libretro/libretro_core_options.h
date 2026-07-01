@@ -694,6 +694,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "F1"
    },
    {
+      "atari800_vkbd_enabled",
+      "Virtual keyboard",
+      NULL,
+      "Show or hide the on-screen virtual keyboard overlay. It can also be toggled in-game with the mapped controller button (L3 for the Atari joystick, R3 for the 5200).",
+      NULL,
+      "input",
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
       "keyboard_defines",
       "Atari Keyboard Defines",
       NULL,
