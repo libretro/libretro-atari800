@@ -50,7 +50,6 @@ extern int SHIFTON;
 extern int CTRLON;
 extern int UI_is_active;
 extern int SHOWKEY, SHOWKEYDELAY;
-extern int atari800_f10;
 
 static int swap_joysticks = FALSE;
 int PLATFORM_kbd_joy_0_enabled = TRUE;	/* enabled by default, doesn't hurt */
@@ -244,19 +243,14 @@ int PLATFORM_Keyboard(void)
 	if (Key_State[RETROK_F4])
 		INPUT_key_consol &= (~INPUT_CONSOL_START);
 
-	/* Handle movement and special keys. */
-	if ((!atari800_f10 && Key_State[RETROK_F1]) || (atari800_f10 && Key_State[RETROK_F10]))
-		return AKEY_UI;
-
+	/* Handle movement and special keys. The built-in atari800 UI (legacy
+	 * F1/F10 menu) is not compiled into the libretro build, so no key is
+	 * mapped to AKEY_UI. */
 	if (Key_State[RETROK_F5] && (Atari800_machine_type != Atari800_MACHINE_5200))
 		return INPUT_key_shift ? AKEY_COLDSTART : AKEY_WARMSTART;
 
 
 	if (Key_State[RETROK_F12])	return AKEY_TURBO;
-
-	if (UI_alt_function != -1) {
-		return AKEY_UI;
-	}
 
 	if (INPUT_key_shift)
 		shiftctrl ^= AKEY_SHFT;

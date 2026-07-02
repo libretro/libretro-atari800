@@ -18,6 +18,7 @@ static dc_storage* dc;
 #include "esc.h"
 #include "input.h"
 #include "memory.h"
+#include "sysrom.h"
 #include "screen.h"
 #include "xep80.h"
 #include "rtime.h"
@@ -122,7 +123,6 @@ int atari_joyhack = 0;
 int paddle_mode = 0;
 int paddle_speed = 3;
 int atarixegs_keyboard_detached = 0;
-int atari800_f10 = 0;
 
 int color_first_time = TRUE;
 double color_hue = 0.0;
@@ -130,7 +130,6 @@ double color_saturation = 0.0;
 double color_contrast = 0.0;
 double color_brightness = 0.0;
 double color_gamma = 2.35;
-double color_delay = 0.0;
 #define COLOR_VARIABLE(name) \
     var.key = "color_" #name; \
     var.value = NULL; \
@@ -553,6 +552,19 @@ void retro_set_environment(retro_environment_t cb)
     cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &no_content);
 }
 
+/* Store a chosen SYSROM revision and reinitialise the machine if the change
+   affects the currently emulated system and we are not yet running. Pass
+   machine_idx = -1 for settings (e.g. BASIC) that apply to any machine. */
+static void apply_sysrom_version(int *slot, int version, int machine_idx)
+{
+    if (*slot == version)
+        return;
+    *slot = version;
+    if (!libretro_runloop_active &&
+        (machine_idx < 0 || Atari800_machine_type == machine_idx))
+        Atari800_InitialiseMachine();
+}
+
 static void update_variables(void)
 {
     struct retro_variable var;
@@ -844,6 +856,25 @@ static void update_variables(void)
         log_cb(RETRO_LOG_INFO, "[Atari800 CORE] Colours_setup changed\n");
         color_first_time = FALSE;
     }
+
+    /* GTIA delay (colorburst phase). Unlike the offset-style colour controls
+       above, this is an absolute angle whose neutral value differs between
+       NTSC (26.8) and PAL (23.2), so the "default" choice leaves the active
+       palette's built-in default untouched and only an explicit value overrides
+       it. */
+    var.key = "color_delay";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value
+        && strcmp(var.value, "default") != 0 && Colours_setup != NULL)
+    {
+        double delay = atof(var.value);
+        if (Colours_setup->color_delay != delay)
+        {
+            Colours_setup->color_delay = delay;
+            Colours_Update();
+        }
+    }
     
     
     
@@ -865,6 +896,176 @@ static void update_variables(void)
         
         if (!libretro_runloop_active)
             Atari800_InitialiseMachine();
+    }
+
+    /* OS ROM revision for the Atari 400/800. */
+    var.key = "atari800_os_800";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int v = SYSROM_AUTO;
+        if (strcmp(var.value, "Rev. A NTSC") == 0)
+            v = SYSROM_A_NTSC;
+        else if (strcmp(var.value, "Rev. A PAL") == 0)
+            v = SYSROM_A_PAL;
+        else if (strcmp(var.value, "Rev. B NTSC") == 0)
+            v = SYSROM_B_NTSC;
+        else if (strcmp(var.value, "AltirraOS") == 0)
+            v = SYSROM_ALTIRRA_800;
+        apply_sysrom_version(&SYSROM_os_versions[Atari800_MACHINE_800], v, Atari800_MACHINE_800);
+    }
+
+    /* OS ROM revision for the Atari XL/XE/XEGS. */
+    var.key = "atari800_os_xl";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int v = SYSROM_AUTO;
+        if (strcmp(var.value, "AA00 Rev. 10") == 0)
+            v = SYSROM_AA00R10;
+        else if (strcmp(var.value, "AA01 Rev. 11") == 0)
+            v = SYSROM_AA01R11;
+        else if (strcmp(var.value, "BB00 Rev. 1") == 0)
+            v = SYSROM_BB00R1;
+        else if (strcmp(var.value, "BB01 Rev. 2") == 0)
+            v = SYSROM_BB01R2;
+        else if (strcmp(var.value, "BB02 Rev. 3") == 0)
+            v = SYSROM_BB02R3;
+        else if (strcmp(var.value, "BB02 Rev. 3 Ver. 4") == 0)
+            v = SYSROM_BB02R3V4;
+        else if (strcmp(var.value, "CC01 Rev. 4") == 0)
+            v = SYSROM_CC01R4;
+        else if (strcmp(var.value, "BB01 Rev. 3") == 0)
+            v = SYSROM_BB01R3;
+        else if (strcmp(var.value, "BB01 Rev. 4") == 0)
+            v = SYSROM_BB01R4_OS;
+        else if (strcmp(var.value, "BB01 Rev. 59") == 0)
+            v = SYSROM_BB01R59;
+        else if (strcmp(var.value, "BB01 Rev. 59 alt.") == 0)
+            v = SYSROM_BB01R59A;
+        else if (strcmp(var.value, "AltirraOS") == 0)
+            v = SYSROM_ALTIRRA_XL;
+        apply_sysrom_version(&SYSROM_os_versions[Atari800_MACHINE_XLXE], v, Atari800_MACHINE_XLXE);
+    }
+
+    /* BIOS ROM revision for the Atari 5200. */
+    var.key = "atari800_os_5200";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int v = SYSROM_AUTO;
+        if (strcmp(var.value, "Original") == 0)
+            v = SYSROM_5200;
+        else if (strcmp(var.value, "Rev. A") == 0)
+            v = SYSROM_5200A;
+        else if (strcmp(var.value, "AltirraOS") == 0)
+            v = SYSROM_ALTIRRA_5200;
+        apply_sysrom_version(&SYSROM_os_versions[Atari800_MACHINE_5200], v, Atari800_MACHINE_5200);
+    }
+
+    /* Atari BASIC ROM revision (applies to any 8-bit machine). */
+    var.key = "atari800_basic_version";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int v = SYSROM_AUTO;
+        if (strcmp(var.value, "Rev. A") == 0)
+            v = SYSROM_BASIC_A;
+        else if (strcmp(var.value, "Rev. B") == 0)
+            v = SYSROM_BASIC_B;
+        else if (strcmp(var.value, "Rev. C") == 0)
+            v = SYSROM_BASIC_C;
+        else if (strcmp(var.value, "Altirra BASIC") == 0)
+            v = SYSROM_ALTIRRA_BASIC;
+        apply_sysrom_version(&SYSROM_basic_version, v, -1);
+    }
+
+    /* Mosaic RAM expansion (Atari 400/800 only; mutually exclusive with Axlon). */
+    var.key = "atari800_mosaic";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int banks = 0;
+        if (strcmp(var.value, "16 KB") == 0)
+            banks = 4;
+        else if (strcmp(var.value, "80 KB") == 0)
+            banks = 20;
+        else if (strcmp(var.value, "144 KB") == 0)
+            banks = 36;
+
+        if (MEMORY_mosaic_num_banks != banks)
+        {
+            MEMORY_mosaic_num_banks = banks;
+            if (banks > 0)
+                MEMORY_axlon_num_banks = 0; /* the two expansions are mutually exclusive */
+            if (!libretro_runloop_active)
+                Atari800_InitialiseMachine();
+        }
+    }
+
+    /* Axlon RAM expansion (Atari 400/800 only; mutually exclusive with Mosaic). */
+    var.key = "atari800_axlon";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int banks = 0;
+        if (strcmp(var.value, "128 KB") == 0)
+            banks = 8;
+        else if (strcmp(var.value, "256 KB") == 0)
+            banks = 16;
+        else if (strcmp(var.value, "512 KB") == 0)
+            banks = 32;
+        else if (strcmp(var.value, "1 MB") == 0)
+            banks = 64;
+        else if (strcmp(var.value, "2 MB") == 0)
+            banks = 128;
+        else if (strcmp(var.value, "4 MB") == 0)
+            banks = 256;
+
+        if (MEMORY_axlon_num_banks != banks)
+        {
+            MEMORY_axlon_num_banks = banks;
+            if (banks > 0)
+                MEMORY_mosaic_num_banks = 0; /* the two expansions are mutually exclusive */
+            if (!libretro_runloop_active)
+                Atari800_InitialiseMachine();
+        }
+    }
+
+    /* Axlon $0F bank-select register shadow. */
+    var.key = "atari800_axlon_shadow";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int shadow = (strcmp(var.value, "enabled") == 0);
+        if (MEMORY_axlon_0f_mirror != shadow)
+        {
+            MEMORY_axlon_0f_mirror = shadow;
+            if (!libretro_runloop_active)
+                Atari800_InitialiseMachine();
+        }
+    }
+
+    /* MapRAM RAM-under-ROM mapping (Atari XL/XE only). */
+    var.key = "atari800_mapram";
+    var.value = NULL;
+
+    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+    {
+        int mapram = (strcmp(var.value, "enabled") == 0);
+        if (MEMORY_enable_mapram != mapram)
+        {
+            MEMORY_enable_mapram = mapram;
+            if (!libretro_runloop_active)
+                Atari800_InitialiseMachine();
+        }
     }
 
     /* Set whether SIO (fast disk) acceleration is activated. The P: and R:
@@ -1105,21 +1306,6 @@ static void update_variables(void)
         else if (strcmp(var.value, "detached") == 0)
         {
             atarixegs_keyboard_detached = 1;
-        }
-    }
-
-    var.key = "atari800_f10";
-    var.value = NULL;
-
-    if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
-    {
-        if (strcmp(var.value, "F1") == 0)
-        {
-            atari800_f10 = 0;
-        }
-        else if (strcmp(var.value, "F10") == 0)
-        {
-            atari800_f10 = 1;
         }
     }
 
