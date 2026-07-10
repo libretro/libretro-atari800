@@ -22,7 +22,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#define _POSIX_C_SOURCE 199309L /* for nanosleep */
+#define _POSIX_C_SOURCE 200809L /* for nanosleep */
 
 #include "afile.h"
 #include "config.h"
@@ -58,6 +58,12 @@
 
 #include "akey.h"
 #include "antic.h"
+#ifdef HAVE_DOWNLOAD
+#ifdef HAVE_DIRENT_H
+#include <dirent.h>
+#endif
+#include "download.h"
+#endif
 #include "artifact.h"
 #include "atari.h"
 #include "binload.h"
@@ -186,6 +192,10 @@ int Atari800_auto_frameskip = FALSE;
 
 #ifdef BENCHMARK
 static double benchmark_start_time;
+#endif
+
+#ifdef HAVE_DOWNLOAD
+static char dl_dir[FILENAME_MAX] = "";
 #endif
 
 #ifdef CTRL_C_HANDLER
@@ -367,6 +377,25 @@ static void PreInitialise(void)
 #endif
 }
 
+#ifdef HAVE_DOWNLOAD
+static void PurgeDownloadDir(const char *dir)
+{
+	DIR *d = opendir(dir);
+	if (d == NULL)
+		return;
+	struct dirent *entry;
+	while ((entry = readdir(d)) != NULL) {
+		if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+			continue;
+		char path[FILENAME_MAX];
+		Util_catpath(path, dir, entry->d_name);
+		remove(path);
+	}
+	closedir(d);
+	rmdir(dir);
+}
+#endif
+
 int Atari800_Initialise(int *argc, char *argv[])
 {
 	int i, j;
@@ -398,17 +427,22 @@ int Atari800_Initialise(int *argc, char *argv[])
 #endif /* _WX_ */
 	PreInitialise();
 #else /* __PLUS */
-	const char *rtconfig_filename = NULL;
+	const char *cfg_source_path = NULL;
 	int got_config;
 	int help_only = FALSE;
+	char atari800_exe_dir[FILENAME_MAX] = "";
+#ifndef __LIBRETRO__
+	char portable_cfg[FILENAME_MAX] = "";
+#endif
 
 	PreInitialise();
 
+#if !defined(ANDROID) || defined(__LIBRETRO__)
 	if (*argc > 1) {
 		for (i = j = 1; i < *argc; i++) {
 			if (strcmp(argv[i], "-config") == 0) {
 				if (i + 1 < *argc)
-					rtconfig_filename = argv[++i];
+					cfg_source_path = argv[++i];
 				else {
 					Log_print("Missing argument for '%s'", argv[i]);
 					return FALSE;
@@ -433,37 +467,48 @@ int Atari800_Initialise(int *argc, char *argv[])
 		}
 		*argc = j;
 	}
-#if !defined(ANDROID) || defined(__LIBRETRO__)
+
+	if (*argc > 0 && argv[0] != NULL)
+		Util_splitpath(argv[0], atari800_exe_dir, NULL);
+
 #if defined(__LIBRETRO__)
 	if (legacy_configuration_file)
-		got_config = CFG_LoadConfig(rtconfig_filename);
+		got_config = CFG_LoadConfig(cfg_source_path);
 	else
 		got_config = FALSE;
 #else
-	got_config = CFG_LoadConfig(rtconfig_filename);
+	if (cfg_source_path == NULL && atari800_exe_dir[0] != '\0') {
+		char checkfile[FILENAME_MAX];
+		Util_catpath(checkfile, atari800_exe_dir, ".atari800-check");
+		FILE *ft = fopen(checkfile, "w");
+		if (ft != NULL) {
+			fclose(ft);
+			remove(checkfile);
+			Log_print("Portable path detected: %s", atari800_exe_dir);
+			Util_catpath(portable_cfg, atari800_exe_dir, DEFAULT_CFG_NAME);
+			cfg_source_path = portable_cfg;
+		}
+	}
+
+	got_config = CFG_LoadConfig(cfg_source_path);
 #endif /* __LIBRETRO__ */
-#else
-	got_config = TRUE; /* pretend we got a config file -- not needed in Android */
-#endif
 
 	/* try to find ROM images if the configuration file is not found
 	   or it does not specify some ROM paths (blank paths count as specified) */
-#if !defined(ANDROID) || defined(__LIBRETRO__)
 #if defined(__LIBRETRO__)
 	SYSROM_FindInDir(retro_system_directory, TRUE);
-#endif
 	{
 		char current_dir[FILENAME_MAX];
 		SYSROM_FindInDir(Util_getcwd(current_dir, FILENAME_MAX), TRUE);
 	}
+#else
+	SYSROM_FindInDir(CFG_data_dir, TRUE);
+#endif
 #if defined(unix) || defined(__unix__) || defined(__linux__)
 	SYSROM_FindInDir("/usr/share/atari800", TRUE);
 #endif
-	if (*argc > 0 && argv[0] != NULL) {
-		char atari800_exe_dir[FILENAME_MAX];
+	if (atari800_exe_dir[0] != '\0') {
 		char atari800_exe_rom_dir[FILENAME_MAX];
-		/* the directory of the Atari800 program */
-		Util_splitpath(argv[0], atari800_exe_dir, NULL);
 		SYSROM_FindInDir(atari800_exe_dir, TRUE);
 		/* "rom" and "ROM" subdirectories of this directory */
 		Util_catpath(atari800_exe_rom_dir, atari800_exe_dir, "rom");
@@ -474,6 +519,8 @@ int Atari800_Initialise(int *argc, char *argv[])
 		SYSROM_FindInDir(atari800_exe_rom_dir, TRUE);
 #endif
 	}
+#else
+	got_config = TRUE; /* pretend we got a config file -- not needed in Android */
 #endif /* ANDROID */
 
 	/* finally if nothing is found, set some defaults to make
@@ -748,6 +795,20 @@ int Atari800_Initialise(int *argc, char *argv[])
 			else if (strcmp(argv[i], "-bpc") == 0)
 				if (i_a) MONITOR_BPC(argv[++i]); else a_m = TRUE;
 #endif /* MONITOR_BREAK */
+#ifdef HAVE_DOWNLOAD
+			else if (strcmp(argv[i], "-download-roms") == 0) {
+				static const char *rom_exts[] = {".rom", NULL};
+				char rom_dir[FILENAME_MAX];
+				Util_catpath(rom_dir, CFG_data_dir, "rom");
+				Log_print("Downloading ROMs to %s ...", rom_dir);
+				if (Download_And_Extract(i_a ? argv[++i] : ROM_URL, rom_exts, rom_dir) == NULL) {
+					Log_print("Downloading ROMs failed");
+					return FALSE;
+				}
+				Log_print("Searching in %s", rom_dir);
+				SYSROM_FindInDir(rom_dir, FALSE);
+			}
+#endif /* HAVE_DOWNLOAD */
 			else {
 				/* all options known to main module tried but none matched */
 
@@ -806,6 +867,9 @@ int Atari800_Initialise(int *argc, char *argv[])
 					Log_print("\t-label-file <f>  Load monitor labels from file <f>");
 #endif
 					Log_print("\t-v               Show version/release number");
+#ifdef HAVE_DOWNLOAD
+					Log_print("\t-download-roms <url> Download and extract ROM archive from <url>");
+#endif
 				}
 
 				/* copy this option for platform/module specific evaluation */
@@ -928,14 +992,35 @@ int Atari800_Initialise(int *argc, char *argv[])
 	/* Auto-start files left on the command line */
 	j = 1; /* diskno */
 	for (i = 1; i < *argc; i++) {
+		const char *filename = argv[i];
 		if (j > 8) {
 			/* The remaining arguments are not necessary disk images, but ignore them... */
 			Log_print("Too many disk image filenames on the command line (max. 8).");
 			break;
 		}
-		switch (AFILE_OpenFile(argv[i], i == 1, j, FALSE)) {
+#ifdef HAVE_DOWNLOAD
+		char dl_buf[FILENAME_MAX+2] = "";
+		if (strncmp(argv[i], "http://", 7) == 0 || strncmp(argv[i], "https://", 8) == 0) {
+			static const char *img_exts[] = { ".atr", ".xfd", ".atx", ".pro", ".dcm", ".xex", ".bas", ".lst", ".cas", ".rom", ".car", ".bin", NULL };
+			if (dl_dir[0] == '\0')
+				Util_catpath(dl_dir, CFG_data_dir, ".atari800_dl");
+			if (dl_dir[0] != '\0') {
+				const char *first = Download_And_Extract(argv[i], img_exts, dl_dir);
+				if (first != NULL) {
+					Log_print("Downloaded %s to %s", first, dl_dir);
+					snprintf(dl_buf, sizeof(dl_buf), "%s/%s", dl_dir, first);
+					filename = dl_buf;
+				}
+			}
+			if (filename == argv[i]) {
+				Log_print("Error downloading \"%s\"", argv[i]);
+				continue;
+			}
+		}
+#endif /* HAVE_DOWNLOAD */
+		switch (AFILE_OpenFile(filename, i == 1, j, FALSE)) {
 			case AFILE_ERROR:
-				Log_print("Error opening \"%s\"", argv[i]);
+				Log_print("Error opening \"%s\"", filename);
 				break;
 			case AFILE_ATR:
 			case AFILE_XFD:
@@ -1018,6 +1103,24 @@ int Atari800_Initialise(int *argc, char *argv[])
 			Sound_Continue();
 	}
 #endif /* SOUND */
+
+#ifdef HAVE_DOWNLOAD
+	if (Atari800_os_version < 0 || Atari800_os_version >= SYSROM_LOADABLE_SIZE) {
+		static const char *rom_exts[] = {".rom", NULL};
+		char rom_dir[FILENAME_MAX];
+		Util_catpath(rom_dir, CFG_data_dir, "rom");
+		Log_print("Downloading ROMs to %s ...", rom_dir);
+		if (Download_And_Extract(ROM_URL, rom_exts, rom_dir) != NULL) {
+			Log_print("Searching in %s", rom_dir);
+			SYSROM_FindInDir(rom_dir, FALSE);
+			CFG_WriteConfig();
+			Atari800_InitialiseMachine();
+		}
+		else {
+			Log_print("Downloading ROMs failed");
+		}
+	}
+#endif /* HAVE_DOWNLOAD */
 
 	return TRUE;
 }
@@ -1119,6 +1222,10 @@ int Atari800_Exit(int run_monitor)
 #endif /* SDL */
 	}
 #endif /* __PLUS */
+#ifdef HAVE_DOWNLOAD
+	if (dl_dir[0] != '\0')
+		PurgeDownloadDir(dl_dir);
+#endif
 	return restart;
 }
 

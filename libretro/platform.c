@@ -50,7 +50,6 @@ extern int SHIFTON;
 extern int CTRLON;
 extern int UI_is_active;
 extern int SHOWKEY, SHOWKEYDELAY;
-extern int atari800_f10;
 
 static int swap_joysticks = FALSE;
 int PLATFORM_kbd_joy_0_enabled = TRUE;	/* enabled by default, doesn't hurt */
@@ -244,19 +243,14 @@ int PLATFORM_Keyboard(void)
 	if (Key_State[RETROK_F4])
 		INPUT_key_consol &= (~INPUT_CONSOL_START);
 
-	/* Handle movement and special keys. */
-	if ((!atari800_f10 && Key_State[RETROK_F1]) || (atari800_f10 && Key_State[RETROK_F10]))
-		return AKEY_UI;
-
+	/* Handle movement and special keys. The built-in atari800 UI (legacy
+	 * F1/F10 menu) is not compiled into the libretro build, so no key is
+	 * mapped to AKEY_UI. */
 	if (Key_State[RETROK_F5] && (Atari800_machine_type != Atari800_MACHINE_5200))
 		return INPUT_key_shift ? AKEY_COLDSTART : AKEY_WARMSTART;
 
 
 	if (Key_State[RETROK_F12])	return AKEY_TURBO;
-
-	if (UI_alt_function != -1) {
-		return AKEY_UI;
-	}
 
 	if (INPUT_key_shift)
 		shiftctrl ^= AKEY_SHFT;
@@ -758,30 +752,51 @@ int PLATFORM_GetRawKey(void)
 }
 */
 
+extern int retrow, retroh;
+
 void retro_Render(void)
 {
 	int x, y;
 	UBYTE *src, *src_line;
 	UWORD *dst, *dst_line;
 
-	src_line = ((UBYTE *) Screen_atari) + 24;
-	dst_line = Retro_Screen;
+	/* The ANTIC output (Screen_atari) is a fixed Screen_WIDTH x Screen_HEIGHT
+	 * (384x240) paletted bitmap. The frontend framebuffer is retrow x retroh,
+	 * chosen by the "Internal resolution" core option, and video_cb() reports
+	 * a row stride of retrow. We must therefore fill the destination using
+	 * retrow as the stride, otherwise the image shears (this was the old
+	 * hard-coded 336-wide blit's bug for every non-default resolution).
+	 *
+	 * When the requested size is smaller than the ANTIC frame we crop the
+	 * centre of the source; when it is larger we centre the frame and leave
+	 * the surrounding border black (letterbox). The default 336x240 produces
+	 * exactly the same output as before (source offset (384-336)/2 = 24). */
+	const int sw = Screen_WIDTH;            /* 384 */
+	const int sh = Screen_HEIGHT;           /* 240 */
+	const int cw = retrow < sw ? retrow : sw;   /* columns to copy */
+	const int ch = retroh < sh ? retroh : sh;   /* rows to copy    */
+	const int src_xoff = (sw - cw) / 2;
+	const int src_yoff = (sh - ch) / 2;
+	const int dst_xoff = (retrow - cw) / 2;
+	const int dst_yoff = (retroh - ch) / 2;
 
-	for (y = 0; y < 240; y++) {
+	/* black borders when the framebuffer is larger than the cropped frame */
+	if (dst_xoff != 0 || dst_yoff != 0)
+		memset(Retro_Screen, 0, (size_t)retrow * retroh * sizeof(UWORD));
+
+	src_line = ((UBYTE *) Screen_atari) + src_yoff * sw + src_xoff;
+	dst_line = Retro_Screen + dst_yoff * retrow + dst_xoff;
+
+	for (y = 0; y < ch; y++) {
 
 		src = src_line;
 		dst = dst_line;
 
-		for (x = 0; x < 336; x += 8) {
+		for (x = 0; x < cw; x++)
+			*dst++ = palette[*src++];
 
-			*dst++ = palette[*src++]; *dst++ = palette[*src++];
-					*dst++ = palette[*src++]; *dst++ = palette[*src++];
-					*dst++ = palette[*src++]; *dst++ = palette[*src++];
-					*dst++ = palette[*src++]; *dst++ = palette[*src++];
-		}
-
-		src_line += 384;
-		dst_line += 336;
+		src_line += sw;
+		dst_line += retrow;
 	}
 }
 
