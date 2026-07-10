@@ -256,8 +256,12 @@
    */
 /* #undef HAVE_SYS_DIR_H */
 
-/* Define to 1 if you have the <sys/ioctl.h> header file. */
-#define HAVE_SYS_IOCTL_H 1
+/* Define to 1 if you have the <sys/ioctl.h> header file. This static config
+   is shared by every libretro target, and MinGW, Vita (newlib) and the
+   devkitPPC consoles have no <sys/ioctl.h> — monitor.c includes it whenever
+   this is defined (only for terminal-size detection, which no libretro build
+   uses), so it must stay undefined here. */
+/* #undef HAVE_SYS_IOCTL_H */
 
 /* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
    */
