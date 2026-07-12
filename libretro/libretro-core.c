@@ -232,6 +232,7 @@ extern int CASSETTE_Insert(const char* filename);
 extern void CASSETTE_Remove(void);
 extern void CASSETTE_Seek(unsigned int position);
 extern int CASSETTE_hold_start;
+extern int CASSETTE_hold_start_on_reboot;
 
 //extern int SIO_RotateDisks(void);
 
@@ -1100,10 +1101,19 @@ static void update_variables(void)
         if (strcmp(var.value, "enabled") == 0)
         {
             CASSETTE_hold_start = 1;
+            /* Persist the START-held state across reboots: the cassette boot
+             * handshake (gtia.c) consumes CASSETTE_hold_start into
+             * CASSETTE_hold_start_on_reboot once the tape boots. With this at 0
+             * (the default), a boot tape loads the first time but a subsequent
+             * reset cold-starts without holding START -> the machine drops to
+             * the self-test screen instead of reloading. Keeping it at 1 makes
+             * every reset re-boot the (rewound) tape. */
+            CASSETTE_hold_start_on_reboot = 1;
         }
         else if (strcmp(var.value, "disabled") == 0)
         {
             CASSETTE_hold_start = 0;
+            CASSETTE_hold_start_on_reboot = 0;
         }
 
         if (!libretro_runloop_active)
