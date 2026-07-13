@@ -398,6 +398,11 @@ extern "C" {
 
 struct retro_core_option_v2_category option_cats_us[] = {
    {
+      "system",
+      "System",
+      "Emulated machine and hardware: Atari system model, OS and BASIC ROMs, RAM expansions, and add-on hardware.  Most take effect after a restart."
+   },
+   {
       "video",
       "Video",
       "Configure video standard (NTSC/PAL).  Enable Hi-res artifacting and set artifacting mode.  Set internal resolution"
@@ -406,6 +411,16 @@ struct retro_core_option_v2_category option_cats_us[] = {
       "input",
       "Input",
       "Configure 5200 Digital and Analog Joystick sensitivity and Analog deadzone.  Activate Swap, Dual Joysticks or Joy 2B+. Activate Paddle mode and set Paddle speed.  Set retroarch keyboard type."
+   },
+   {
+      "media",
+      "Media",
+      "Disk, tape and cartridge loading behaviour: SIO acceleration, cassette boot, binary-load speed, cartridge autodetect, and host P:/R: device redirection."
+   },
+   {
+      "osd",
+      "On-Screen Display",
+      "On-screen indicators drawn over the emulation: emulation speed, disk/tape activity, sector/block counter, and 1200XL LEDs."
    },
    { NULL, NULL, NULL },
 };
@@ -823,7 +838,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Select system emulated.  Atari 5200 for Atari 5200 console games.  400/800 (OS B) for <48K games or ones that require OS/B.  800XL (64K) works for most content.  130XE (128K), Modern XL/XE(320K Compy Shop),  Modern XL/XE(576K), Modern XL/XE(1088K) for content that needs more than 64K.  Atari XE Game System for the Atari XE Game System or XEGS console games.",
       NULL,
-      NULL,
+      "system",
       {
          { "400/800 (OS B)", "Atari 400/800 (OS B)" },
          { "800XL (64K)", "Atari 800XL (64K)" },
@@ -843,7 +858,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Enable for content that needs Atari BASIC in order to run.  A proper ROM file (ATARIBAS.ROM) is needed.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -857,7 +872,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Select the operating-system ROM revision used by the Atari 400/800. 'Auto' picks a revision automatically. 'AltirraOS' uses the bundled open-source replacement ROM (no original ROM required). Other revisions require the matching ROM file in the system directory.",
       NULL,
-      NULL,
+      "system",
       {
          { "auto",       "Auto" },
          { "Rev. A NTSC", NULL },
@@ -874,7 +889,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Select the operating-system ROM revision used by the Atari XL/XE/XEGS. 'Auto' picks a revision automatically. 'AltirraOS' uses the bundled open-source replacement ROM (no original ROM required). Other revisions require the matching ROM file in the system directory.",
       NULL,
-      NULL,
+      "system",
       {
          { "auto",        "Auto" },
          { "AA00 Rev. 10", NULL },
@@ -899,7 +914,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Select the BIOS ROM revision used by the Atari 5200. 'Auto' picks a revision automatically. 'AltirraOS' uses the bundled open-source replacement ROM (no original ROM required). Other revisions require the matching ROM file in the system directory.",
       NULL,
-      NULL,
+      "system",
       {
          { "auto",     "Auto" },
          { "Original", NULL },
@@ -915,7 +930,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Select the Atari BASIC ROM revision. 'Auto' picks a revision automatically. 'Altirra BASIC' uses the bundled open-source replacement (no original ROM required). Other revisions require the matching ROM file in the system directory.",
       NULL,
-      NULL,
+      "system",
       {
          { "auto",   "Auto" },
          { "Rev. A", NULL },
@@ -932,7 +947,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Emulate the Mosaic RAM expansion (Atari 400/800 only). Adds RAM-select boards mapped at $4000-$7FFF. Mutually exclusive with the Axlon expansion.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "16 KB",  "16 KB (1 board)" },
@@ -948,7 +963,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Emulate the Axlon 128K-compatible bank-switched RAM expansion (Atari 400/800 only). Mutually exclusive with the Mosaic expansion.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "128 KB", NULL },
@@ -967,7 +982,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "The real Axlon board mirrored its bank-select register at $0FC0-$0FFF; some compatibles did not. Enable for full Axlon compatibility.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -981,7 +996,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Enable MapRAM RAM-under-ROM mapping (Atari XL/XE only), mirroring the OS ROM into RAM for a small speed-up used by some enhanced systems.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -995,7 +1010,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Autofire mode for all joystick ports.  Fire: autofire while the fire button is held.  Always: continuous autofire without holding the button.",
       NULL,
-      NULL,
+      "input",
       {
          { "disabled", NULL },
          { "fire",     "While fire held" },
@@ -1010,7 +1025,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Overlay the emulation speed as a percentage on screen.",
       NULL,
-      NULL,
+      "osd",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1024,7 +1039,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Overlay a disk-drive / tape activity indicator on screen.",
       NULL,
-      NULL,
+      "osd",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1038,7 +1053,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Overlay the current disk sector / tape block number on screen.",
       NULL,
-      NULL,
+      "osd",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1052,7 +1067,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Overlay the two 1200XL keyboard LEDs on screen (Atari 1200XL only).",
       NULL,
-      NULL,
+      "osd",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1066,7 +1081,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Emulate the XEP80 80-column display interface on the chosen joystick port.  Requires the XEP80 charset ROM.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "port 1",   "Port 1" },
@@ -1081,7 +1096,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Emulate the ICD R-Time 8 real-time clock cartridge.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1095,7 +1110,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Enable the P: printer device SIO patch.",
       NULL,
-      NULL,
+      "media",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1109,7 +1124,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Enable the R: serial device SIO patch (Atari 850 emulation / Coder's Cable).",
       NULL,
-      NULL,
+      "media",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1123,7 +1138,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Load DOS binary (.xex) files at the slower, more accurate original speed instead of instantly.",
       NULL,
-      NULL,
+      "media",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1137,7 +1152,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "This enables ALL SIO acceleration.  Enabled improves loading speed for Disk and Cassette images.  Disable only for protected disk (.ATX) and protected cassette images.  Reboot required if change made while loading a cassette image.",
       NULL,
-      NULL,
+      "media",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1151,7 +1166,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Forces emulated system to boot from autoboot cassette images by holding down the \"START\" key on boot.",
       NULL,
-      NULL,
+      "media",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1165,7 +1180,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Emulates the Atari Stereo Sound Mod (second POKEY chip at $D210-$D21F on 800/XL/XE). Stock 800/XL/XE has only one POKEY -- leave this disabled for authentic behavior. Some games (Bounty Bob Strikes Back, Road Race) use POKEY register mirroring tricks that lock up or lose audio when stereo is enabled. The Atari 5200 always uses mono regardless of this setting.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1179,7 +1194,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "If the Atari800 legacy configuration file, .atari800.cfg, is found, it will be loaded, and if not found, a new will be created.",
       NULL,
-      NULL,
+      "system",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1194,7 +1209,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Emulator will auto detect Atari cartridge based on checksum. (requires good ROM dumps).",
       NULL,
-      NULL,
+      "media",
       {
          { "disabled", NULL },
          { "enabled",  NULL },
@@ -1209,7 +1224,7 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       NULL,
       "Set the value for emulated analog joystick or paddle center.  Use this to properly center player for some games like Kaboom, Starwars or Super Breakout.  Default is 114",
       NULL,
-      "5200",
+      "input",
       {
          { "80", NULL },
          { "82", NULL },
