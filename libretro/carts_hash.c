@@ -935,3 +935,50 @@ int get_5200_cart_atari800_type(ULONG crc, int size) {
     }
     return CARTRIDGE_NONE;
 }
+
+int get_800_cart_type_by_kb(int kb) {
+    switch (kb) {
+    case    4: return CARTRIDGE_STD_4;
+    case    8: return CARTRIDGE_STD_8;
+    case   16: return CARTRIDGE_STD_16;
+    case   32: return CARTRIDGE_XEGS_32;
+    case   40: return CARTRIDGE_BBSB_40;
+    case   64: return CARTRIDGE_XEGS_07_64;
+    case  128: return CARTRIDGE_XEGS_128;
+    case  256: return CARTRIDGE_XEGS_256;
+    case  512: return CARTRIDGE_XEGS_512;
+    case 1024: return CARTRIDGE_ATMAX_OLD_1024;
+    }
+    return CARTRIDGE_NONE;
+}
+
+/* Same idea as get_5200_cart_atari800_type(), for the Atari 8-bit computers.
+   A raw .rom/.bin image carries no type information and every common size
+   matches several entries in atari800's CARTRIDGES[] (16K alone matches
+   STD_16, OSS_034M_16, OSS_M091_16, MegaCart_16, Blizzard_16, ...), so
+   auto-detect leaves the cartridge at CARTRIDGE_UNKNOWN and atari.c then
+   asks the user via the built-in UI - which does not exist in this build. */
+int get_800_cart_atari800_type(ULONG crc, int size) {
+    int idx = 0;
+    while (a800_game[idx].type != -1) {
+        if (crc == a800_game[idx].crc) {
+            switch (a800_game[idx].type) {
+            case a800:                 return get_800_cart_type_by_kb(size >> 10);
+            case a800_40:              return CARTRIDGE_BBSB_40;
+            case a800_WILL_64:         return CARTRIDGE_WILL_64;
+            case a800_XE_07_64:        return CARTRIDGE_XEGS_07_64;
+            case a800_XE_128:          return CARTRIDGE_XEGS_128;
+            case a800_MAX_128:         return CARTRIDGE_ATMAX_128;
+            case a800_MAX_1024:        return CARTRIDGE_ATMAX_OLD_1024;
+            case a800_OSS_M091_16:     return CARTRIDGE_OSS_M091_16;
+            case a800_TURBOSOFT_64:    return CARTRIDGE_TURBOSOFT_64;
+            case a800_TURBOSOFT_128:   return CARTRIDGE_TURBOSOFT_128;
+            case a800_TURBOSOFT_64_WILL: return CARTRIDGE_WILL_64;
+            }
+            break;
+        }
+        idx++;
+    }
+    /* Not in the database (homebrew, hack, bad dump): guess from the size. */
+    return get_800_cart_type_by_kb(size >> 10);
+}

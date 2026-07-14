@@ -67,3 +67,13 @@ int is_cart(ULONG crc);
    Uses CRC lookup in a5200_game[] first, falls back to size-based guess.
    Returns CARTRIDGE_NONE (0) if nothing sensible can be picked. */
 int get_5200_cart_atari800_type(ULONG crc, int size);
+
+/* Resolve an atari800 CARTRIDGE_* type for an Atari 8-bit ROM.
+   Uses CRC lookup in a800_game[] first, falls back to size-based guess.
+   Returns CARTRIDGE_NONE (0) if nothing sensible can be picked. */
+int get_800_cart_atari800_type(ULONG crc, int size);
+
+/* Size-based guess for a raw Atari 8-bit cartridge image, size given in KB.
+   Used when the CRC is not in the database and as the last-resort default
+   for a raw image whose size matches several CARTRIDGES[] entries. */
+int get_800_cart_type_by_kb(int kb);

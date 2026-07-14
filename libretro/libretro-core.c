@@ -50,63 +50,49 @@ int retroh = 300;
 #define RETRO_DEVICE_ATARI_JOYSTICK RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 1)
 #define RETRO_DEVICE_ATARI_5200_JOYSTICK RETRO_DEVICE_SUBCLASS(RETRO_DEVICE_JOYPAD, 2)
 
-/* Atari 800 Joysticks 1 thru 4 */
-#define RETRO_DESCRIPTOR_BLOCK(_user)                                                       \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Up" },                  \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Down" },              \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left" },              \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },            \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Fire 1" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire 2" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Space/Fire 3" },                 \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "Return" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select" },          \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },            \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "Option" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "Atari800 Menu" },        \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "Esc" },               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Help" },                 \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Virtual Keyboard" },    \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "R3" }
-
-static struct retro_input_descriptor inputDescriptors_a800[] =
+/* One port's worth of descriptors; the port field is filled in by
+   update_input_descriptors(). RETRO_DEVICE_ID_JOYPAD_R and _R3 are left
+   undescribed on purpose: R used to open the built-in atari800 menu, which
+   is not part of this build (the frontend provides those functions), and R3
+   was never mapped to anything. Option/Select/Start are the Atari console
+   keys, not frontend menus. */
+static const struct retro_input_descriptor descriptors_a800[] =
 {
-   RETRO_DESCRIPTOR_BLOCK(0),
-   RETRO_DESCRIPTOR_BLOCK(1),
-   RETRO_DESCRIPTOR_BLOCK(2),
-   RETRO_DESCRIPTOR_BLOCK(3),
-   {0},
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Up" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Down" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Left" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Right" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Fire 1" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire 2" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Space/Fire 3" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "Return" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Select (Console Key)" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start (Console Key)" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "Option (Console Key)" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "Esc" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Help" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Virtual Keyboard" },
 };
-#undef RETRO_DESCRIPTOR_BLOCK
 
-/* Atari 5200 Joysticks 1 thru 4 */
-#define RETRO_DESCRIPTOR_BLOCK(_user)                                                               \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Joystick Up (Digital)" },       \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Joystick Down (Digital)" },   \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Joystick Left (Digital)" },   \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Joystick Right (Digital)" }, \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Fire 1" },                       \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire 2" },                       \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Numpad #" },                     \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "Numpad *" },                     \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Pause" },                   \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },                    \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "Numpad 0" },                     \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "Numpad 1" },                     \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "Numpad 2" },                    \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Numpad 3" },                    \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Numpad 7" },                    \
-       { _user, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "Virtual Keyboard" }
-
-static struct retro_input_descriptor inputDescriptors_a5200[] =
+static const struct retro_input_descriptor descriptors_a5200[] =
 {
-   RETRO_DESCRIPTOR_BLOCK(0),
-   RETRO_DESCRIPTOR_BLOCK(1),
-   RETRO_DESCRIPTOR_BLOCK(2),
-   RETRO_DESCRIPTOR_BLOCK(3),
-   {0},
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_UP, "Joystick Up (Digital)" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_DOWN, "Joystick Down (Digital)" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_LEFT, "Joystick Left (Digital)" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_RIGHT, "Joystick Right (Digital)" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B, "Fire 1" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_A, "Fire 2" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y, "Numpad #" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X, "Numpad *" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT, "Pause" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START, "Start" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L, "Numpad 0" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R, "Numpad 1" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2, "Numpad 2" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R2, "Numpad 3" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L3, "Numpad 7" },
+   { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R3, "Virtual Keyboard" },
 };
-#undef RETRO_DESCRIPTOR_BLOCK
 
 /* Dynamic inputdescripter */
 static struct retro_input_descriptor inputDescriptors_dyna[(ATARI_JOYPAD_BUTTONS * ATARI_NUMBER_JOYSTICKS) + 1];
@@ -119,6 +105,7 @@ unsigned atari_devices[4];
 int keyboard_type = 0;
 int autorunCartridge = NO_CART;
 int autorun5200CartType = 0;    /* atari800 CARTRIDGE_* type when autorunCartridge == A5200_CART */
+int autorun800CartType = 0;     /* atari800 CARTRIDGE_* type when autorunCartridge == A800_CART */
 int atari_joyhack = 0;
 int paddle_mode = 0;
 int paddle_speed = 3;
@@ -193,6 +180,35 @@ static retro_audio_sample_batch_t audio_batch_cb;
 static retro_environment_t environ_cb;
 
 bool libretro_supports_bitmasks = false;
+
+/* Rebuild the descriptor list from the device currently selected on each port
+   and hand it to the frontend. */
+static void update_input_descriptors(void)
+{
+    unsigned port, i, n = 0;
+
+    for (port = 0; port < ATARI_NUMBER_JOYSTICKS; port++)
+    {
+        const struct retro_input_descriptor *src = descriptors_a800;
+        unsigned count = sizeof(descriptors_a800) / sizeof(descriptors_a800[0]);
+
+        if (atari_devices[port] == RETRO_DEVICE_ATARI_5200_JOYSTICK)
+        {
+            src   = descriptors_a5200;
+            count = sizeof(descriptors_a5200) / sizeof(descriptors_a5200[0]);
+        }
+
+        for (i = 0; i < count; i++, n++)
+        {
+            inputDescriptors_dyna[n]      = src[i];
+            inputDescriptors_dyna[n].port = port;
+        }
+    }
+
+    memset(&inputDescriptors_dyna[n], 0, sizeof(inputDescriptors_dyna[n]));
+
+    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, inputDescriptors_dyna);
+}
 
 static void fallback_log(enum retro_log_level level, const char* fmt, ...)
 {
@@ -589,6 +605,7 @@ static void update_variables(void)
 
     /* Moved here for better consistency and when system options that require EMU reset to occur */
     autorun5200CartType = 0;
+    autorun800CartType = 0;
     if (strcmp(RPATH, "") == 0)  // Start core with no content
         autorunCartridge = NO_CART;
     /* Most complex case - .bin (common) and .rom (rare) can be used for both Atari 5200 console and Atari 8bit computers */
@@ -616,6 +633,16 @@ static void update_variables(void)
                 autorun5200CartType = get_5200_cart_atari800_type(crc, (int)fsize);
                 log_cb(RETRO_LOG_INFO,"[update_variables] 5200 cart type: %d (size %ld, crc %08lx)\n",
                     autorun5200CartType, fsize, (unsigned long)crc);
+            } else {
+                autorun800CartType = get_800_cart_atari800_type(crc, (int)fsize);
+                log_cb(RETRO_LOG_INFO,"[update_variables] Atari 8bit cart type: %d (size %ld, crc %08lx)\n",
+                    autorun800CartType, fsize, (unsigned long)crc);
+                /* Same stereo POKEY problem as the .car case below. */
+                if (autorun800CartType == CARTRIDGE_BBSB_40) {
+                    POKEYSND_stereo_enabled = FALSE;
+                    Sound_desired.channels = 1;
+                    log_cb(RETRO_LOG_INFO, "[update_variables] BBSB_40 raw cart detected, forcing mono POKEY\n");
+                }
             }
         } else {
             log_cb(RETRO_LOG_INFO,"[update_variables] Error opening cart file: %s\n", (char*)RPATH );
@@ -1566,12 +1593,9 @@ void retro_init(void)
 
     /* set these up early retro_set_controller_port_device() will adjust later */
     for (int i = 0; i < 4; i++)
-    {
-        memcpy(inputDescriptors_dyna + ATARI_JOYPAD_BUTTONS * i, inputDescriptors_a800 + ATARI_JOYPAD_BUTTONS * i, (ATARI_JOYPAD_BUTTONS + 1) * sizeof(struct retro_input_descriptor));
         atari_devices[i] = RETRO_DEVICE_ATARI_JOYSTICK;
-    }
 
-    environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors_dyna);
+    update_input_descriptors();
 
     // Disk control interface
     if (environ_cb(RETRO_ENVIRONMENT_GET_DISK_CONTROL_INTERFACE_VERSION, &dci_version) && (dci_version >= 1))
@@ -1618,12 +1642,7 @@ void retro_set_controller_port_device(unsigned port, unsigned device)
 
         printf(" port(%d)=%d \n", port, device);
 
-        if (device == RETRO_DEVICE_ATARI_JOYSTICK)
-            memcpy(inputDescriptors_dyna + ATARI_JOYPAD_BUTTONS * port, inputDescriptors_a800 + ATARI_JOYPAD_BUTTONS * port, (ATARI_JOYPAD_BUTTONS + 1) * sizeof(struct retro_input_descriptor));
-        else if (device == RETRO_DEVICE_ATARI_5200_JOYSTICK)
-            memcpy(inputDescriptors_dyna + ATARI_JOYPAD_BUTTONS * port, inputDescriptors_a5200 + ATARI_JOYPAD_BUTTONS * port, (ATARI_JOYPAD_BUTTONS + 1) * sizeof(struct retro_input_descriptor));
-
-        environ_cb(RETRO_ENVIRONMENT_SET_INPUT_DESCRIPTORS, &inputDescriptors_dyna);
+        update_input_descriptors();
     }
 }
 

@@ -105,6 +105,9 @@
 #include "ui.h"
 #endif
 #endif /* BASIC */
+#ifdef __LIBRETRO__
+#include "carts_hash.h"
+#endif
 #if defined(SOUND) && !defined(__PLUS)
 #include "pokeysnd.h"
 #include "sound.h"
@@ -395,6 +398,26 @@ static void PurgeDownloadDir(const char *dir)
 	rmdir(dir);
 }
 #endif
+
+#ifdef __LIBRETRO__
+/* A raw cartridge image (.rom/.bin/.a52) carries no type information, and most
+   sizes match several entries in CARTRIDGES[], so CARTRIDGE_ReadImage() leaves
+   the type at CARTRIDGE_UNKNOWN and expects the caller to ask the user. The
+   built-in UI cannot do that here: its menu loops paced themselves with
+   Atari800_Sync(), which is a no-op in this build, so entering one would spin
+   forever inside retro_load_game() and hang the frontend. The libretro layer
+   resolves the type up front from the CRC database and passes it as
+   -cart-type; this is the fallback for images it did not recognise. */
+static int GuessCartType(CARTRIDGE_image_t const *cart)
+{
+	int type = (Atari800_machine_type == Atari800_MACHINE_5200)
+	         ? get_5200_cart_atari800_type(0, cart->size << 10)
+	         : get_800_cart_type_by_kb(cart->size);
+	Log_print("Ambiguous %d KB raw cartridge, assuming \"%s\"",
+	          cart->size, CARTRIDGES[type].description);
+	return type;
+}
+#endif /* __LIBRETRO__ */
 
 int Atari800_Initialise(int *argc, char *argv[])
 {
@@ -1040,7 +1063,9 @@ int Atari800_Initialise(int *argc, char *argv[])
 	if (CARTRIDGE_main.type == CARTRIDGE_UNKNOWN) {
 #ifdef BASIC
 		Log_print("Raw cartridge images not supported in BASIC version!");
-#else /* BASIC */
+#elif defined(__LIBRETRO__)
+		CARTRIDGE_SetType(&CARTRIDGE_main, GuessCartType(&CARTRIDGE_main));
+#else
 		UI_is_active = TRUE;
 		CARTRIDGE_SetType(&CARTRIDGE_main, UI_SelectCartType(CARTRIDGE_main.size));
 		UI_is_active = FALSE;
@@ -1051,7 +1076,9 @@ int Atari800_Initialise(int *argc, char *argv[])
 	if (CARTRIDGE_piggyback.type == CARTRIDGE_UNKNOWN) {
 #ifdef BASIC
 		Log_print("Raw cartridge images not supported in BASIC version!");
-#else /* BASIC */
+#elif defined(__LIBRETRO__)
+		CARTRIDGE_SetType(&CARTRIDGE_piggyback, GuessCartType(&CARTRIDGE_piggyback));
+#else
 		UI_is_active = TRUE;
 		CARTRIDGE_SetType(&CARTRIDGE_piggyback, UI_SelectCartType(CARTRIDGE_piggyback.size));
 		UI_is_active = FALSE;
