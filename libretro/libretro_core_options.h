@@ -620,6 +620,24 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "default"
    },
    {
+      "external_palette",
+      "External Palette",
+      NULL,
+      "Use one of the default External Palettes. If this option is selected, it will override any External Palette configured in the Legacy CFG file.",
+      NULL,
+      "video",
+      {
+         { "none", NULL },
+         { "default",  "Default" },
+         { "gray",  "Gray" },
+         { "jakub",  "Jakub" },
+         { "real",  "Real" },
+         { "xformer",  "Xformer" },
+         { NULL, NULL },
+      },
+      "none"
+   },
+   {
       "atari800_opt2",
       "Controller Hacks",
       NULL,
