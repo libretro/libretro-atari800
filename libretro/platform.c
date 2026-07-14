@@ -661,8 +661,10 @@ int PLATFORM_Keyboard(void)
 					INPUT_key_consol &= (~INPUT_CONSOL_START);
 				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_L])
 					INPUT_key_consol &= (~INPUT_CONSOL_OPTION);
-				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_R])
-					return AKEY_UI;
+				/* R used to return AKEY_UI here to open the built-in atari800
+				   menu. That menu is disabled in the libretro build (see the
+				   comment in PLATFORM_Keyboard()), so the key was inert; it is
+				   now left unbound and undescribed. */
 				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_Y])
 					return AKEY_SPACE;
 				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_L2])

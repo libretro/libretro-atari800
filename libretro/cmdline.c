@@ -27,6 +27,20 @@ void Add_Option(const char* option)
 
 extern int autorunCartridge;
 extern int autorun5200CartType;
+extern int autorun800CartType;
+
+static void Add_CartOptions(int cart_type)
+{
+   if (cart_type > 0)
+   {
+      char type_buf[16];
+      snprintf(type_buf, sizeof(type_buf), "%d", cart_type);
+      Add_Option("-cart-type");
+      Add_Option(type_buf);
+   }
+   Add_Option("-cart");
+   Add_Option(RPATH);
+}
 
 int pre_main(const char *argv)
 {
@@ -45,24 +59,21 @@ int pre_main(const char *argv)
    {
 		Add_Option("prg");
 
-      /* For Atari 5200 carts, force the machine and the cart type explicitly.
-         Raw .a52/.bin images without a CART header otherwise match multiple
+      /* For raw cartridge images, force the cart type (and for the 5200 also
+         the machine) explicitly. Images without a CART header match multiple
          entries in atari800's CARTRIDGES[] (e.g. 16K => STD_16, 5200_NS_16,
          5200_EE_16, Megacart_16, Williams_16, ...) and auto-detect falls
-         into CARTRIDGE_UNKNOWN, which triggers UI_SelectCartType() and a
-         black screen on boot. */
+         into CARTRIDGE_UNKNOWN, which makes atari.c ask the user with
+         UI_SelectCartType() - the built-in UI is disabled in this build, so
+         that means a black screen (5200) or a hung frontend (8-bit). */
       if (autorunCartridge == A5200_CART)
       {
          Add_Option("-5200");
-         if (autorun5200CartType > 0)
-         {
-            char type_buf[16];
-            snprintf(type_buf, sizeof(type_buf), "%d", autorun5200CartType);
-            Add_Option("-cart-type");
-            Add_Option(type_buf);
-         }
-         Add_Option("-cart");
-         Add_Option(RPATH);
+         Add_CartOptions(autorun5200CartType);
+      }
+      else if (autorunCartridge == A800_CART && autorun800CartType > 0)
+      {
+         Add_CartOptions(autorun800CartType);
       }
       else
       {
