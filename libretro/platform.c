@@ -243,6 +243,27 @@ int PLATFORM_Keyboard(void)
 	if (Key_State[RETROK_F4])
 		INPUT_key_consol &= (~INPUT_CONSOL_START);
 
+	/* The same console keys from the controller. This has to happen here,
+	   before the key scanning below, because that code returns an AKEY_* as
+	   soon as any Atari key is held -- and the frontend's default keyboard
+	   binds put several RetroPad buttons on keys the Atari also has (Enter
+	   is both "Start" and Return). Handling the console keys further down,
+	   next to the joypad AKEY_* binds, meant a held Return short-circuited
+	   the function and START/SELECT/OPTION never reached the machine. */
+	if (!UI_is_active && SHOWKEY == -1)
+	{
+		int port;
+		for (port = 0; port < 4; port++)
+		{
+			if (mbt[port][RETRO_DEVICE_ID_JOYPAD_SELECT])
+				INPUT_key_consol &= (~INPUT_CONSOL_SELECT);
+			if (mbt[port][RETRO_DEVICE_ID_JOYPAD_START])
+				INPUT_key_consol &= (~INPUT_CONSOL_START);
+			if (mbt[port][RETRO_DEVICE_ID_JOYPAD_L])
+				INPUT_key_consol &= (~INPUT_CONSOL_OPTION);
+		}
+	}
+
 	/* Handle movement and special keys. The built-in atari800 UI (legacy
 	 * F1/F10 menu) is not compiled into the libretro build, so no key is
 	 * mapped to AKEY_UI. */
@@ -655,12 +676,8 @@ int PLATFORM_Keyboard(void)
 		{
 			if (SHOWKEY == -1)
 			{
-				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_SELECT])
-					INPUT_key_consol &= (~INPUT_CONSOL_SELECT);
-				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_START])
-					INPUT_key_consol &= (~INPUT_CONSOL_START);
-				if (mbt[i][RETRO_DEVICE_ID_JOYPAD_L])
-					INPUT_key_consol &= (~INPUT_CONSOL_OPTION);
+				/* SELECT/START/OPTION are handled at the top of this
+				   function, before the key scanning can return early. */
 				/* R used to return AKEY_UI here to open the built-in atari800
 				   menu. That menu is disabled in the libretro build (see the
 				   comment in PLATFORM_Keyboard()), so the key was inert; it is
