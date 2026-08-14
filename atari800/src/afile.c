@@ -49,7 +49,13 @@ int AFILE_DetectFileType(const char *filename)
 {
 	UBYTE header[4];
 	int file_length;
+#ifdef __LIBRETRO__
+	retro_file_t *fp = retro_vfs_fopen(filename, RETRO_VFS_FILE_ACCESS_READ,
+			RETRO_VFS_FILE_ACCESS_HINT_NONE);
+#else
 	FILE *fp = fopen(filename, "rb");
+#endif
+
 	if (fp == NULL)
 		return AFILE_ERROR;
 
@@ -58,50 +64,72 @@ int AFILE_DetectFileType(const char *filename)
 	{
 		ULONG crc;
 		CRC32_FromFile(fp, &crc);
-		Util_rewind(fp);
+		retro_vfs_fseek(fp, 0, RETRO_VFS_SEEK_POSITION_START);
 		if (is_cart(crc)) {
-			fclose(fp);
+			retro_vfs_fclose(fp);
 			return AFILE_ROM;
 		}
 	}
-#endif /* __LIBRETRO__ */
-
+#else
 	if (fread(header, 1, 4, fp) != 4) {
 		fclose(fp);
 		return AFILE_ERROR;
 	}
+#endif /* __LIBRETRO__ */
+
+#ifdef __LIBRETRO__
+	if (retro_vfs_fread(fp, header, 4) != 4) {
+		retro_vfs_fclose(fp);
+		return AFILE_ERROR;
+	}
+#endif
+
 	switch (header[0]) {
 	case 0:
 		if (header[1] == 0 && (header[2] != 0 || header[3] != 0) /* && file_length < 37 * 1024 */) {
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
+#endif
 			return AFILE_BAS;
 		}
 		break;
 	case 0x1f:
 		if (header[1] == 0x8b) {
 #ifndef HAVE_LIBZ
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
+#endif
 			Log_print("\"%s\" is a compressed file.", filename);
 			Log_print("This executable does not support compressed files. You can uncompress this file");
 			Log_print("with an external program that supports gzip (*.gz) files (e.g. gunzip)");
 			Log_print("and then load into this emulator.");
 			return AFILE_ERROR;
 #else /* HAVE_LIBZ */
-			gzFile gzf;
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
-			gzf = gzopen(filename, "rb");
-			if (gzf == NULL)
-				return AFILE_ERROR;
-			if (gzread(gzf, header, 4) != 4) {
+#endif
+			{
+				gzFile gzf = gzopen(filename, "rb");
+				if (gzf == NULL)
+					return AFILE_ERROR;
+				if (gzread(gzf, header, 4) != 4) {
+					gzclose(gzf);
+					return AFILE_ERROR;
+				}
 				gzclose(gzf);
-				return AFILE_ERROR;
+				if (header[0] == 0x96 && header[1] == 0x02)
+					return AFILE_ATR_GZ;
+				if (header[0] == 'A' && header[1] == 'T' &&
+					header[2] == 'A' && header[3] == 'R')
+					return AFILE_STATE_GZ;
+				return AFILE_XFD_GZ;
 			}
-			gzclose(gzf);
-			if (header[0] == 0x96 && header[1] == 0x02)
-				return AFILE_ATR_GZ;
-			if (header[0] == 'A' && header[1] == 'T' && header[2] == 'A' && header[3] == 'R')
-				return AFILE_STATE_GZ;
-			return AFILE_XFD_GZ;
 #endif /* HAVE_LIBZ */
 		}
 		break;
@@ -116,47 +144,78 @@ int AFILE_DetectFileType(const char *filename)
 	case '8':
 	case '9':
 		if ((header[1] >= '0' && header[1] <= '9') || header[1] == ' ') {
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
+#endif
 			return AFILE_LST;
 		}
 		break;
 	case 'A':
 		if (header[1] == 'T' && header[2] == 'A' && header[3] == 'R') {
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
+#endif
 			return AFILE_STATE;
 		}
 		if (header[1] == 'T' && header[2] == '8' && header[3] == 'X') {
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
+#endif
 			return AFILE_ATX;
 		}
 		break;
 	case 'C':
 		if (header[1] == 'A' && header[2] == 'R' && header[3] == 'T') {
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
+#endif
 			return AFILE_CART;
 		}
 		break;
 	case 0x96:
 		if (header[1] == 0x02) {
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
+#endif
 			return AFILE_ATR;
 		}
 		break;
 	case 0xf9:
 	case 0xfa:
+#ifdef __LIBRETRO__
+		retro_vfs_fclose(fp);
+#else
 		fclose(fp);
+#endif
 		return AFILE_DCM;
 	case 0xff:
 		if (header[1] == 0xff && (header[2] != 0xff || header[3] != 0xff)) {
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(fp);
+#else
 			fclose(fp);
+#endif
 			return AFILE_XEX;
 		}
 		break;
-	default:
-		break;
 	}
+#ifdef __LIBRETRO__
+	file_length = (int)retro_vfs_fsize(fp);
+	retro_vfs_fclose(fp);
+#else
 	file_length = Util_flen(fp);
 	fclose(fp);
+#endif
 	/* Detect .pro images */
 	/* # of sectors is in header */
 	if ((file_length-16)%(128+12) == 0 &&

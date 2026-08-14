@@ -9,6 +9,7 @@
 
 // DISK CONTROL
 #include "retro_disk_control.h"
+#include "retro_vfs.h"
 static dc_storage* dc;
 
 #include "antic.h"
@@ -612,6 +613,8 @@ void retro_set_environment(retro_environment_t cb)
 
     bool no_content = true;
     cb(RETRO_ENVIRONMENT_SET_SUPPORT_NO_GAME, &no_content);
+
+    retro_set_vfs_interface(environ_cb);
 }
 
 /* Store a chosen SYSROM revision and reinitialise the machine if the change
@@ -662,12 +665,23 @@ static void update_variables(void)
         ULONG crc = 0;
         long fsize = 0;
         FILE *fp;
-        fp = fopen((char*)RPATH, "rb");
-        if (fp != NULL) {
-            CRC32_FromFile(fp, &crc);
-            fseek(fp, 0, SEEK_END);
-            fsize = ftell(fp);
-            fclose(fp);
+        retro_file_t *rf = retro_vfs_fopen((char*)RPATH, RETRO_VFS_FILE_ACCESS_READ, RETRO_VFS_FILE_ACCESS_HINT_NONE);
+        if (rf != NULL) {
+            int64_t vsize = retro_vfs_fsize(rf);
+            if (vsize > 0) {
+                uint8_t *filebuf = (uint8_t*)malloc((size_t)vsize);
+                if (filebuf != NULL) {
+                    int64_t nread = retro_vfs_fread(rf, filebuf, (uint64_t)vsize);
+                    if (nread > 0) {
+                        ULONG crc_accum = 0xffffffff;
+                        crc_accum = CRC32_Update(crc_accum, filebuf, (size_t)nread);
+                        crc = ~crc_accum;
+                        fsize = (long)nread;
+                    }
+                    free(filebuf);
+                }
+            }
+            retro_vfs_fclose(rf);
             if (is_5200_cart(crc)) {
                 autorunCartridge = A5200_CART;
                 log_cb(RETRO_LOG_INFO,"[update_variables] Found Atari 5200 cart in DB for: %s\n", (char*)RPATH);
@@ -701,10 +715,10 @@ static void update_variables(void)
            to a nonexistent second chip and locks the game in the menu. Peek at
            the .car header (16 bytes: "CART" + 4-byte big-endian type) so we
            can force mono before Sound_Initialise(). */
-        FILE *fp = fopen((char*)RPATH, "rb");
-        if (fp != NULL) {
+        retro_file_t *rf = retro_vfs_fopen((char*)RPATH, RETRO_VFS_FILE_ACCESS_READ, RETRO_VFS_FILE_ACCESS_HINT_NONE);
+        if (rf != NULL) {
             unsigned char hdr[8];
-            if (fread(hdr, 1, 8, fp) == 8
+            if (retro_vfs_fread(rf, hdr, 8) == 8
              && hdr[0] == 'C' && hdr[1] == 'A' && hdr[2] == 'R' && hdr[3] == 'T') {
                 int car_type = (hdr[4] << 24) | (hdr[5] << 16) | (hdr[6] << 8) | hdr[7];
                 if (car_type == CARTRIDGE_BBSB_40) {
@@ -713,7 +727,7 @@ static void update_variables(void)
                     log_cb(RETRO_LOG_INFO, "[update_variables] BBSB_40 .car detected, forcing mono POKEY\n");
                 }
             }
-            fclose(fp);
+            retro_vfs_fclose(rf);
         }
     }
     /* Non cartridges extensions*/

@@ -21,6 +21,7 @@
 #include "retro_disk_control.h"
 #include "retro_strings.h"
 #include "retro_utils.h"
+#include "retro_vfs.h"
 #include "file/file_path.h"
 
 #include <stdio.h>
@@ -76,16 +77,13 @@ static char* m3u_search_file(const char* basedir, const char* dskName)
 		char* dskPath = path_join_dup(basedir, dskName);
 
 		// Verify if this item is a relative filename (append it to the m3u path)
-		if (file_exists(dskPath))
-		{
-			// Return
+		if (retro_vfs_exists(dskPath))
 			return dskPath;
-		}
 		free(dskPath);
 	}
 
 	// Verify if this item is an absolute pathname (or the file is in working dir)
-	if (file_exists(dskName))
+	if (retro_vfs_exists(dskName))
 	{
 		// Copy and return
 		return strdup(dskName);
@@ -320,6 +318,36 @@ int dc_replace_file(dc_storage* dc, int index, const char* filename)
 	return true;
 }
 
+static char* get_next_m3u_line(char** cursor)
+{
+	char* start;
+	char* p;
+	size_t len;
+
+	if (!cursor || !*cursor || **cursor == '\0')
+		return NULL;
+
+	start = *cursor;
+	p = start;
+
+	while (*p != '\0' && *p != '\n')
+		p++;
+
+	if (*p == '\n')
+	{
+		*p = '\0';
+		*cursor = p + 1;
+	}
+	else
+		*cursor = p;
+
+	/* strip a trailing '\r' left over from CRLF line endings */
+	len = strlen(start);
+	if (len > 0 && start[len - 1] == '\r')
+		start[len - 1] = '\0';
+
+	return start;
+}
 
 void dc_parse_m3u(dc_storage* dc, const char* m3u_file)
 {
@@ -330,10 +358,9 @@ void dc_parse_m3u(dc_storage* dc, const char* m3u_file)
 	if (m3u_file == NULL)
 		return;
 
-	FILE* fp = NULL;
-
 	// Try to open the file
-	if ((fp = fopen(m3u_file, "r")) == NULL)
+	retro_file_t* file = retro_vfs_fopen(m3u_file, RETRO_VFS_FILE_ACCESS_READ, RETRO_VFS_FILE_ACCESS_HINT_NONE);
+	if (file == NULL)
 		return;
 
 	// Reset
@@ -346,43 +373,62 @@ void dc_parse_m3u(dc_storage* dc, const char* m3u_file)
 	char* image_name = NULL;
 
 	// Read the lines while there is line to read and we have enough space
-	char buffer[2048];
-	while ((dc->count <= DC_MAX_SIZE) && (fgets(buffer, sizeof(buffer), fp) != NULL))
+	int64_t fsize = retro_vfs_fsize(file);
+	char* filebuf = NULL;
+
+	if (fsize > 0)
 	{
-		char* string = trimwhitespace(buffer);
-
-		// If it's a m3u special key or a file
-		if (strstartswith(string, M3U_SPECIAL_COMMAND))
+		filebuf = (char*)malloc((size_t)fsize + 1);
+		if (filebuf != NULL)
 		{
-			dc->command = strright(string, strlen(string) - strlen(M3U_SPECIAL_COMMAND));
+			int64_t nread = retro_vfs_fread(file, filebuf, (uint64_t)fsize);
+			if (nread < 0)
+				nread = 0;
+			filebuf[nread] = '\0';
 		}
-		else if (!strstartswith(string, COMMENT))
+	}
+
+	retro_vfs_fclose(file);
+
+	if (filebuf != NULL)
+	{
+		char* cursor = filebuf;
+		char* raw_line;
+
+		while ((dc->count <= DC_MAX_SIZE) && ((raw_line = get_next_m3u_line(&cursor)) != NULL))
 		{
-			// Search the file (absolute, relative to m3u)
-			char* filename;
-			if ((filename = m3u_search_file(basedir, string)) != NULL)
+			char* string = trimwhitespace(raw_line);
+
+			// If it's a m3u special key or a file
+			if (strstartswith(string, M3U_SPECIAL_COMMAND))
 			{
-
-				char tmp[512];
-				tmp[0] = '\0';
-
-				fill_pathname(tmp, path_basename(filename), "", sizeof(tmp));
-				image_name = strdup(tmp);
-
-				// Add the file to the struct
-				dc_add_file_int(dc, filename, image_name);
-				image_name = NULL;
+				dc->command = strright(string, strlen(string) - strlen(M3U_SPECIAL_COMMAND));
 			}
+			else if ((*string != '\0') && !strstartswith(string, COMMENT))
+			{
+				// Search the file (absolute, relative to m3u)
+				char* filename;
+				if ((filename = m3u_search_file(basedir, string)) != NULL)
+				{
+					char tmp[512];
+					tmp[0] = '\0';
 
+					fill_pathname(tmp, path_basename(filename), "", sizeof(tmp));
+					image_name = strdup(tmp);
+
+					// Add the file to the struct
+					dc_add_file_int(dc, filename, image_name);
+					image_name = NULL;
+				}
+			}
 		}
+
+		free(filebuf);
 	}
 
 	// If basedir was provided
 	if (basedir != NULL)
 		free(basedir);
-
-	// Close the file
-	fclose(fp);
 
 	if (dc->count != 0)
 	{
