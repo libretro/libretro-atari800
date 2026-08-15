@@ -44,7 +44,8 @@ SOURCES_C += \
 	$(CORE_DIR)/libretro/vkbd.c \
 	$(CORE_DIR)/libretro/retro_strings.c \
 	$(CORE_DIR)/libretro/retro_utils.c \
-	$(CORE_DIR)/libretro/retro_disk_control.c
+	$(CORE_DIR)/libretro/retro_disk_control.c \
+	$(CORE_DIR)/libretro/retro_vfs.c
 
 SOURCES_C += \
 	$(CORE_DIR)/atari800/src/afile.c \

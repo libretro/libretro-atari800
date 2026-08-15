@@ -47,6 +47,10 @@
 # include "roms/altirra_basic.h"
 #endif /* EMUOS_ALTIRRA */
 
+#if defined(__LIBRETRO__)
+#include "retro_vfs.h"
+#endif
+
 int SYSROM_os_versions[Atari800_MACHINE_SIZE] = { SYSROM_AUTO, SYSROM_AUTO, SYSROM_AUTO };
 int SYSROM_basic_version = SYSROM_AUTO;
 int SYSROM_xegame_version = SYSROM_AUTO;
@@ -204,23 +208,52 @@ int SYSROM_SetPath(char const *filename, int num, ...)
 	int len;
 	ULONG crc;
 	int retval = SYSROM_OK;
+#ifdef __LIBRETRO__
+	retro_file_t *f = retro_vfs_fopen(filename, RETRO_VFS_FILE_ACCESS_READ,
+			RETRO_VFS_FILE_ACCESS_HINT_NONE);
+#else
 	FILE *f = fopen(filename, "rb");
+#endif
 
 	if (f == NULL)
 		return SYSROM_ERROR;
 
+#ifdef __LIBRETRO__
+	len = (int)retro_vfs_fsize(f);
+#else
 	len = Util_flen(f);
+#endif
+
 	/* Don't proceed to CRC computation if the file has invalid size. */
 	if (!IsLengthAllowed(len)) {
+#ifdef __LIBRETRO__
+		retro_vfs_fclose(f);
+#else
 		fclose(f);
+#endif
 		return SYSROM_BADSIZE;
 	}
+
+#ifdef __LIBRETRO__
+	retro_vfs_fseek(f, 0, RETRO_VFS_SEEK_POSITION_START);
+#else
 	Util_rewind(f);
+#endif
+
 	if (!CRC32_FromFile(f, &crc)) {
+#ifdef __LIBRETRO__
+		retro_vfs_fclose(f);
+#else
 		fclose(f);
+#endif
 		return SYSROM_ERROR;
 	}
+
+#ifdef __LIBRETRO__
+	retro_vfs_fclose(f);
+#else
 	fclose(f);
+#endif
 
 	va_start(ap, num);
 	while (num > 0) {
@@ -295,36 +328,69 @@ int SYSROM_FindInDir(char const *directory, int only_if_not_set)
 
 	while ((entry = readdir(dir)) != NULL) {
 		char full_filename[FILENAME_MAX];
+#ifdef __LIBRETRO__
+		retro_file_t *file;
+#else
 		FILE *file;
+#endif
 		int len;
 		int id;
 		ULONG crc;
 		int matched_crc = FALSE;
+
 		Util_catpath(full_filename, directory, entry->d_name);
-		if ((file = fopen(full_filename, "rb")) == NULL)
-			/* Ignore non-readable files (e.g. directories). */
+
+#ifdef __LIBRETRO__
+		file = retro_vfs_fopen(full_filename, RETRO_VFS_FILE_ACCESS_READ,
+				RETRO_VFS_FILE_ACCESS_HINT_NONE);
+#else
+		/* Ignore non-readable files (e.g. directories). */
+		file = fopen(full_filename, "rb");
+#endif
+
+		if (file == NULL)
 			continue;
 
+#ifdef __LIBRETRO__
+		len = (int)retro_vfs_fsize(file);
+#else
 		len = Util_flen(file);
+#endif
 		/* Don't proceed to CRC computation if the file has invalid size. */
 		if (!IsLengthAllowed(len)){
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(file);
+#else
 			fclose(file);
+#endif
 			continue;
 		}
+
+#ifdef __LIBRETRO__
+		retro_vfs_fseek(file, 0, RETRO_VFS_SEEK_POSITION_START);
+#else
 		Util_rewind(file);
+#endif
 
 		if (!CRC32_FromFile(file, &crc)) {
+#ifdef __LIBRETRO__
+			retro_vfs_fclose(file);
+#else
 			fclose(file);
+#endif
 			continue;
 		}
+
+#ifdef __LIBRETRO__
+		retro_vfs_fclose(file);
+#else
 		fclose(file);
-
+#endif
 		Log_print("FindInDir: checking %s (len=%d crc=%08x)", entry->d_name, len, crc);
-
 		/* Match ROM image by CRC. */
 		for (id = 0; id < SYSROM_LOADABLE_SIZE; ++id) {
 			if ((!only_if_not_set || SYSROM_roms[id].unset)
-			    && SYSROM_roms[id].size == len
+				&& SYSROM_roms[id].size == len
 			    && SYSROM_roms[id].crc32 != CRC_NULL && SYSROM_roms[id].crc32 == crc) {
 				Log_print("FindInDir: CRC match id=%d filename=%s", id, full_filename);
 				strcpy(SYSROM_roms[id].filename, full_filename);

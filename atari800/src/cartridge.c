@@ -48,6 +48,10 @@
 #endif
 #include "log.h"
 
+#ifdef __LIBRETRO__
+#include "retro_vfs.h"
+#endif
+
 /* #define DEBUG 1 */
 
 int CARTRIDGE_autoreboot = TRUE;
@@ -1611,7 +1615,11 @@ static void InitCartridge(CARTRIDGE_image_t *cart)
 }
 
 int CARTRIDGE_WriteImage(char *filename, int type, UBYTE *image, int size, int raw, UBYTE value) {
+#ifdef __LIBRETRO__
+	retro_file_t *fp = retro_vfs_fopen(filename, RETRO_VFS_FILE_ACCESS_WRITE, 0);
+#else
 	FILE *fp = fopen(filename, "wb");
+#endif
 	if (fp != NULL) {
 		if (!raw) {
 			UBYTE header[0x10];
@@ -1639,8 +1647,22 @@ int CARTRIDGE_WriteImage(char *filename, int type, UBYTE *image, int size, int r
 			header[0xe] = 0;
 			header[0xf] = 0;
 
+#ifdef __LIBRETRO__
+			retro_vfs_fwrite(fp, header, sizeof(header));
+#else
 			fwrite(&header, 1, sizeof(header), fp);
+#endif
 		}
+#ifdef __LIBRETRO__
+		if (image != NULL)
+			retro_vfs_fwrite(fp, image, size);
+		else {
+			while (size-- > 0)
+				retro_vfs_fwrite(fp, &value, 1);
+		}
+
+		retro_vfs_fclose(fp);
+#else
 		if (image != NULL)
 			fwrite(image, 1, size, fp);
 		else
@@ -1648,6 +1670,7 @@ int CARTRIDGE_WriteImage(char *filename, int type, UBYTE *image, int size, int r
 				fwrite(&value, 1, 1, fp);
 
 		fclose(fp);
+#endif
 		return 0;
 	}
 	else {
@@ -1718,11 +1741,28 @@ void CARTRIDGE_ColdStart(void) {
 
 int CARTRIDGE_ReadImage(const char *filename, CARTRIDGE_image_t *cart)
 {
+#ifdef __LIBRETRO__
+	retro_file_t *fp;
+#else
 	FILE *fp;
+#endif
 	int len;
 	int type;
 	UBYTE header[16];
 
+#ifdef __LIBRETRO__
+	fp = retro_vfs_fopen(filename, RETRO_VFS_FILE_ACCESS_READ, RETRO_VFS_FILE_ACCESS_HINT_NONE);
+	if (fp == NULL)
+		return CARTRIDGE_CANT_OPEN;
+	// check file length
+	len = (int)retro_vfs_fsize(fp);
+	// rewind
+	if (retro_vfs_fseek(fp, 0, RETRO_VFS_SEEK_POSITION_START) < 0) {
+		Log_print("CARTRIDGE_ReadImage: seek failed\n");
+		retro_vfs_fclose(fp);
+		return CARTRIDGE_CANT_OPEN;
+	}
+#else
 	/* open file */
 	fp = fopen(filename, "rb");
 	if (fp == NULL)
@@ -1730,6 +1770,7 @@ int CARTRIDGE_ReadImage(const char *filename, CARTRIDGE_image_t *cart)
 	/* check file length */
 	len = Util_flen(fp);
 	Util_rewind(fp);
+#endif
 
 	/* Guard against providing cart->filename as parameter. */
 	if (cart->filename != filename)
@@ -1742,6 +1783,16 @@ int CARTRIDGE_ReadImage(const char *filename, CARTRIDGE_image_t *cart)
 	if ((len & 0x3ff) == 0) {
 		/* alloc memory and read data */
 		cart->image = (UBYTE *) Util_malloc(len);
+#ifdef __LIBRETRO__
+		if (retro_vfs_fread(fp, cart->image, len) < len) {
+			Log_print("Error reading cartridge.\n");
+			retro_vfs_fclose(fp);
+			free(cart->image);
+			cart->image = NULL;
+			return CARTRIDGE_TOO_FEW_DATA;
+		}
+		retro_vfs_fclose(fp);
+#else
 		if (fread(cart->image, 1, len, fp) < len) {
 			Log_print("Error reading cartridge.\n");
 			fclose(fp);
@@ -1750,6 +1801,7 @@ int CARTRIDGE_ReadImage(const char *filename, CARTRIDGE_image_t *cart)
 			return CARTRIDGE_TOO_FEW_DATA;
 		}
 		fclose(fp);
+#endif
 		/* find cart type */
 		cart->type = CARTRIDGE_NONE;
 		len >>= 10;	/* number of kilobytes */
@@ -1774,11 +1826,19 @@ int CARTRIDGE_ReadImage(const char *filename, CARTRIDGE_image_t *cart)
 	}
 
 	/* if not full kilobytes, assume it is CART file */
+#ifdef __LIBRETRO__
+	if (retro_vfs_fread(fp, header, 16) < 16) {
+		Log_print("Error reading cartridge.\n");
+		retro_vfs_fclose(fp);
+		return CARTRIDGE_BAD_FORMAT;
+	}
+#else
 	if (fread(header, 1, 16, fp) < 16) {
 		Log_print("Error reading cartridge.\n");
 		fclose(fp);
 		return CARTRIDGE_BAD_FORMAT;
 	}
+#endif
 	if ((header[0] == 'C') &&
 		(header[1] == 'A') &&
 		(header[2] == 'R') &&
@@ -1795,6 +1855,16 @@ int CARTRIDGE_ReadImage(const char *filename, CARTRIDGE_image_t *cart)
 			cart->size = CARTRIDGES[type].kb;
 			/* alloc memory and read data */
 			cart->image = (UBYTE *) Util_malloc(len);
+#ifdef __LIBRETRO__
+			if (retro_vfs_fread(fp, cart->image, len) < len) {
+				Log_print("Error reading cartridge.\n");
+				retro_vfs_fclose(fp);
+				free(cart->image);
+				cart->image = NULL;
+				return CARTRIDGE_TOO_FEW_DATA;
+			}
+			retro_vfs_fclose(fp);
+#else
 			if (fread(cart->image, 1, len, fp) < len) {
 				Log_print("Error reading cartridge.\n");
 				fclose(fp);
@@ -1803,6 +1873,7 @@ int CARTRIDGE_ReadImage(const char *filename, CARTRIDGE_image_t *cart)
 				return CARTRIDGE_TOO_FEW_DATA;
 			}
 			fclose(fp);
+#endif
 			checksum = (header[8] << 24) |
 				(header[9] << 16) |
 				(header[10] << 8) |
@@ -1813,7 +1884,11 @@ int CARTRIDGE_ReadImage(const char *filename, CARTRIDGE_image_t *cart)
 			return result;
 		}
 	}
+#ifdef __LIBRETRO__
+	retro_vfs_fclose(fp);
+#else
 	fclose(fp);
+#endif
 	return CARTRIDGE_BAD_FORMAT;
 }
 

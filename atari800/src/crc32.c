@@ -90,6 +90,7 @@ ULONG CRC32_Update(ULONG crc, UBYTE const *buf, unsigned int len)
 }
 #endif
 
+#ifndef __LIBRETRO__
 int CRC32_FromFile(FILE *f, ULONG *result)
 {
 	UBYTE buf[BUF_SIZE];
@@ -101,6 +102,28 @@ int CRC32_FromFile(FILE *f, ULONG *result)
 		if (len < BUF_SIZE)
 			break;
 	}
+
 	*result = ~crc;
 	return feof(f);
 }
+#else
+int CRC32_FromFile(retro_file_t *f, ULONG *result)
+{
+	UBYTE buf[BUF_SIZE];
+	ULONG crc = 0xffffffff;
+	int64_t len;
+
+	for (;;) {
+		len = retro_vfs_fread(f, buf, BUF_SIZE);
+		if (len < 0)
+			return FALSE;
+
+		crc = CRC32_Update(crc, buf, len);
+		if (len < BUF_SIZE)
+			break;
+	}
+
+	*result = ~crc;
+	return TRUE;
+}
+#endif

@@ -164,6 +164,7 @@
 #endif /* NETSIO */
 
 #if defined(__LIBRETRO__)
+#include "retro_vfs.h"
 extern const char *retro_system_directory;
 extern int legacy_configuration_file;
 #endif /* __LIBRETRO__ */
@@ -307,16 +308,30 @@ void Atari800_Coldstart(void)
 
 int Atari800_LoadImage(const char *filename, UBYTE *buffer, int nbytes)
 {
+#ifdef __LIBRETRO__
+	retro_file_t *f;
+#else
 	FILE *f;
+#endif
 	int len;
 
+#ifdef __LIBRETRO__
+	f = retro_vfs_fopen(filename, RETRO_VFS_FILE_ACCESS_READ,
+			RETRO_VFS_FILE_ACCESS_HINT_NONE);
+#else
 	f = fopen(filename, "rb");
+#endif
 	if (f == NULL) {
 		Log_print("Error loading ROM image: %s", filename);
 		return FALSE;
 	}
+#ifdef __LIBRETRO__
+	len = (int)retro_vfs_fread(f, buffer, nbytes);
+	retro_vfs_fclose(f);
+#else
 	len = fread(buffer, 1, nbytes, f);
 	fclose(f);
+#endif
 	if (len != nbytes) {
 		Log_print("Error reading %s", filename);
 		return FALSE;
