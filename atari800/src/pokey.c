@@ -494,7 +494,12 @@ int POKEY_Initialise(int *argc, char *argv[])
 #endif
 	{
 		random_scanline_counter =
-#ifdef HAVE_WINDOWS_H
+#if defined(__LIBRETRO__)
+		/* The frontend replays retro_run() for netplay, rewind and
+		 * run-ahead, so the poly counter starts from a fixed point
+		 * rather than from whatever the host clock happens to read. */
+		0;
+#elif defined(HAVE_WINDOWS_H)
 		GetTickCount() % POKEY_POLY17_SIZE;
 #elif defined(HAVE_TIME)
 		time(NULL) % POKEY_POLY17_SIZE;
