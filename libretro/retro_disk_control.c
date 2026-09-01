@@ -255,6 +255,8 @@ bool dc_remove_file(dc_storage* dc, int index)
 
 int dc_replace_file(dc_storage* dc, int index, const char* filename)
 {
+	unsigned i;
+
 	if (dc == NULL)
 		return false;
 
@@ -298,7 +300,7 @@ int dc_replace_file(dc_storage* dc, int index, const char* filename)
 			fill_pathname(name, path_basename(filename), "", sizeof(name));
 
 			/* Dupecheck */
-			for (unsigned i = 0; i < dc->count - 1; i++)
+			for (i = 0; i < dc->count - 1; i++)
 			{
 				if (!strcmp(dc->files[i], full_path_replace))
 				{

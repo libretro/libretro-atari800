@@ -71,6 +71,7 @@ bool file_check_extension(const char *filename, const size_t filename_size, cons
 
 bool file_check_flag(const char *filename, const size_t filename_size, const char *flag, const size_t flag_size)
 {
+   int i;
 #ifndef __PS3__
    size_t file_len = strnlen(filename, filename_size);
    size_t flag_len = strnlen(flag, flag_size);
@@ -79,7 +80,7 @@ bool file_check_flag(const char *filename, const size_t filename_size, const cha
    size_t flag_len = strlen(flag) > flag_size ? flag_size : strlen(flag);
 #endif
 
-  for (int i = 0; i < file_len; i++) {
+  for (i = 0; i < file_len; i++) {
      if (i + flag_len > file_len)
         return false;
 
@@ -169,13 +170,14 @@ the polynomial. */
 
 uint32_t crc32_calculate(uint8_t * data, uint32_t size) {
    uint32_t byte, crc, mask;
+   int i, j;
 
    crc = 0xFFFFFFFF;
 
-   for (int i = 0; i < size; i++) {
+   for (i = 0; i < size; i++) {
       byte = data[i];
       crc = crc ^ byte;
-      for (int j = 7; j >= 0; j--) {
+      for (j = 7; j >= 0; j--) {
          mask = -(crc & 1);
          crc = (crc >> 1) ^ (0xedb88320 & mask);
       }

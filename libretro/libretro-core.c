@@ -1622,6 +1622,7 @@ void retro_get_system_av_info(struct retro_system_av_info* info)
 
 void retro_init(void)
 {
+    int i;
     unsigned dci_version = 0;
     struct retro_log_callback log;
     dc = dc_create();
@@ -1685,7 +1686,7 @@ void retro_init(void)
     }
 
     /* set these up early retro_set_controller_port_device() will adjust later */
-    for (int i = 0; i < 4; i++)
+    for (i = 0; i < 4; i++)
         atari_devices[i] = RETRO_DEVICE_ATARI_JOYSTICK;
 
     update_input_descriptors();

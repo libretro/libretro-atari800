@@ -604,7 +604,7 @@ int Retro_PollEvent()
 
        for (i = 0; i < 16; i++)
        {
-           for (int j = 0; j < 4; j++)
+           for (j = 0; j < 4; j++)
            {
                if ((joypad_bits[j] & (1 << i)) && mbt[j][i] == 0)
                    mbt[j][i] = 1;
@@ -669,7 +669,7 @@ int Retro_PollEvent()
 
    if (paddle_mode)
    {
-       for (int i = 0; i < 4; i++)
+       for (i = 0; i < 4; i++)
        {
            int pval = input_state_cb(i, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_LEFT, RETRO_DEVICE_ID_ANALOG_X);
 

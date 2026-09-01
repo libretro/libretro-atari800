@@ -175,6 +175,7 @@ static int key_control = 0;
 
 int PLATFORM_Keyboard(void)
 {	
+	int i;
 	int shiftctrl = 0;
 	int whichButton = 0;
 
@@ -285,7 +286,7 @@ int PLATFORM_Keyboard(void)
 			SHOWKEYDELAY--;
 
 		/* Don't accept joypad input when virtual keyboard is active */
-		for (int i = 0; i < 4; i++)
+		for (i = 0; i < 4; i++)
 		{
 			if (SHOWKEY == -1)
 			{
@@ -672,7 +673,7 @@ int PLATFORM_Keyboard(void)
 		if (SHOWKEYDELAY)
 			SHOWKEYDELAY--;
 
-		for (int i = 0; i < 4; i++)
+		for (i = 0; i < 4; i++)
 		{
 			if (SHOWKEY == -1)
 			{
