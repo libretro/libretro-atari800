@@ -1679,6 +1679,7 @@ void Atari800_StateSave(void)
 		temp = Atari800_keyboard_detached;
 		StateSav_SaveUBYTE(&temp, 1);
 	}
+	StateSav_SaveINT(&Atari800_nframes, 1);
 }
 
 void Atari800_StateRead(UBYTE version)
@@ -1709,6 +1710,8 @@ void Atari800_StateRead(UBYTE version)
 			Atari800_keyboard_detached = temp != 0;
 			Atari800_UpdateKeyboardDetached();
 		}
+		if (version >= 9)
+			StateSav_ReadINT(&Atari800_nframes, 1);
 	}
 	else { /* savestate from version 2.2.1 or earlier */
 		int new_tv_mode;
@@ -1827,6 +1830,9 @@ void Retro_Atari800_StateSave(void)
 		temp = Atari800_keyboard_detached;
 		Retro_SaveUBYTE(&temp, 1);
 	}
+	/* The frame counter drives the emulated R-Time 8 clock, so it belongs
+	   in the state for a restore to resume at the same point. */
+	Retro_SaveINT(&Atari800_nframes, 1);
 }
 
 void Retro_Atari800_StateRead(UBYTE version)
@@ -1857,6 +1863,8 @@ void Retro_Atari800_StateRead(UBYTE version)
 			Atari800_keyboard_detached = temp != 0;
 			Atari800_UpdateKeyboardDetached();
 		}
+		if (version >= 9)
+			Retro_ReadINT(&Atari800_nframes, 1);
 	}
 	else { /* savestate from version 2.2.1 or earlier */
 		int new_tv_mode;

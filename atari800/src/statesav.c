@@ -76,7 +76,7 @@ int Retro_SaveState_Size = 0;
 #include "xep80.h"
 #endif
 
-#define SAVE_VERSION_NUMBER 8 /* Last changed after Atari800 3.1.0 */
+#define SAVE_VERSION_NUMBER 9 /* Version 9 adds Atari800_nframes */
 
 #if defined(MEMCOMPR) || defined(LIBATARI800)
 /* libatari800 pretends to care about libz but it doesn't */
