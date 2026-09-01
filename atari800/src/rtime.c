@@ -97,7 +97,35 @@ static int hex2bcd(int h)
 
 static int gettime(int p)
 {
-#ifdef HAVE_WINDOWS_H
+#if defined(__LIBRETRO__)
+	/* One Atari800_Frame() is one retro_run(), so the cartridge clock
+	 * advances with the emulation and reads the same on every replay of
+	 * a given frame. Counted in UTC from 2000-01-01 so the result does
+	 * not depend on the host time zone either. */
+	time_t tt;
+	struct tm *lt;
+
+	tt = (time_t) 946684800 + (time_t) (Atari800_nframes /
+	     ((Atari800_tv_mode == Atari800_TV_PAL) ? Atari800_FPS_PAL : Atari800_FPS_NTSC));
+	lt = gmtime(&tt);
+
+	switch (p) {
+	case 0:
+		return hex2bcd(lt->tm_sec);
+	case 1:
+		return hex2bcd(lt->tm_min);
+	case 2:
+		return hex2bcd(lt->tm_hour);
+	case 3:
+		return hex2bcd(lt->tm_mday);
+	case 4:
+		return hex2bcd(lt->tm_mon + 1);
+	case 5:
+		return hex2bcd(lt->tm_year % 100);
+	case 6:
+		return hex2bcd(((lt->tm_wday + 2) % 7) + 1);
+	}
+#elif defined(HAVE_WINDOWS_H)
 	SYSTEMTIME st;
 	GetLocalTime(&st);
 	switch (p) {
