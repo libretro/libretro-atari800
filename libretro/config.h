@@ -622,7 +622,6 @@
 #define sysFsReaddir cellFsReaddir
 #define sysFSDirent CellFsDirent
 #define sysFsClosedir cellFsClosedir
-#define WORDS_BIGENDIAN 1
 #define FS_SUCCEEDED 0
 #define FS_TYPE_DIR 1
 #endif

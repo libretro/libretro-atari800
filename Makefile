@@ -177,7 +177,7 @@ else ifeq ($(platform), qnx)
 # Lightweight PS3 Homebrew SDK
 else ifneq (,$(filter $(platform), ps3 psl1ght))
 	ifeq ($(platform), psl1ght)
-		PLATFORM_DEFINES := -D__PS3__ -D__PSLIGHT__
+		PLATFORM_DEFINES := -D__PS3__ -D__PSL1GHT__
 	else
 		PLATFORM_DEFINES := -D__PS3__
 	endif
