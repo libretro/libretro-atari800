@@ -414,6 +414,13 @@ static void UpdateSyncBuffer(void)
 				  (sync_buffer_size - fill)/Sound_out.channels/Sound_out.sample_size,
 				  bytes_written/Sound_out.channels/Sound_out.sample_size);
 #endif
+#ifdef __LIBRETRO__
+		/* sync_buffer is drained by the frontend after retro_run() returns,
+		 * so nothing can make room while this call is still on the stack.
+		 * Drop the update and keep the frame moving. */
+		PLATFORM_SoundUnlock();
+		return;
+#else
 		/* Wait until hardware buffer can be filled, or wait until callback
 		   makes place in the buffer. */
 		do {
@@ -428,6 +435,7 @@ static void UpdateSyncBuffer(void)
 #endif /* SOUND_CALLBACK */
 			fill = sync_write_pos - sync_read_pos;
 		} while (bytes_written > sync_buffer_size - fill);
+#endif /* __LIBRETRO__ */
 	}
 	/* Now bytes_written <= audio_buffer_size + dsp_read_pos - dsp_write_pos) */
 
