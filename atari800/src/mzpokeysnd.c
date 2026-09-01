@@ -1243,6 +1243,19 @@ found:
 }
 
 static void mzpokeysnd_process_8(void* sndbuffer, int sndn);
+
+/* Dither source. The process-wide rand() carries state that the frontend,
+ * another core in the same process or a save-state restore can move
+ * underneath us, which would make the same frame render different samples
+ * on a replay. This generator belongs to the sound engine and is reset by
+ * MZPOKEYSND_Init(). */
+static unsigned long dither_state = 1UL;
+
+static double dither_rand(void)
+{
+	dither_state = dither_state * 1103515245UL + 12345UL;
+	return (double) ((dither_state >> 16) & 0x7fffUL) / 32767.0;
+}
 static void mzpokeysnd_process_16(void* sndbuffer, int sndn);
 static void Update_pokey_sound_mz(UWORD addr, UBYTE val, UBYTE chip, UBYTE gain);
 #ifdef CONSOLE_SOUND
@@ -1285,6 +1298,7 @@ int MZPOKEYSND_Init(ULONG freq17, int playback_freq, UBYTE num_pokeys,
     double cutoff;
 
     snd_quality = quality;
+    dither_state = 1UL;
 
     POKEYSND_Update_ptr = Update_pokey_sound_mz;
 #ifdef CONSOLE_SOUND
@@ -2294,11 +2308,11 @@ static void mzpokeysnd_process_8(void* sndbuffer, int sndn)
     while(nsam >= (int) num_cur_pokeys)
     {
         buffer[0] = (UBYTE)floor(generate_sample(pokey_states)
-         * (255.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 128 + 0.5 + 0.5 * rand() / RAND_MAX - 0.25);
+         * (255.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 128 + 0.5 + 0.5 * dither_rand() - 0.25);
         for(i=1; i<num_cur_pokeys; i++)
         {
             buffer[i] = (UBYTE)floor(generate_sample(pokey_states + i)
-             * (255.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 128 + 0.5 + 0.5 * rand() / RAND_MAX - 0.25);
+             * (255.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 128 + 0.5 + 0.5 * dither_rand() - 0.25);
         }
         buffer += num_cur_pokeys;
         nsam -= num_cur_pokeys;
@@ -2319,11 +2333,11 @@ static void mzpokeysnd_process_16(void* sndbuffer, int sndn)
     while(nsam >= (int) num_cur_pokeys)
     {
         buffer[0] = (SWORD)floor(generate_sample(pokey_states)
-         * (65535.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 0.5 + 0.5 * rand() / RAND_MAX - 0.25);
+         * (65535.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 0.5 + 0.5 * dither_rand() - 0.25);
         for(i=1; i<num_cur_pokeys; i++)
         {
             buffer[i] = (SWORD)floor(generate_sample(pokey_states + i)
-             * (65535.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 0.5 + 0.5 * rand() / RAND_MAX - 0.25);
+             * (65535.0 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95) + 0.5 + 0.5 * dither_rand() - 0.25);
         }
         buffer += num_cur_pokeys;
         nsam -= num_cur_pokeys;
@@ -2360,7 +2374,7 @@ static void generate_sync(unsigned int num_ticks)
 				*((SWORD *)buffer) = (SWORD)floor(
 					interp_read_resam_all(pokey_states + i, samp_pos)
 					* (volume.s16 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95)
-					+ 0.5 + 0.5 * rand() / RAND_MAX - 0.25
+					+ 0.5 + 0.5 * dither_rand() - 0.25
 				);
 				buffer += 2;
 			}
@@ -2368,7 +2382,7 @@ static void generate_sync(unsigned int num_ticks)
 				*buffer++ = (UBYTE)floor(
 					interp_read_resam_all(pokey_states + i, samp_pos)
 					* (volume.s8 / 2 / MAX_SAMPLE / 4 * M_PI * 0.95)
-					+ 128 + 0.5 + 0.5 * rand() / RAND_MAX - 0.25
+					+ 128 + 0.5 + 0.5 * dither_rand() - 0.25
 				);
 		}
 	}

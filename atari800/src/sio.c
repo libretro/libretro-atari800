@@ -86,6 +86,17 @@ static int sectorsize[SIO_MAX_DRIVES];
 int SIO_format_sectorcount[SIO_MAX_DRIVES];
 int SIO_format_sectorsize[SIO_MAX_DRIVES];
 static int io_success[SIO_MAX_DRIVES];
+
+/* Filler for sectors an ATX image marks unreadable. Kept independent of the
+ * process-wide rand() so a given frame produces the same bytes on every
+ * replay, including after a save-state restore. */
+static unsigned long bad_sector_state = 1UL;
+
+static unsigned long bad_sector_rand(void)
+{
+	bad_sector_state = bad_sector_state * 1103515245UL + 12345UL;
+	return (bad_sector_state >> 16) & 0x7fffUL;
+}
 /* stores dup sector counter for PRO images */
 typedef struct tagpro_additional_info_t {
 	int max_sector;
@@ -823,7 +834,7 @@ int SIO_ReadSector(int unit, int sector, UBYTE *buffer)
 					for (i=0;i<128;i++) {
 						Log_print("0x%02x",buffer[i]);
 						if (buffer[i] == 0x33)
-							buffer[i] = rand() & 0xFF;
+							buffer[i] = (UBYTE) (bad_sector_rand() & 0xFF);
 					}
 				}
 			}
