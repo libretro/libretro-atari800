@@ -830,7 +830,9 @@ extern long long retro_frame_counter;
 
 double PLATFORM_Time(void)
 {
-        return retro_frame_counter * (1000.0 / retro_fps);
+	/* Util_time() is specified in seconds. Derived from the frame counter
+	 * so it advances with emulation rather than with the host clock. */
+	return retro_frame_counter / (double) retro_fps;
 }
 
 void PLATFORM_Sleep(double s)
