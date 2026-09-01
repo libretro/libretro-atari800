@@ -833,6 +833,15 @@ double PLATFORM_Time(void)
         return retro_frame_counter * (1000.0 / retro_fps);
 }
 
+void PLATFORM_Sleep(double s)
+{
+	/* One Atari800_Frame() maps to exactly one retro_run(), and the
+	 * frontend paces those calls. A core that sleeps on its own fights
+	 * that pacing and makes output depend on host scheduling, so this
+	 * deliberately does nothing. */
+	(void)s;
+}
+
 void PLATFORM_PaletteUpdate(void)
 {
 	retro_PaletteUpdate();

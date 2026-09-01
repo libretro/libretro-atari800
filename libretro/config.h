@@ -487,7 +487,11 @@
 #define SUPPORTS_PLATFORM_PALETTEUPDATE 1
 
 /* Platform-specific sleep function. */
-/* #undef SUPPORTS_PLATFORM_SLEEP */
+/* The frontend is the sole timing authority: it paces retro_run() to the
+   display and audio clock. Route Util_sleep() through PLATFORM_Sleep(),
+   which the libretro port implements as a no-op, so no host sleep call
+   is compiled into the core. */
+#define SUPPORTS_PLATFORM_SLEEP 1
 
 /* Platform-specific time function. */
 #define SUPPORTS_PLATFORM_TIME 1
