@@ -360,6 +360,27 @@ else ifeq ($(platform), retrofw)
 	CFLAGS += -fomit-frame-pointer -march=mips32 -mtune=mips32 -mhard-float
 	PLATFORM_DEFINES += -DRETROFW
 
+# OpenDingux (GCW Zero / RG350 and friends; the odbeta job builds the same
+# platform against a newer toolchain image)
+else ifeq ($(platform), gcw0)
+	TARGET := $(TARGET_NAME)_libretro.so
+	CC = /opt/gcw0-toolchain/usr/bin/mipsel-linux-gcc
+	CXX = /opt/gcw0-toolchain/usr/bin/mipsel-linux-g++
+	AR = /opt/gcw0-toolchain/usr/bin/mipsel-linux-ar
+	fpic := -fPIC
+	SHARED := -shared -Wl,-version-script=link.T -Wl,-no-undefined
+	CFLAGS += -fomit-frame-pointer -ffast-math -march=mips32 -mtune=mips32r2 -mhard-float
+
+# RS-90 (JZ4725B: mips32r1 and no FPU, so no -mhard-float here)
+else ifeq ($(platform), rs90)
+	TARGET := $(TARGET_NAME)_libretro.so
+	CC = /opt/rs90-toolchain/usr/bin/mipsel-linux-gcc
+	CXX = /opt/rs90-toolchain/usr/bin/mipsel-linux-g++
+	AR = /opt/rs90-toolchain/usr/bin/mipsel-linux-ar
+	fpic := -fPIC
+	SHARED := -shared -Wl,-version-script=link.T -Wl,-no-undefined
+	CFLAGS += -fomit-frame-pointer -ffast-math -march=mips32 -mtune=mips32
+
 #MIYOO
 else ifeq ($(platform), miyoo)
 	TARGET := $(TARGET_NAME)_libretro.so
