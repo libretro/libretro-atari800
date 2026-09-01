@@ -201,7 +201,7 @@ bool dc_add_file(dc_storage* dc, const char* filename)
 	name[0] = '\0';
 	fill_pathname(name, path_basename(filename), "", sizeof(name));
 
-	if (!dc_add_file_int(dc, strdup(filename), strdup(name)))
+	if (!dc_add_file_int(dc, (char*)filename, name))
 		return false;
 
 	// if dc unit-type is none, get type from first image
@@ -302,6 +302,11 @@ int dc_replace_file(dc_storage* dc, int index, const char* filename)
 			/* Dupecheck */
 			for (i = 0; i < dc->count - 1; i++)
 			{
+				/* The slot being replaced was cleared above, and a
+				 * removal can leave other slots empty. */
+				if (dc->files[i] == NULL)
+					continue;
+
 				if (!strcmp(dc->files[i], full_path_replace))
 				{
 					dc_remove_file(dc, index);
@@ -372,7 +377,6 @@ void dc_parse_m3u(dc_storage* dc, const char* m3u_file)
 	char* basedir = dirname_int(m3u_file);
 
 	// Disk control interface 'name' for the following file
-	char* image_name = NULL;
 
 	// Read the lines while there is line to read and we have enough space
 	int64_t fsize = retro_vfs_fsize(file);
@@ -416,11 +420,10 @@ void dc_parse_m3u(dc_storage* dc, const char* m3u_file)
 					tmp[0] = '\0';
 
 					fill_pathname(tmp, path_basename(filename), "", sizeof(tmp));
-					image_name = strdup(tmp);
 
 					// Add the file to the struct
-					dc_add_file_int(dc, filename, image_name);
-					image_name = NULL;
+					dc_add_file_int(dc, filename, tmp);
+					free(filename);
 				}
 			}
 		}
