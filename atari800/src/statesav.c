@@ -76,7 +76,7 @@ int Retro_SaveState_Size = 0;
 #include "xep80.h"
 #endif
 
-#define SAVE_VERSION_NUMBER 9 /* Version 9 adds Atari800_nframes */
+#define SAVE_VERSION_NUMBER 10 /* Version 9 adds Atari800_nframes, 10 GTIA_consol_override */
 
 #if defined(MEMCOMPR) || defined(LIBATARI800)
 /* libatari800 pretends to care about libz but it doesn't */
@@ -595,7 +595,6 @@ int Retro_ReadAtariState(const uint8_t* data, size_t size)
 
 	memstream_close(state_stream); state_stream = NULL;
 	if (state_stream_error) return FALSE;
-	GTIA_consol_override = 0;
 	return Retro_SaveState_Size;
 
 error:

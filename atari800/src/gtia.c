@@ -1251,6 +1251,7 @@ void GTIA_StateSave(void)
 	StateSav_SaveINT(&GTIA_speaker, 1);
 	StateSav_SaveINT(&next_console_value, 1);
 	StateSav_SaveUBYTE(GTIA_TRIG_latch, 4);
+	StateSav_SaveINT(&GTIA_consol_override, 1);
 }
 
 void GTIA_StateRead(UBYTE version)
@@ -1305,6 +1306,8 @@ void GTIA_StateRead(UBYTE version)
 	StateSav_ReadINT(&next_console_value, 1);
 	if (version >= 7)
 		StateSav_ReadUBYTE(GTIA_TRIG_latch, 4);
+	if (version >= 10)
+		StateSav_ReadINT(&GTIA_consol_override, 1);
 
 	GTIA_PutByte(GTIA_OFFSET_HPOSP0, GTIA_HPOSP0);
 	GTIA_PutByte(GTIA_OFFSET_HPOSP1, GTIA_HPOSP1);
@@ -1391,6 +1394,9 @@ void Retro_GTIA_StateSave(void)
 	Retro_SaveINT(&GTIA_speaker, 1);
 	Retro_SaveINT(&next_console_value, 1);
 	Retro_SaveUBYTE(GTIA_TRIG_latch, 4);
+	/* The OS counts this down as it boots, holding Option to switch off BASIC,
+	   so a state loaded part way through carries on from the same count. */
+	Retro_SaveINT(&GTIA_consol_override, 1);
 }
 
 void Retro_GTIA_StateRead(UBYTE version)
@@ -1445,6 +1451,10 @@ void Retro_GTIA_StateRead(UBYTE version)
 	Retro_ReadINT(&next_console_value, 1);
 	if (version >= 7)
 		Retro_ReadUBYTE(GTIA_TRIG_latch, 4);
+	if (version >= 10)
+		Retro_ReadINT(&GTIA_consol_override, 1);
+	else
+		GTIA_consol_override = 0;
 
 	GTIA_PutByte(GTIA_OFFSET_HPOSP0, GTIA_HPOSP0);
 	GTIA_PutByte(GTIA_OFFSET_HPOSP1, GTIA_HPOSP1);
