@@ -253,8 +253,12 @@ void Retro_SaveFNAME(const char* filename)
 #ifdef HAVE_GETCWD
 	char dirname[FILENAME_MAX] = "";
 	if (getcwd(dirname, FILENAME_MAX) != NULL) {
-		if (strncmp(filename, dirname, strlen(dirname)) == 0)
-			filename += strlen(dirname) + 1;
+		size_t dirlen = strlen(dirname);
+		/* Only a file inside the directory is saved relative to it. The root
+		   would lose the name's first letter along with the separator. */
+		if (dirlen > 1 && strncmp(filename, dirname, dirlen) == 0
+		 && (filename[dirlen] == '/' || filename[dirlen] == '\\'))
+			filename += dirlen + 1;
 	}
 #endif
 	namelen = strlen(filename);
