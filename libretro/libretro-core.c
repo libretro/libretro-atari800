@@ -1,3 +1,4 @@
+#include <ctype.h>
 #include <stdarg.h>
 #include <string/stdstring.h>
 
@@ -630,6 +631,27 @@ static void apply_sysrom_version(int *slot, int version, int machine_idx)
         Atari800_InitialiseMachine();
 }
 
+/* TOSEC names say what a dump needs to boot, e.g. [BASIC] or [OSb]. */
+static int content_has_tag(const char *tag)
+{
+    const char *name = RPATH;
+    const char *p;
+    size_t n = strlen(tag);
+    size_t i;
+
+    for (p = RPATH; *p; p++)
+        if (*p == '/' || *p == '\\')
+            name = p + 1;
+    for (p = name; *p; p++)
+    {
+        for (i = 0; i < n && p[i] && tolower((unsigned char)p[i]) == tolower((unsigned char)tag[i]); i++)
+            ;
+        if (i == n)
+            return 1;
+    }
+    return 0;
+}
+
 static void update_variables(void)
 {
     struct retro_variable var;
@@ -792,6 +814,9 @@ static void update_variables(void)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
+        if (content_has_tag("[OSb]"))
+            var.value = "400/800 (OS B)";
+
         /* I moved "5200" comparison up to top because I'm lazy.  :P  Leave it here! */
         if (autorunCartridge == A5200_CART || (strcmp(var.value, "5200") == 0))
         {
@@ -905,6 +930,9 @@ static void update_variables(void)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
+        if (content_has_tag("(PAL)"))
+            var.value = "PAL";
+
         if (strcmp(var.value, "NTSC") == 0)
         {
             CURRENT_TV = Atari800_TV_NTSC;   
@@ -1006,6 +1034,9 @@ static void update_variables(void)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
+        if (content_has_tag("[BASIC]"))
+            var.value = "enabled";
+
         if (strcmp(var.value, "enabled") == 0)
         {
             Atari800_disable_basic = FALSE;
@@ -1218,6 +1249,9 @@ static void update_variables(void)
 
     if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
     {
+        if (HandleExtension((char*)RPATH, "cas") || HandleExtension((char*)RPATH, "CAS"))
+            var.value = "enabled";
+
         if (strcmp(var.value, "enabled") == 0)
         {
             CASSETTE_hold_start = 1;
