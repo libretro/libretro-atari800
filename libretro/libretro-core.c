@@ -25,6 +25,7 @@ static dc_storage* dc;
 #include "rtime.h"
 #include "binload.h"
 #include "cassette.h"
+#include "gtia.h"
 #include "artifact.h"
 #include "statesav.h"
 #include "pokeysnd.h"
@@ -1968,9 +1969,32 @@ size_t retro_serialize_size(void)
     return size;
 }
 
+/* The OS holds the console keys and presses Space over several frames as it
+ * boots, and a state doesn't hold the tape's place, so run-ahead going back to
+ * a state from part way through either would lose it */
+static bool boot_in_progress(void)
+{
+    return GTIA_consol_override > 0 || CASSETTE_press_space
+        || CASSETTE_GetPosition() < CASSETTE_GetSize();
+}
+
+static bool savestate_is_for_runahead(void)
+{
+    enum retro_savestate_context context = RETRO_SAVESTATE_CONTEXT_NORMAL;
+
+    if (!environ_cb(RETRO_ENVIRONMENT_GET_SAVESTATE_CONTEXT, &context))
+        return false;
+
+    return context == RETRO_SAVESTATE_CONTEXT_RUNAHEAD_SAME_INSTANCE
+        || context == RETRO_SAVESTATE_CONTEXT_RUNAHEAD_SAME_BINARY;
+}
+
 bool retro_serialize(void* data_, size_t size)
 {
     int returned_size;
+
+    if (boot_in_progress() && savestate_is_for_runahead())
+        return false;
 
     returned_size = Retro_SaveAtariState(data_, size, 1);
 
