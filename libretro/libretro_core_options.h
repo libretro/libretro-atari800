@@ -458,6 +458,20 @@ struct retro_core_option_v2_definition option_defs_us[] = {
       "none"
    },
    {
+      "atari800_artifacting_type",
+      "NTSC Artifacting Type",
+      NULL,
+      "How Hi-Res Artifacting is emulated on NTSC systems: atari800's old or new emulation. New shows what games hide in hi-res colour the way the hardware does: with Old, Pac-Man shows HIGH SCORE at boot.",
+      NULL,
+      "video",
+      {
+         { "old", "Old" },
+         { "new", "New" },
+         { NULL, NULL },
+      },
+      "old"
+   },
+   {
       "atari800_resolution",
       "Internal resolution",
       NULL,
